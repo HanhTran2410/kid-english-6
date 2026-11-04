@@ -1,0 +1,74 @@
+// Góc bố mẹ: menu và Cài đặt. Các trang khác (tiến độ, ghi âm, tạo bài, sao lưu) thêm dần theo SPEC.md mục 6.
+
+import { h, toast } from '../../ui.js';
+import { APP_VERSION } from '../../app.js';
+import { englishVoices } from '../../speech/tts.js';
+import { LIMIT_OPTIONS } from '../../session.js';
+import { parentLayout, goParent, section, field } from './common.js';
+
+const VIEWS = {
+  menu: menuView,
+  settings: settingsView,
+};
+
+export function parentScreen(app, params = {}) {
+  const view = VIEWS[params.view] ?? menuView;
+  return view(app, params);
+}
+
+function menuView(app) {
+  const body = parentLayout(app, { title: 'Góc bố mẹ' });
+  const item = (emoji, text, onclick) => h('button.menu-item', { type: 'button', onclick }, h('span.menu-emoji', { text: emoji }), h('span', { text }));
+  body.append(
+    h('button.exit-to-child', { type: 'button', onclick: () => app.go('home') }, h('span', { text: '▶ Về màn hình của bé' })),
+    h('div.menu', {},
+      item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
+    h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
+  );
+}
+
+function settingsView(app) {
+  const body = parentLayout(app, { title: 'Cài đặt', back: () => goParent(app) });
+  const s = app.settings;
+
+  const childName = h('input', { type: 'text', value: s.childName ?? '', placeholder: 'Ví dụ: Minh', autocomplete: 'off' });
+  childName.addEventListener('change', () => app.setSetting('childName', childName.value.trim()));
+
+  const voices = englishVoices(app.speaker.voices);
+  const voiceSel = h('select', {},
+    h('option', { value: '', text: 'Tự chọn' }),
+    ...voices.map((v) => h('option', { value: v.voiceURI, text: `${v.name} (${v.lang})`, selected: v.voiceURI === s.voiceURI })));
+  const rateSel = h('select', {}, ...[0.7, 0.8, 0.9, 1].map((r) => h('option', { value: String(r), text: `${r}×`, selected: r === s.rate })));
+  const applyVoice = async () => {
+    await app.setSetting('voiceURI', voiceSel.value || null);
+    await app.setSetting('rate', Number(rateSel.value));
+    app.speaker.configure({ voiceURI: s.voiceURI, voiceURI2: s.voiceURI2, rate: s.rate });
+  };
+  voiceSel.addEventListener('change', applyVoice);
+  rateSel.addEventListener('change', applyVoice);
+  const test = h('button.btn', {
+    type: 'button',
+    text: '🔊 Nghe thử',
+    onclick: () => app.speaker.speak(`Hi! I am ${s.characterName}. Let's read a story!`).catch(() => toast('Máy không đọc được.')),
+  });
+
+  const limitSel = h('select', {}, ...LIMIT_OPTIONS.map((m) => h('option', {
+    value: m == null ? '' : String(m),
+    text: m == null ? 'Không giới hạn' : `${m} phút`,
+    selected: m === s.limitMinutes,
+  })));
+  limitSel.addEventListener('change', () => app.setSetting('limitMinutes', limitSel.value ? Number(limitSel.value) : null));
+
+  const recog = h('input', { type: 'checkbox', checked: s.useRecognition });
+  recog.addEventListener('change', async () => {
+    await app.setSetting('useRecognition', recog.checked);
+    app.recognizer.setAllowed(recog.checked);
+  });
+
+  body.append(
+    section('👧 Bé', field('Tên bé (Olly gọi tên khi chào)', childName)),
+    section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test),
+    section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),
+    section('🎤 Nhận dạng giọng nói', h('label.check', {}, recog, h('span', { text: ' Dùng nhận dạng giọng nói khi bé đọc / nói' }))),
+  );
+}
