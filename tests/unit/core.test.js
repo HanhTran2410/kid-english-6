@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
 import { ZONES, ZONE_BY_ID, greeting } from '../../app/js/zones.js';
 import { openDatabase, STORES, progressKey, getProgress, updateProgress } from '../../app/js/db.js';
-import { loadSettings, saveSetting, DEFAULT_SETTINGS } from '../../app/js/settings.js';
+import { loadSettings, saveSetting, DEFAULT_SETTINGS, VI_HELP_AFTER, needsVietnameseHelp } from '../../app/js/settings.js';
 import { newSession, addTime, isTimeUp } from '../../app/js/session.js';
 
 test('4 khu học theo thứ tự Read, Spell, Talk, Quest; mỗi khu có tên Anh / Việt, màu, câu mở đầu', () => {
@@ -38,6 +38,13 @@ test('kho dữ liệu: đủ các kho; cài đặt mặc định + đã lưu; ti
   assert.equal(p.seen, 1);
   assert.equal(p.correct, 1);
   db.close();
+});
+
+test('giải thích tiếng Việt: mặc định bật; nói đúng một lần khi sai liên tiếp đủ VI_HELP_AFTER lần; tắt thì không nói', () => {
+  const on = { ...DEFAULT_SETTINGS };
+  assert.equal(on.explainVietnamese, true);
+  assert.deepEqual([1, 2, 3, 4].map((n) => needsVietnameseHelp(on, n)), [false, true, false, false]);
+  assert.equal(needsVietnameseHelp({ ...on, explainVietnamese: false }, VI_HELP_AFTER), false);
 });
 
 test('thời gian buổi học: mặc định 20 phút', () => {

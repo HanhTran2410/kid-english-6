@@ -63,8 +63,26 @@ Màn chính: Olly chào (gọi tên bé nếu bố mẹ đã nhập) + 4 thẻ t
 - Sao theo bài (1–3 sao), huy hiệu theo khu.
 - Không có "Try again" kiểu chê: sai thì Olly chỉ chỗ sai và làm mẫu.
 
-## 5. Bài học
-- Bài có sẵn trong app (JSON) cho từng khu; bố mẹ tạo thêm bằng prompt AI như kid-english (sẽ chép `prompts.js` và sửa cho từng loại bài).
+### 4.1. Olly giải thích bằng tiếng Việt (đã chốt)
+- Bé sai **2 lần liên tiếp** ở cùng một mục (`VI_HELP_AFTER`) → Olly nói **một lần** lời giải thích ngắn bằng tiếng Việt, rồi làm mẫu lại bằng tiếng Anh. Ví dụ: *"Chữ s và h đứng cạnh nhau đọc là /sh/, như khi mình bảo im lặng: shhh. Ship!"*
+- Lần sai thứ 3 trở đi không giải thích lại (tránh lặp); Olly làm mẫu tiếng Anh và cho qua như cũ.
+- Lời giải thích hiện kèm phụ đề tiếng Việt. Máy không có giọng tiếng Việt thì chỉ hiện chữ.
+- Mỗi bài viết sẵn lời giải thích cho từng mục (trường `vi`); bài tạo bằng prompt AI thì prompt yêu cầu AI viết luôn.
+- Bố mẹ tắt được ở Cài đặt → 🇻🇳 Giải thích tiếng Việt (mặc định bật).
+
+## 5. Bài học — hai mạch nội dung (đã chốt)
+Mỗi bài thuộc một trong hai mạch; màn chọn bài của khu có hai tab:
+
+### 5.1. 📘 Theo sách lớp 1 (Việt Nam)
+- Bố mẹ chọn bộ sách bé đang học ở Cài đặt (ví dụ *Tiếng Anh 1 Global Success*, *i-Learn Smart Start 1*, *Family and Friends 1*…) — chỉ dùng để đặt tên và sắp xếp bài theo Unit.
+- App **không** chép nội dung sách (bản quyền): bài theo Unit do bố mẹ tạo bằng **prompt AI** — bố mẹ chọn sách + Unit + gõ (hoặc chụp) danh sách từ / câu của Unit; prompt yêu cầu AI dựng bài Read / Spell / Talk từ đúng các từ đó.
+- Một Unit → một "gói bài": đọc từ, đánh vần từ, hội thoại theo mẫu câu của Unit.
+
+### 5.2. 🔤 Phonics quốc tế
+- Bài **có sẵn trong app**, theo thứ tự âm kiểu Jolly Phonics (7 nhóm: s a t i p n → c/k e h r m d → g o u l f b → ai j oa ie ee or → z w ng v oo → y x ch sh th → qu ou oi ue er ar), rồi âm ghép, nguyên âm dài, từ 2 âm tiết. kid-english đã có nhóm 1 (`jolly.js`) — chép cách làm và mở rộng.
+- Mỗi nhóm: nghe âm → ghép âm thành từ (Read) → đánh vần từ (Spell) → đọc câu chỉ dùng âm đã học (decodable sentences).
+- Sight words theo danh sách thông dụng (the, I, to, you, said, was…), chia theo nhóm, xen giữa các nhóm âm.
+
 - Ảnh: dùng lại cách "ảnh lưới" của kid-english (một ảnh nhiều ô, app tự cắt).
 
 ## 6. Góc bố mẹ
@@ -72,9 +90,9 @@ Màn chính: Olly chào (gọi tên bé nếu bố mẹ đã nhập) + 4 thẻ t
 - Sẽ làm: Tiến độ (theo khu, mục hay sai), Nghe lại giọng bé, Quản lý / tạo bài, Sao lưu – khôi phục.
 
 ## 7. Thứ tự làm (đề xuất)
-1. **0.1.0 — khung app** *(xong)*: Bắt đầu, màn chính 4 khu, khu "sắp có", Olly đi ngủ khi hết giờ, Góc bố mẹ → Cài đặt, service worker, test.
-2. **0.2 — Read: ghép âm + sight words** (bài có sẵn CVC, sh/ch/th).
-3. **0.3 — Spell: nghe – xếp chữ + điền chữ thiếu**.
+1. **0.1.0 — khung app** *(xong)*: Bắt đầu, màn chính 4 khu, khu "sắp có", Olly đi ngủ khi hết giờ, Góc bố mẹ → Cài đặt, service worker, test. **0.1.1**: cài đặt giải thích tiếng Việt, deploy GitHub Pages.
+2. **0.2 — Read: ghép âm + sight words** theo mạch Phonics quốc tế (nhóm 1–3 có sẵn), có giải thích tiếng Việt khi sai.
+3. **0.3 — Spell: nghe – xếp chữ + điền chữ thiếu**; prompt tạo "gói bài" theo Unit sách lớp 1.
 4. **0.4 — Read: đọc câu + truyện ngắn**.
 5. **0.5 — Talk** (chép phần nghe bé nói của kid-english).
 6. **0.6 — Spell: tập viết chữ**.
@@ -85,8 +103,8 @@ Màn chính: Olly chào (gọi tên bé nếu bố mẹ đã nhập) + 4 thẻ t
 - `npm test`: unit (lõi, service worker đủ file, phiên bản trùng nhau, import đúng file).
 - `npx playwright test`: giao diện trên Chromium cỡ iPad, `?fast` chạy nhanh, giọng đọc giả.
 
-## 9. Câu hỏi còn mở
-- Tên app / tên nhân vật cuối cùng (tạm: **Olly English**, cú Olly).
-- Có cần tiếng Việt (Olly giải thích bằng tiếng Việt khi bé sai nhiều lần) không?
-- Chương trình theo sách giáo khoa lớp 1 ở Việt Nam hay theo phonics quốc tế (Jolly Phonics / Oxford)?
-- Deploy ở đâu (GitHub Pages như kid-english?).
+## 9. Đã chốt (2026-11-04)
+- Tên app **Olly English**, nhân vật **cú Olly**.
+- Nội dung **cả hai mạch**: theo sách tiếng Anh lớp 1 ở Việt Nam (bài tạo bằng prompt theo Unit) và Phonics quốc tế (bài có sẵn) — mục 5.
+- **Có** giải thích tiếng Việt khi bé sai nhiều lần — mục 4.1.
+- Deploy **GitHub Pages** như kid-english: repo `HanhTran2410/kid-english-6`, workflow `.github/workflows/deploy.yml` (chạy `npm test` rồi đưa `app/` lên Pages). Link: `https://hanhtran2410.github.io/kid-english-6/`.

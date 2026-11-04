@@ -4,6 +4,7 @@ import { h, toast } from '../../ui.js';
 import { APP_VERSION } from '../../app.js';
 import { englishVoices } from '../../speech/tts.js';
 import { LIMIT_OPTIONS } from '../../session.js';
+import { VI_HELP_AFTER } from '../../settings.js';
 import { parentLayout, goParent, section, field } from './common.js';
 
 const VIEWS = {
@@ -65,8 +66,14 @@ function settingsView(app) {
     app.recognizer.setAllowed(recog.checked);
   });
 
+  const viHelp = h('input', { type: 'checkbox', checked: s.explainVietnamese });
+  viHelp.addEventListener('change', () => app.setSetting('explainVietnamese', viHelp.checked));
+  const viNote = app.speaker.hasVietnamese ? null : h('p.field-hint', { text: 'Máy chưa có giọng tiếng Việt: Olly sẽ hiện lời giải thích bằng chữ.' });
+
   body.append(
     section('👧 Bé', field('Tên bé (Olly gọi tên khi chào)', childName)),
+    section('🇻🇳 Giải thích tiếng Việt',
+      h('label.check', {}, viHelp, h('span', { text: ` Bé sai ${VI_HELP_AFTER} lần liên tiếp thì Olly giải thích bằng tiếng Việt` })), viNote),
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test),
     section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),
     section('🎤 Nhận dạng giọng nói', h('label.check', {}, recog, h('span', { text: ' Dùng nhận dạng giọng nói khi bé đọc / nói' }))),

@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS = {
   voiceURI2: null, // giọng thứ hai (nhân vật phụ trong Nói chuyện); null = tự chọn
   rate: 0.9, // bé 6 tuổi nghe được nhanh hơn bé 3 tuổi (kid-english: 0.8)
   readVietnamese: false,
+  // Bé sai nhiều lần (VI_HELP_AFTER lần liên tiếp cùng một mục) thì Olly giải thích bằng tiếng Việt (SPEC mục 4.1).
+  explainVietnamese: true,
   recordVoice: true,
   useRecognition: true,
   micOnlyWhenListening: false,
@@ -17,6 +19,12 @@ export const DEFAULT_SETTINGS = {
 };
 
 export const BACKUP_REMIND_DAYS = 7;
+
+/** Sai liên tiếp bao nhiêu lần ở cùng một mục thì Olly giải thích bằng tiếng Việt. */
+export const VI_HELP_AFTER = 2;
+
+/** Có nói lời giải thích tiếng Việt sau lần sai thứ `wrongInRow` không (chỉ nói một lần mỗi mục, đúng lúc chạm ngưỡng). */
+export const needsVietnameseHelp = (settings, wrongInRow) => Boolean(settings.explainVietnamese) && wrongInRow === VI_HELP_AFTER;
 
 export async function loadSettings(db) {
   const rows = await db.getAll('settings');

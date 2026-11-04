@@ -18,6 +18,15 @@ npm test            # unit
 npx playwright test # giao diện (Chromium, cỡ iPad)
 ```
 
+## Đưa lên GitHub Pages
+
+1. Tạo repo **public** tên `kid-english-6` trên tài khoản `HanhTran2410` (không tạo README / .gitignore), rồi đẩy code lên nhánh `main`.
+2. Trên GitHub: **Settings → Pages → Build and deployment → Source: GitHub Actions**.
+3. Mỗi lần đẩy code lên `main`, workflow [.github/workflows/deploy.yml](.github/workflows/deploy.yml) chạy test rồi đưa thư mục `app/` lên Pages.
+4. Link app: `https://hanhtran2410.github.io/kid-english-6/` — địa chỉ khác kid-english nên dữ liệu hai app tách riêng.
+
+Repo chỉ chứa code, icon, font. Không có dữ liệu nào của bé.
+
 ## Mỗi lần sửa code
 
 Tăng phiên bản ở 3 chỗ cho trùng nhau: `APP_VERSION` (app/js/app.js), `VERSION` (app/sw.js), `version` (package.json). Thêm / bớt file trong `app/` thì sửa danh sách `ASSETS` trong `app/sw.js` (test sẽ báo nếu thiếu).
