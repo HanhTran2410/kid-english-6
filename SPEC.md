@@ -129,7 +129,7 @@ Cách dùng lại: **chép phần lõi sang** (không chia sẻ code giữa hai 
 Một bức tranh, Olly đọc lần lượt các câu tả tranh; mũi tên chỉ vào chỗ câu đang tả; câu chạy ở thanh chữ dưới tranh; dòng tiếng Việt bật / tắt được. Chi tiết: [SPEC-ta-tranh.md](SPEC-ta-tranh.md).
 
 ### 3.2. ✏️ Spell / Đánh vần và viết
-- **Nghe – xếp ô**: Olly đọc từ → bé kéo **ô grapheme** (ô *sh* là một miếng, khi đã học âm đó) vào chỗ trống, có ô nhiễu. Ô sai rung, Olly phát **âm** đúng của chỗ đó (file). Chạm ô bất kỳ → nghe âm của ô.
+- **Nghe – xếp ô**: Olly đọc từ → bé **chạm** ô trong khay để đặt vào chỗ trống kế tiếp (chạm ô đã đặt → về khay; chạm dễ hơn kéo với bé 6 tuổi trên iPad — đã chốt 2026-11-06) — **ô grapheme** (ô *sh* là một miếng, khi đã học âm đó) vào chỗ trống, có ô nhiễu. Ô sai rung, Olly phát **âm** đúng của chỗ đó (file). Chạm ô bất kỳ → nghe âm của ô.
 - **Điền ô thiếu**: *c _ t* + hình.
 - **Tập viết chữ** (chữ thường a–z), làm ở 0.6. Mỗi chữ có dữ liệu nét: danh sách nét theo thứ tự, mỗi nét là đường điểm theo chiều viết.
   - Chấm từng nét theo: **điểm bắt đầu** (trong 15% khung chữ), **hướng** (đi cùng chiều đường mẫu), **phủ đường** (≥ 75% điểm mẫu nằm gần nét bé vẽ), **thứ tự nét**, **đủ nét**.
@@ -347,7 +347,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.1.3 *(xong)* | 🔔 Chuông thông báo (bản mới, bài mới) + Thư viện bài `app/shared/` (6.3) |
 | 0.1.4 *(xong)* | 18 file âm rời nhóm 1–3 (`app/sounds/phonics/`, nguồn trong `app/sounds/CREDITS.md`), bố mẹ đã duyệt |
 | 0.2.0 *(xong)* | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0); số phiên bản ở màn hình chính. **Chưa làm, để sau:** nhắc "còn 2 phút" (1.1), đưa thẻ tricky quá hạn của bài khác vào lượt ôn (3.1.4), bài Theo sách mới chơi được các hoạt động sounds / blend / tricky |
-| 0.3 | Spell: xếp ô + điền ô; prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
+| 0.3.0 *(xong)* | Spell: xếp ô + điền ô (bài nhóm 1–3 có sẵn, sao riêng của khu Spell) |
+| **0.3.1** | prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
 | 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |

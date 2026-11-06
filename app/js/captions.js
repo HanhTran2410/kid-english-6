@@ -9,6 +9,8 @@ export const QUESTIONS = {
   readIt: () => 'Your turn! Read it!',
   whichOne: (word) => `Which one is ${word}?`,
   findWord: (word) => `Find the word: ${word}!`,
+  spellIt: (word) => `Spell: ${word}!`,
+  whatsMissing: (word) => `What is missing in ${word}?`,
 };
 
 /**
@@ -27,6 +29,8 @@ export function translateQuestion(en, meaning = '') {
     [/^Your turn! Read it!$/, () => 'Đến lượt bé! Bé đọc to từ này nhé.'],
     [/^Which one is (.+)\?$/, (x) => `Hình nào là "${x}"${m}? Bé chạm vào hình đúng.`],
     [/^Find the word: (.+)!$/, (x) => `Tìm chữ "${x}"${m}! Bé chạm vào thẻ đúng.`],
+    [/^Spell: (.+)!$/, (x) => `Xếp các ô thành từ "${x}"${m}. Bé chạm từng ô theo đúng thứ tự âm.`],
+    [/^What is missing in (.+)\?$/, (x) => `Từ "${x}"${m} còn thiếu ô nào? Bé chạm vào ô đúng.`],
   ];
   for (const [re, fn] of rules) {
     const hit = s.match(re);

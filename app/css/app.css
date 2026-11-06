@@ -381,3 +381,17 @@ input[type='text'], input[type='number'], select, textarea {
 .done-stars { margin: 0; font-family: var(--emoji); font-size: clamp(48px, 9vw, 72px); letter-spacing: 6px; }
 .done-actions { display: flex; gap: 18px; }
 @media (prefers-reduced-motion: reduce) { .hint, .star-burst span, .stage.listening::after { animation: none; } }
+
+/* ---------- Khu Spell (read/spell-stages.js): chỗ trống + khay ô ---------- */
+.spell-pic { font-family: var(--emoji); font-size: clamp(70px, 13vmin, 110px); line-height: 1; }
+.slot-row { display: flex; gap: 12px; }
+.slot { display: grid; place-items: center; min-width: clamp(84px, 15vmin, 120px); height: clamp(100px, 18vmin, 140px); border-radius: 22px; border: 4px dashed rgba(38, 33, 92, 0.25); background: rgba(255, 255, 255, 0.5); }
+.slot .tile { box-shadow: none; }
+.slot.fixed { border-style: solid; border-color: transparent; background: var(--card); box-shadow: var(--shadow); font-size: clamp(56px, 10vmin, 84px); font-weight: 800; }
+.slot.gap { font-size: clamp(56px, 10vmin, 84px); font-weight: 800; color: var(--mint); }
+.slot.right { border-color: var(--mint); background: #d3f9d8; }
+.slot.hint { border-color: var(--mint); }
+.tray { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; min-height: clamp(100px, 18vmin, 140px); }
+/* Ô đáp án của "điền ô thiếu" khác hẳn hàng chữ của từ (dễ nhầm khi cùng kiểu). */
+.fill-choice { background: #f3f0ff; border: 4px solid var(--lilac); color: #5f3dc4; }
+.slot-row + .choices { margin-top: 18px; padding-top: 18px; border-top: 3px dotted rgba(38, 33, 92, 0.15); }

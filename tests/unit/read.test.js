@@ -55,7 +55,7 @@ test('phụ đề 🔊 (SPEC 4.5): mọi mẫu câu hỏi của Olly đều có 
 });
 
 test('màn học chỉ dùng câu hỏi trong QUESTIONS (để phụ đề luôn dịch được)', async () => {
-  for (const f of ['read/stages.js', 'read/teacher.js']) {
+  for (const f of ['read/stages.js', 'read/teacher.js', 'read/spell-stages.js']) {
     const src = await readFile(new URL(`../../app/js/${f}`, import.meta.url), 'utf8');
     for (const m of src.matchAll(/(?:ask|choose)\(\s*\{?[^)]*?question:\s*([^,}]+)/g)) {
       assert.match(m[1].trim(), /^QUESTIONS\./, `${f}: câu hỏi "${m[1].trim()}" phải lấy từ QUESTIONS`);
@@ -91,4 +91,38 @@ test('đáp án nhiễu: khác đáp án đúng, không trùng nhau, ưu tiên t
   }
   assert.deepEqual(distractors('x', ['x'], ['x', 'y', 'z'], 2, rand).sort(), ['y', 'z']);
   assert.deepEqual(shuffle([1, 2, 3, 4], rand).sort(), [1, 2, 3, 4]);
+});
+
+test('Spell: chỗ xếp sai; ô nhiễu không cùng âm với từ (c/k/ck); ô bỏ trống ưu tiên nguyên âm giữa', async () => {
+  const { wrongSlots, spellDistractors, missingIndex } = await import('../../app/js/read/spell-stages.js');
+  assert.deepEqual(wrongSlots(['c', 'a', 't'], ['c', 'a', 't']), []);
+  assert.deepEqual(wrongSlots(['k', 't', 'a'], ['c', 'a', 't']), [0, 1, 2]);
+  const cat = { en: 'cat', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'] };
+  let seed = 7;
+  const rand = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  for (let i = 0; i < 40; i++) {
+    const d = spellDistractors(cat, 2, 2, rand);
+    assert.equal(d.length, 2);
+    for (const g of d) assert.ok(!['c', 'k', 'ck', 'a', 't'].includes(g), g);
+  }
+  assert.ok(spellDistractors({ en: 'frog', graphemes: ['f', 'r', 'o', 'g'], sounds: ['f', 'r', 'o', 'g'] }, 3, 2, rand).every((g) => !['f', 'r', 'o', 'g'].includes(g)));
+  assert.equal(missingIndex(cat), 1);
+  assert.equal(missingIndex({ graphemes: ['a', 'n', 't'] }), 2);
+  assert.equal(missingIndex({ graphemes: ['f', 'r', 'o', 'g'] }), 2);
+});
+
+test('Spell trong bài có sẵn: mỗi bài có xếp ô + điền ô thiếu (từ có hình); sao Spell lưu riêng khóa "lesson:<id>/spell"', async () => {
+  const { lessonKey, emptyLesson } = await import('../../app/js/progress.js');
+  const { isPlayable } = await import('../../app/js/read/stages.js');
+  for (const l of BUILTIN_LESSONS) {
+    assert.ok(isPlayable(l, 'spell') && isPlayable(l, 'read'), l.id);
+    const spell = l.activities.find((a) => a.type === 'spell').items;
+    const fill = l.activities.find((a) => a.type === 'fill').items;
+    assert.ok(spell.length >= 5 && fill.length >= 2, l.id);
+    for (const id of [...spell, ...fill]) assert.ok(l.words.find((w) => w.id === id).emoji, id);
+    assert.equal(countSteps(l, 'spell'), spell.length + fill.length);
+  }
+  assert.equal(lessonKey('phonics-g1'), 'lesson:phonics-g1');
+  assert.equal(lessonKey('phonics-g1', 'spell'), 'lesson:phonics-g1/spell');
+  assert.equal(emptyLesson('phonics-g1', 'spell').lessonId, 'phonics-g1');
 });

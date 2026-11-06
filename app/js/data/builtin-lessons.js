@@ -1,4 +1,5 @@
-// Bài Phonics có sẵn trong app (SPEC mục 5.2): nhóm âm 1–3 kiểu Jolly. Mỗi bài: gặp âm mới → ghép âm thành từ → tricky words.
+// Bài Phonics có sẵn trong app (SPEC mục 5.2): nhóm âm 1–3 kiểu Jolly. Khu Read: gặp âm mới → ghép âm thành từ → tricky words;
+// khu Spell: nghe – xếp ô → điền ô thiếu.
 // Ô chữ (grapheme) và mã âm tính bằng `toGraphemes` theo các âm đã học tới nhóm của bài — test kiểm tra mọi từ
 // đọc được bằng âm đã học (decodable) và mọi âm có file ghi âm.
 
@@ -36,6 +37,8 @@ function lessonFor(group) {
     const graphemes = toGraphemes(en, learned);
     return { id: en, en, graphemes, sounds: graphemes.map(soundOfGrapheme), tags: ['cvc'], vi, emoji };
   });
+  const pictured = words.filter((w) => w.emoji);
+  const spellCount = Math.min(6, pictured.length - 2);
   const tricky = TRICKY_BY_GROUP[group].map((en) => ({
     id: `tricky-${en.toLowerCase()}`, en, tags: ['tricky'], vi: TRICKY_VI[en],
     explainVi: `Từ "${en}" là từ cần nhớ mặt chữ (không đọc theo âm được).`,
@@ -54,6 +57,9 @@ function lessonFor(group) {
       { type: 'sounds', sounds: g.sounds },
       { type: 'blend', items: words.map((w) => w.id) },
       { type: 'tricky', items: tricky.map((w) => w.id) },
+      // Khu Spell (SPEC 3.2): xếp ô tối đa 6 từ có hình (chừa ≥ 2 từ), điền ô thiếu các từ có hình còn lại (tối đa 4).
+      { type: 'spell', items: pictured.slice(0, spellCount).map((w) => w.id) },
+      { type: 'fill', items: pictured.slice(spellCount, spellCount + 4).map((w) => w.id) },
     ],
   };
 }

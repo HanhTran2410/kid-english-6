@@ -155,18 +155,25 @@ export async function trickyWords(ctx, words) {
   }
 }
 
-/** Số bước của bài (để vẽ thanh tiến độ). */
-export function countSteps(lesson) {
+/** Loại hoạt động của từng khu (màn học chỉ chạy các loại của khu mình). */
+export const ZONE_TYPES = {
+  read: new Set(['sounds', 'blend', 'tricky']),
+  spell: new Set(['spell', 'fill']),
+};
+
+/** Bài có hoạt động nào khu `zone` chơi được không. */
+export const isPlayable = (lesson, zone = 'read') => lesson.activities.some((a) => ZONE_TYPES[zone]?.has(a.type));
+export const isReadable = (lesson) => isPlayable(lesson, 'read');
+
+/** Số bước của bài trong một khu (để vẽ thanh tiến độ). */
+export function countSteps(lesson, zone = 'read') {
   const byId = new Map(lesson.words.map((w) => [w.id, w]));
   let n = 0;
   for (const a of lesson.activities) {
-    if (a.type === 'sounds') n += 2 * a.sounds.filter((s) => RECORDED_SOUNDS.has(s) && SOUND_INFO[s]).length;
-    if (a.type === 'blend') n += a.items.filter((id) => byId.get(id)?.graphemes).length;
+    if (!ZONE_TYPES[zone].has(a.type)) continue;
+    if (a.type === 'sounds') n += 2 * a.sounds.filter((x) => RECORDED_SOUNDS.has(x) && SOUND_INFO[x]).length;
     if (a.type === 'tricky') n += 2 * a.items.length;
+    if (['blend', 'spell', 'fill'].includes(a.type)) n += a.items.filter((id) => byId.get(id)?.graphemes).length;
   }
   return n;
 }
-
-/** Bài có hoạt động nào khu Read chơi được không. */
-export const READ_TYPES = new Set(['sounds', 'blend', 'tricky']);
-export const isReadable = (lesson) => lesson.activities.some((a) => READ_TYPES.has(a.type));

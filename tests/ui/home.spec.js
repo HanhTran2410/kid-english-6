@@ -9,8 +9,8 @@ test('màn chính: Olly chào, 4 khu học; khu chưa làm "Sắp mở" → Olly
   for (const name of ['Tập đọc', 'Đánh vần và viết', 'Nói chuyện', 'Thử thách']) await expect(page.getByRole('button', { name })).toBeVisible();
   await expect.poll(() => spoken(page)).toContain('Hi! What do you want to do today?');
 
-  await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
-  await expect(page.locator('.zone-card[data-zone="spell"] .soon-chip')).toHaveText('Sắp mở');
+  await page.getByRole('button', { name: 'Nói chuyện' }).click();
+  await expect(page.locator('.zone-card[data-zone="talk"] .soon-chip')).toHaveText('Sắp mở');
   await expect.poll(() => spoken(page)).toContain('Khu này Olly đang chuẩn bị nhé!');
   await expect(page.locator('.zone-card')).toHaveCount(4);
 

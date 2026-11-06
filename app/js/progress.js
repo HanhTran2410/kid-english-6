@@ -1,7 +1,7 @@
 // Tiến độ (SPEC mục 4.3) và sao (mục 4.4). Ba loại bản ghi trong kho `progress`:
 //   mục:   "<lessonId>/<activity>/<itemId>"  — ví dụ "phonics-g6/blend/ship"; cùng từ ở hai bài là hai bản ghi
 //   tricky: "tricky/card/<từ>"               — bộ thẻ dùng chung cho mọi bài (lessonId "tricky")
-//   bài:   "lesson:<lessonId>"
+//   bài:   "lesson:<lessonId>" (khu Read), "lesson:<lessonId>/spell" (khu Spell — sao riêng)
 // Mọi bản ghi có `lessonId` (chỉ mục) để lấy / xóa theo bài.
 
 import { normalizeWord } from './text.js';
@@ -17,7 +17,8 @@ export const RESULT = {
 export const TRICKY_LESSON = 'tricky';
 
 export const itemKey = (lessonId, activity, itemId) => `${lessonId}/${activity}/${itemId}`;
-export const lessonKey = (lessonId) => `lesson:${lessonId}`;
+/** Khóa tiến độ bài; `part` = khu khác Read (vd. 'spell') → sao riêng của khu đó: "lesson:<id>/spell". */
+export const lessonKey = (lessonId, part = '') => `lesson:${lessonId}${part ? `/${part}` : ''}`;
 export const trickyRef = (word) => ({ lessonId: TRICKY_LESSON, activity: 'card', itemId: normalizeWord(word) });
 
 export const emptyItem = ({ lessonId, activity, itemId }) => ({
@@ -34,8 +35,8 @@ export const emptyItem = ({ lessonId, activity, itemId }) => ({
   lastAt: null,
 });
 
-export const emptyLesson = (lessonId) => ({
-  key: lessonKey(lessonId), lessonId, plays: 0, completedAt: null, bestStars: 0, lastStars: 0, lastAt: null,
+export const emptyLesson = (lessonId, part = '') => ({
+  key: lessonKey(lessonId, part), lessonId, part, plays: 0, completedAt: null, bestStars: 0, lastStars: 0, lastAt: null,
 });
 
 /** Cộng một kết quả vào tiến độ mục (hàm thuần). */
@@ -104,12 +105,12 @@ export async function recordTricky(db, word, result, now = Date.now()) {
   return next;
 }
 
-export async function getLessonProgress(db, lessonId) {
-  return (await db.get('progress', lessonKey(lessonId))) ?? emptyLesson(lessonId);
+export async function getLessonProgress(db, lessonId, part = '') {
+  return (await db.get('progress', lessonKey(lessonId, part))) ?? emptyLesson(lessonId, part);
 }
 
-export async function recordLessonDone(db, lessonId, stars, now = Date.now()) {
-  const next = applyLessonDone(await getLessonProgress(db, lessonId), stars, now);
+export async function recordLessonDone(db, lessonId, stars, now = Date.now(), part = '') {
+  const next = applyLessonDone(await getLessonProgress(db, lessonId, part), stars, now);
   await db.put('progress', next);
   return next;
 }
