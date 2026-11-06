@@ -1,8 +1,8 @@
 // Bốn khu học của app (SPEC.md mục 3). Mỗi khu một màu, một câu Olly nói khi mở.
-// `ready: false`: khu chưa làm — màn chính vẫn hiện thẻ, chạm vào thì Olly báo "sắp có".
+// `ready: false`: khu chưa làm — màn chính hiện thẻ mờ "Sắp mở", chạm vào thì Olly nói một câu tiếng Việt (SPEC 3.0).
 
 export const ZONES = [
-  { id: 'read', emoji: '📖', en: 'Read', vi: 'Tập đọc', color: 'sky', intro: "Let's read together!", ready: false },
+  { id: 'read', emoji: '📖', en: 'Read', vi: 'Tập đọc', color: 'sky', intro: "Let's read together!", ready: true },
   { id: 'spell', emoji: '✏️', en: 'Spell', vi: 'Đánh vần và viết', color: 'mint', intro: "Let's spell some words!", ready: false },
   { id: 'talk', emoji: '💬', en: 'Talk', vi: 'Nói chuyện', color: 'coral', intro: "Let's have a chat!", ready: false },
   { id: 'quest', emoji: '🧩', en: 'Quest', vi: 'Thử thách', color: 'lilac', intro: 'Are you ready for a quest?', ready: false },

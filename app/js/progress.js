@@ -74,6 +74,18 @@ export function applyLessonDone(p, stars, now = Date.now()) {
   };
 }
 
+/** Hộp ôn tricky words (SPEC 3.1.4): số ngày tới lần gặp lại theo hộp 0–4. Hộp 0 = gặp lại trong buổi. */
+export const TRICKY_BOX_DAYS = [0, 1, 3, 7, 14];
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Cập nhật hộp ôn của một thẻ tricky (hàm thuần): sai → hộp 0; có gợi ý → giữ hộp; độc lập → +1. */
+export function applyTricky(p, result, now = Date.now()) {
+  const box = p.box ?? 0;
+  const next = result === RESULT.MISSED ? 0 : result === RESULT.INDEPENDENT ? Math.min(box + 1, TRICKY_BOX_DAYS.length - 1) : box;
+  const days = result === RESULT.HELPED ? Math.max(1, TRICKY_BOX_DAYS[next]) : TRICKY_BOX_DAYS[next];
+  return { ...applyResult(p, result, now), box: next, nextAt: now + days * DAY_MS };
+}
+
 // ---------- Đọc / ghi trong IndexedDB ----------
 
 export async function getItem(db, ref) {
@@ -82,6 +94,12 @@ export async function getItem(db, ref) {
 
 export async function recordItem(db, ref, result, now = Date.now()) {
   const next = applyResult(await getItem(db, ref), result, now);
+  await db.put('progress', next);
+  return next;
+}
+
+export async function recordTricky(db, word, result, now = Date.now()) {
+  const next = applyTricky(await getItem(db, trickyRef(word)), result, now);
   await db.put('progress', next);
   return next;
 }

@@ -32,6 +32,55 @@ export const RECORDED_SOUNDS = new Set([
 
 export const soundUrl = (soundId) => `sounds/phonics/${soundId}.mp3`;
 
+/**
+ * Thông tin hiển thị của các âm đã có file: chữ viết ra âm đó, từ ví dụ (bắt đầu bằng âm đó), lời giải thích tiếng Việt
+ * khi bé nhầm 2 lần (SPEC 4.1). `{name}` = tên nhân vật (Olly) — không viết cứng tên.
+ */
+export const SOUND_INFO = {
+  s: { letters: 's', word: 'sun', emoji: '☀️', vi: 'Âm /s/ giống tiếng rắn kêu: sss. Chữ s, như trong "sun" (mặt trời).' },
+  a: { letters: 'a', word: 'ant', emoji: '🐜', vi: 'Âm /a/ ngắn, há miệng: a, a. Chữ a, như trong "ant" (con kiến).' },
+  t: { letters: 't', word: 'tent', emoji: '⛺', vi: 'Âm /t/ bật nhẹ đầu lưỡi: t, t, t. Chữ t, như trong "tent" (cái lều).' },
+  i: { letters: 'i', word: 'ink', emoji: '🖋️', vi: 'Âm /i/ ngắn: i, i. Chữ i, như trong "ink" (mực).' },
+  p: { letters: 'p', word: 'pig', emoji: '🐷', vi: 'Âm /p/ bật hơi ở môi như thổi nến: p, p, p. Chữ p, như trong "pig" (con lợn).' },
+  n: { letters: 'n', word: 'nest', emoji: '🪺', vi: 'Âm /n/ ngân trong mũi: nnn. Chữ n, như trong "nest" (cái tổ).' },
+  k: { letters: 'c k ck', word: 'cat', emoji: '🐱', vi: 'Âm /k/ bật ở cổ họng: k, k, k. Chữ c, chữ k và hai chữ ck đều đọc như vậy, như trong "cat" (con mèo).' },
+  e: { letters: 'e', word: 'egg', emoji: '🥚', vi: 'Âm /e/ ngắn: e, e. Chữ e, như trong "egg" (quả trứng).' },
+  h: { letters: 'h', word: 'hat', emoji: '🎩', vi: 'Âm /h/ chỉ là hơi thở ra: h, h. Chữ h, như trong "hat" (cái mũ).' },
+  r: { letters: 'r', word: 'rat', emoji: '🐀', vi: 'Âm /r/ uốn lưỡi, không rung: rrr. Chữ r, như trong "rat" (con chuột).' },
+  m: { letters: 'm', word: 'map', emoji: '🗺️', vi: 'Âm /m/ ngậm môi ngân: mmm. Chữ m, như trong "map" (bản đồ).' },
+  d: { letters: 'd', word: 'dad', emoji: '👨', vi: 'Âm /d/ bật nhẹ đầu lưỡi, có rung: d, d. Chữ d, như trong "dad" (bố).' },
+  g: { letters: 'g', word: 'gas', emoji: '⛽', vi: 'Âm /g/ bật ở cổ họng, có rung: g, g. Chữ g, như trong "gas" (xăng).' },
+  o: { letters: 'o', word: 'on', emoji: '💡', vi: 'Âm /o/ ngắn, tròn miệng: o, o. Chữ o, như trong "on" (bật).' },
+  u: { letters: 'u', word: 'up', emoji: '⬆️', vi: 'Âm /u/ ngắn giống "ơ": u, u. Chữ u, như trong "up" (lên trên).' },
+  l: { letters: 'l', word: 'leg', emoji: '🦵', vi: 'Âm /l/ đặt lưỡi lên răng ngân: lll. Chữ l, như trong "leg" (cái chân).' },
+  f: { letters: 'f', word: 'fish', emoji: '🐟', vi: 'Âm /f/ cắn nhẹ môi dưới thổi hơi: fff. Chữ f, như trong "fish" (con cá).' },
+  b: { letters: 'b', word: 'bed', emoji: '🛏️', vi: 'Âm /b/ bật ở môi, có rung: b, b. Chữ b, như trong "bed" (cái giường).' },
+};
+
+/** Tricky words nhóm 1 kiểu Jolly, chia theo nhóm âm đang học (SPEC 3.1.4). */
+export const TRICKY_BY_GROUP = {
+  1: ['I', 'the'],
+  2: ['he', 'she', 'me', 'we'],
+  3: ['be', 'was', 'to', 'do'],
+};
+
+/** c, k, ck cùng âm `k`; các grapheme khác trùng mã âm (tới nhóm 3). */
+export const soundOfGrapheme = (g) => (g === 'c' || g === 'ck' ? 'k' : g);
+
+/** Tách từ thành grapheme theo tập đã học, ưu tiên grapheme dài (ck trước c). Không tách được → null. */
+export function toGraphemes(word, learned) {
+  const w = String(word).toLowerCase();
+  const sorted = [...learned].filter((g) => !g.includes('_')).sort((a, b) => b.length - a.length);
+  const out = [];
+  for (let i = 0; i < w.length;) {
+    const g = sorted.find((x) => w.startsWith(x, i));
+    if (!g) return null;
+    out.push(g);
+    i += g.length;
+  }
+  return out;
+}
+
 /** Các grapheme bé đã học tính tới hết nhóm `group` (≥ 8: thêm split digraph). */
 export function learnedGraphemes(group) {
   const set = new Set(GROUPS.filter((g) => g.group <= group).flatMap((g) => g.graphemes));

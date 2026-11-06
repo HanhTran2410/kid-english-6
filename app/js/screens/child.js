@@ -1,10 +1,10 @@
-// Các màn hình của bé: Bắt đầu, màn hình chính (4 khu học), khu chưa làm, Olly đi ngủ.
+// Các màn hình của bé: Bắt đầu, màn hình chính (4 khu học, khu chưa làm hiện "Sắp mở"), Olly đi ngủ.
 
 import { h, holdButton, toast } from '../ui.js';
 import { APP_VERSION } from '../app.js';
 import { play } from '../speech/sfx.js';
 import { mascotElement } from '../mascot.js';
-import { ZONES, ZONE_BY_ID, greeting } from '../zones.js';
+import { ZONES, greeting } from '../zones.js';
 import { noticeBell } from './notice-bell.js';
 
 export const PARENT_HOLD_MS = 3000;
@@ -70,36 +70,32 @@ export function startScreen(app) {
 
 export function homeScreen(app) {
   app.root.className = 'child-screen home';
-  const cards = ZONES.map((zone) => h(`button.zone-card.zone-${zone.color}`, {
+  const cards = ZONES.map((zone) => h(`button.zone-card.zone-${zone.color}${zone.ready ? '' : '.soon'}`, {
     type: 'button',
     'aria-label': zone.vi,
     dataset: { zone: zone.id },
     onclick: () => {
       play('tap');
-      app.go(zone.ready ? zone.id : 'zone-soon', { zone: zone.id });
+      if (zone.ready) app.go(zone.id);
+      else soonNotice(app);
     },
-  }, h('span.zone-emoji', { text: zone.emoji }), h('span.zone-en', { text: zone.en }), h('span.zone-vi', { text: zone.vi })));
+  }, h('span.zone-emoji', { text: zone.emoji }), h('span.zone-en', { text: zone.en }), h('span.zone-vi', { text: zone.vi }),
+  zone.ready ? null : h('span.soon-chip', { text: 'Sắp mở' })));
 
   app.root.append(
     h('header.home-top', {}, mascotElement('home-olly'), h('p.home-hello', { text: greeting(app.settings.childName) }), noticeBell(app), parentButton(app)),
     h('div.zone-grid', {}, ...cards),
+    h('p.version.home-version', { text: `v${APP_VERSION}` }),
   );
   say(app, greeting(app.settings.childName));
 }
 
-// ---------- Khu chưa làm ----------
+// ---------- Khu chưa làm (SPEC 3.0): không chuyển màn, không tính giờ ----------
 
-export function zoneSoonScreen(app, { zone: id } = {}) {
-  const zone = ZONE_BY_ID.get(id) ?? ZONES[0];
-  app.root.className = `child-screen zone-soon zone-${zone.color}`;
-  app.root.append(
-    h('header.child-top', {}, homeButton(app)),
-    h('div.soon-body', {}, mascotElement('soon-olly'),
-      h('p.soon-title', { text: `${zone.emoji} ${zone.en}` }),
-      h('p.soon-text', { text: 'Coming soon!' }),
-      h('p.soon-vi', { text: `Khu "${zone.vi}" đang được làm.` })),
-  );
-  say(app, `${zone.intro} Coming soon!`);
+function soonNotice(app) {
+  const text = `Khu này ${app.settings.characterName || 'Olly'} đang chuẩn bị nhé!`;
+  toast(text, 3000);
+  app.speaker.speak(text, { lang: 'vi' }).catch(() => {});
 }
 
 // ---------- Hết giờ: Olly đi ngủ ----------

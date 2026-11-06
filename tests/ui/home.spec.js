@@ -1,8 +1,8 @@
-// Khung app: Bắt đầu → màn chính 4 khu học → khu chưa làm → về; Góc bố mẹ → Cài đặt tên bé → Olly gọi tên.
+// Khung app: Bắt đầu → màn chính 4 khu học (khu chưa làm "Sắp mở") → Read → về; Góc bố mẹ → Cài đặt tên bé → Olly gọi tên.
 import { test, expect } from '@playwright/test';
 import { fakeSpeech, startApp, openParent, spoken } from './helpers.js';
 
-test('màn chính: Olly chào, 4 khu học; chạm khu chưa làm → "Coming soon!", 🏠 về màn chính', async ({ page }) => {
+test('màn chính: Olly chào, 4 khu học; khu chưa làm "Sắp mở" → Olly nói tiếng Việt, không chuyển màn; Read → 🏠 về', async ({ page }) => {
   await fakeSpeech(page);
   await startApp(page);
   await expect(page.locator('.zone-card')).toHaveCount(4);
@@ -10,8 +10,12 @@ test('màn chính: Olly chào, 4 khu học; chạm khu chưa làm → "Coming so
   await expect.poll(() => spoken(page)).toContain('Hi! What do you want to do today?');
 
   await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
-  await expect(page.locator('.soon-text')).toHaveText('Coming soon!');
-  await expect.poll(() => spoken(page)).toContain("Let's spell some words! Coming soon!");
+  await expect(page.locator('.zone-card[data-zone="spell"] .soon-chip')).toHaveText('Sắp mở');
+  await expect.poll(() => spoken(page)).toContain('Khu này Olly đang chuẩn bị nhé!');
+  await expect(page.locator('.zone-card')).toHaveCount(4);
+
+  await page.getByRole('button', { name: 'Tập đọc' }).click();
+  await expect(page.locator('.lesson-card')).toHaveCount(3);
   await page.getByRole('button', { name: 'Về màn hình chính' }).click();
   await expect(page.locator('.zone-card')).toHaveCount(4);
 });
