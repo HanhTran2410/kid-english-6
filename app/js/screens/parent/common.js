@@ -1,6 +1,7 @@
-// Khung chung cho các trang của Góc bố mẹ (lấy từ kid-english, bỏ chuông thông báo).
+// Khung chung cho các trang của Góc bố mẹ (lấy từ kid-english), có chuông thông báo (SPEC 6.3).
 
 import { h } from '../../ui.js';
+import { noticeBell } from '../notice-bell.js';
 
 /**
  * @param {{ title: string, back?: () => void }} options back = null ở trang menu
@@ -12,7 +13,8 @@ export function parentLayout(app, { title, back }) {
   app.root.append(
     h('header.parent-top', {},
       back ? h('button.btn.back', { type: 'button', text: '← Quay lại', onclick: back }) : null,
-      h('h1', { text: title })),
+      h('h1', { text: title }),
+      noticeBell(app)),
     body,
   );
   return body;

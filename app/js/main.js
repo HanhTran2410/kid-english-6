@@ -5,6 +5,7 @@ import { openDatabase } from './db.js';
 import { loadSettings } from './settings.js';
 import { startScreen, homeScreen, zoneSoonScreen, sleepScreen } from './screens/child.js';
 import { parentScreen } from './screens/parent/index.js';
+import { startNotices } from './notices.js';
 
 async function registerServiceWorker(app) {
   if (!('serviceWorker' in navigator) || new URLSearchParams(location.search).has('nosw')) return;
@@ -61,6 +62,7 @@ async function boot() {
 
   app.go('start');
   registerServiceWorker(app);
+  startNotices(app);
 }
 
 boot();

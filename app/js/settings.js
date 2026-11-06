@@ -15,6 +15,7 @@ export const DEFAULT_SETTINGS = {
   limitMinutes: 20, // null = tắt giới hạn
   firstUseAt: null,
   lastBackupAt: null,
+  librarySeen: null, // Thư viện bài đã thấy ("file|dung lượng"); null = chưa kiểm lần nào (SPEC 6.3)
   session: null,
 };
 

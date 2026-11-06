@@ -22,7 +22,8 @@ const swSource = await readFile(path.join(appDir, 'sw.js'), 'utf8');
 const assets = [...swSource.matchAll(/^\s+'([^']+)',$/gm)].map((m) => m[1]);
 
 test('service worker cache mọi file cần để chạy offline', async () => {
-  const files = (await walk(appDir)).filter((f) => f !== 'sw.js' && !/LICENSE|OFL\.txt|CREDITS\.md/.test(f));
+  // Thư viện bài (shared/) không lưu offline (SPEC mục 6.3).
+  const files = (await walk(appDir)).filter((f) => f !== 'sw.js' && !f.startsWith('shared/') && !/LICENSE|OFL\.txt|CREDITS\.md/.test(f));
   const missing = files.filter((f) => !assets.includes(f));
   assert.deepEqual(missing, [], `Thêm vào ASSETS trong sw.js: ${missing.join(', ')}`);
   const extra = assets.filter((a) => a !== './' && !files.includes(a));

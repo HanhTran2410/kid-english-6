@@ -1,20 +1,23 @@
-// Góc bố mẹ → 📚 Bài học (SPEC mục 5.5): danh sách bài, nhập bài JSON (dán / chọn file) có kiểm tra, xuất, xóa.
+// Góc bố mẹ → 📚 Bài học (SPEC mục 5.5, 6.3): danh sách bài, nhập bài JSON (dán / chọn file) có kiểm tra, xuất, xóa;
+// Thư viện bài (bài dùng chung trên GitHub) — nhập bài bất kỳ, kể cả bài cũ chuông thông báo không báo.
 
 import { h, toast, confirmDialog, formatDateTime } from '../../ui.js';
 import { parseLessonText, validateLesson, itemsToReset } from '../../lesson.js';
 import { saveLesson, replaceLesson, deleteLesson } from '../../db.js';
 import { parentLayout, goParent, section, notice } from './common.js';
+import { fetchLibrary } from '../../library.js';
+import { importShared, errorText } from '../notice-bell.js';
 
 const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
 
 export function lessonsView(app) {
   const body = parentLayout(app, { title: 'Bài học', back: () => goParent(app) });
-  const listBox = h('div.lesson-list');
+  const listBox = h('div.lesson-list.my-lessons');
   const refresh = () => renderList(app, listBox).catch((err) => {
     console.error(err);
     toast('Không đọc được danh sách bài.');
   });
-  body.append(importPanel(app, refresh), section('Các bài đã có', listBox));
+  body.append(importPanel(app, refresh), libraryPanel(app, refresh), section('Các bài đã có', listBox));
   refresh();
 }
 
@@ -161,4 +164,48 @@ function exportLesson(lesson) {
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function libraryPanel(app, refresh) {
+  const box = h('div.lesson-list.library-list', {}, h('p.muted', { text: 'Đang tải danh sách…' }));
+  const load = async () => {
+    let files;
+    try {
+      files = await fetchLibrary();
+    } catch {
+      box.replaceChildren(h('p.muted', { text: 'Không tải được Thư viện bài (cần mạng).' }));
+      return;
+    }
+    if (!files.length) {
+      box.replaceChildren(h('p.muted', { text: 'Thư viện chưa có bài nào.' }));
+      return;
+    }
+    const have = new Set((await app.db.getAll('lessons')).map((l) => l.id));
+    box.replaceChildren(...files.map((f) => {
+      const status = h('span.field-hint');
+      const btn = h('button.btn.primary', {
+        type: 'button',
+        text: have.has(f.id) ? 'Cập nhật' : 'Nhập',
+        onclick: async () => {
+          btn.disabled = true;
+          status.textContent = 'Đang nhập…';
+          try {
+            toast(`${await importShared(app, f)}.`, 3500);
+            status.textContent = '✅ Đã có trên máy';
+            btn.textContent = 'Cập nhật';
+            refresh();
+          } catch (err) {
+            status.textContent = `⚠️ ${errorText(err)}`;
+          }
+          btn.disabled = false;
+        },
+      });
+      return h('div.lesson-row', { dataset: { file: f.file } },
+        h('div.lesson-info', {}, h('strong', { text: `${f.emoji || '📘'} ${f.title}` }), f.titleVi ? h('span', { text: ` — ${f.titleVi}` }) : null,
+          h('div.field-hint', { text: [TRACK_LABEL[f.track] ?? f.track, `id: ${f.id}`, have.has(f.id) ? 'đã có trên máy' : null].filter(Boolean).join(' · ') }), status),
+        h('div.lesson-actions', {}, btn));
+    }));
+  };
+  load();
+  return section('📚 Thư viện bài', h('p.field-hint', { text: 'Bài dùng chung đặt trên GitHub (thư mục app/shared/). Có bài mới thì chuông 🔔 báo.' }), box);
 }

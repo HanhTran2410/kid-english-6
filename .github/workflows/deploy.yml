@@ -26,6 +26,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - run: node scripts/make-shared-index.mjs
 
   deploy:
     needs: test
@@ -36,6 +37,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/configure-pages@v5
+      # Thư viện bài (SPEC mục 6.3): tạo lại app/shared/index.json từ các file .json (kể cả file tải lên qua web GitHub).
+      - run: node scripts/make-shared-index.mjs
       - uses: actions/upload-pages-artifact@v3
         with:
           path: app

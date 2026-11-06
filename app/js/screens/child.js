@@ -5,6 +5,7 @@ import { APP_VERSION } from '../app.js';
 import { play } from '../speech/sfx.js';
 import { mascotElement } from '../mascot.js';
 import { ZONES, ZONE_BY_ID, greeting } from '../zones.js';
+import { noticeBell } from './notice-bell.js';
 
 export const PARENT_HOLD_MS = 3000;
 
@@ -80,7 +81,7 @@ export function homeScreen(app) {
   }, h('span.zone-emoji', { text: zone.emoji }), h('span.zone-en', { text: zone.en }), h('span.zone-vi', { text: zone.vi })));
 
   app.root.append(
-    h('header.home-top', {}, mascotElement('home-olly'), h('p.home-hello', { text: greeting(app.settings.childName) }), parentButton(app)),
+    h('header.home-top', {}, mascotElement('home-olly'), h('p.home-hello', { text: greeting(app.settings.childName) }), noticeBell(app), parentButton(app)),
     h('div.zone-grid', {}, ...cards),
   );
   say(app, greeting(app.settings.childName));

@@ -185,6 +185,13 @@ Nhận dạng giọng nói của trình duyệt nghe giọng trẻ em kém, ph�
 - Bé từ chối quyền micro: màn của bé không hiện hộp thoại; Góc bố mẹ hiện hướng dẫn cấp lại quyền (Safari: Cài đặt → Safari → Micro).
 - Nhận dạng lỗi giữa buổi → tắt cho hết buổi (như hiện có), các hoạt động tự chuyển sang nút ✅.
 
+### 4.5. 🔊 Nghe lại + phụ đề tiếng Việt (giống kid-english)
+- Mọi màn hoạt động có nút **🔊** ở góc trên. Chạm → Olly đọc lại câu đang hỏi / câu mẫu đang chờ bé, đồng thời hiện **phụ đề 2 dòng** khoảng 5 giây: câu tiếng Anh + câu **tiếng Việt** giải thích Olly đang hỏi gì / bé cần làm gì. Ví dụ: *"Which one is ship?"* → *"Hình nào là "ship" (con tàu)? Bé chạm vào hình đúng."*
+- Tiếng Việt lấy từ: bảng dịch câu hỏi theo mẫu cố định của app (`captions.js`, như kid-english) + nghĩa của từ / câu trong bài (`vi`). Không nhận ra mẫu câu thì chỉ hiện "Nghĩa: …" nếu có.
+- Luôn có, không phụ thuộc `showVi` (bé / bố mẹ chủ động bấm khi cần). Khác mục 4.1: 4.1 là Olly **tự** giải thích khi bé sai 2 lần; 🔊 là **bấm** để nghe lại và đọc chữ.
+- Test: mọi câu hỏi Olly dùng trong code đều có dòng dịch trong bảng mẫu.
+- Làm cùng các màn hoạt động đầu tiên (0.2).
+
 ### 4.3. Tiến độ
 Kho `progress` (khóa `key`), ba loại bản ghi:
 
@@ -322,12 +329,23 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 - Sao lưu / khôi phục do bố mẹ bấm (file zip, chép `backup.js` từ kid-english). Khôi phục: hỏi lại trước khi ghi đè. Google Drive / GitHub (sau cùng) cũng chỉ là **sao lưu tùy chọn bố mẹ bấm**, không đồng bộ tự động.
 - Nhắc sao lưu sau 7 ngày (`BACKUP_REMIND_DAYS`).
 
+### 6.3. 🔔 Chuông thông báo và Thư viện bài (giống kid-english) — có từ 0.1.3
+- Chuông 🔔 ở **màn hình chính** và đầu mọi trang **Góc bố mẹ**; chỉ hiện khi có tin, có số tin, rung nhẹ 3 lần (tắt khi máy bật giảm chuyển động).
+- Hai loại tin:
+  - **Có bản app mới**: so `VERSION` trong `sw.js` trên mạng với bản đang chạy → nút **Cập nhật ngay** (áp dụng service worker mới, tải lại app).
+  - **Bài mới / bài cập nhật trong Thư viện bài**: nút **Nhập** / **Cập nhật** từng bài, **Nhập hết**, **Để sau** (đánh dấu đã xem, chuông ẩn).
+- Kiểm tra lúc mở app (sau 2 giây), khi quay lại app, mỗi 30 phút. Cần mạng; lỗi mạng thì im lặng, giữ kết quả cũ.
+- **Thư viện bài**: bố mẹ tải file `.json` của bài vào `app/shared/` trên GitHub (kể cả qua trang web GitHub). Lúc deploy, `scripts/make-shared-index.mjs` kiểm tra từng bài (5.5) và tạo `app/shared/index.json`; bài lỗi không vào danh sách và log deploy báo lỗi. Thư viện **không** lưu offline.
+- "Bài mới" = file chưa thấy trên máy này (`librarySeen`: tên file|dung lượng); đổi dung lượng = bài cập nhật. **Lần đầu** lấy cả thư viện hiện có làm mốc (không báo cả thư viện cũ) → bài cũ nhập ở Góc bố mẹ → Bài học → **📚 Thư viện bài**.
+- Nhập bài trùng id bài đã có → thay bài, giữ tiến độ các mục còn nguyên (5.5). Trùng id bài có sẵn của app → báo lỗi.
+
 ## 7. Thứ tự làm
 | Phiên bản | Phạm vi |
 |---|---|
 | 0.1.x *(xong)* | Khung app, Cài đặt, DB, giọng đọc, service worker, deploy |
 | 0.1.2 *(xong)* | Lõi dữ liệu: khóa tiến độ mới + sao (4.3–4.4, `progress.js`), kết quả khi bé đọc (4.2, `listen.js`), so khớp chặt (`match.js`), chữ và âm (`phonics.js`), gói bài + kiểm tra (`lesson.js`), Góc bố mẹ → 📚 Bài học: **nhập / xuất / thay / xóa bài JSON** (5.5), `CORE.md` + test chống lệch (2.2) |
-| **0.2** | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, sao; thẻ khu "Sắp mở" (3.0) |
+| 0.1.3 *(xong)* | 🔔 Chuông thông báo (bản mới, bài mới) + Thư viện bài `app/shared/` (6.3) |
+| **0.2** | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0) |
 | 0.3 | Spell: xếp ô + điền ô; prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
 | 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |
 | 0.5 | Talk |
