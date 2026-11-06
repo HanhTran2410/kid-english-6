@@ -223,3 +223,15 @@ test('lưu, thay, xóa bài: tiến độ theo đúng quy tắc; cùng từ ở 
   await assert.rejects(deleteLesson(db, 'built'), /không xóa được/);
   db.close();
 });
+
+test('âm rời đã duyệt: mỗi mã có file mp3 và dòng nguồn trong CREDITS.md; nhóm 1–3 đủ', async () => {
+  const { readFile, stat } = await import('node:fs/promises');
+  const { RECORDED_SOUNDS, GROUPS, soundUrl } = await import('../../app/js/phonics.js');
+  const app = new URL('../../app/', import.meta.url);
+  const credits = await readFile(new URL('sounds/CREDITS.md', app), 'utf8');
+  for (const id of RECORDED_SOUNDS) {
+    assert.ok((await stat(new URL(soundUrl(id), app))).size > 1000, `${id}.mp3`);
+    assert.match(credits, new RegExp(`^\| ${id}\.mp3 \|`, 'm'), `CREDITS.md thiếu ${id}.mp3`);
+  }
+  for (const g of GROUPS.slice(0, 3)) for (const s of g.sounds) assert.ok(RECORDED_SOUNDS.has(s), s);
+});

@@ -345,6 +345,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.1.x *(xong)* | Khung app, Cài đặt, DB, giọng đọc, service worker, deploy |
 | 0.1.2 *(xong)* | Lõi dữ liệu: khóa tiến độ mới + sao (4.3–4.4, `progress.js`), kết quả khi bé đọc (4.2, `listen.js`), so khớp chặt (`match.js`), chữ và âm (`phonics.js`), gói bài + kiểm tra (`lesson.js`), Góc bố mẹ → 📚 Bài học: **nhập / xuất / thay / xóa bài JSON** (5.5), `CORE.md` + test chống lệch (2.2) |
 | 0.1.3 *(xong)* | 🔔 Chuông thông báo (bản mới, bài mới) + Thư viện bài `app/shared/` (6.3) |
+| 0.1.4 *(xong)* | 18 file âm rời nhóm 1–3 (`app/sounds/phonics/`, nguồn trong `app/sounds/CREDITS.md`), bố mẹ đã duyệt |
 | **0.2** | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0) |
 | 0.3 | Spell: xếp ô + điền ô; prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
 | 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |

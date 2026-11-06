@@ -3,7 +3,7 @@
 // Thêm/bớt file trong app/ thì cập nhật ASSETS (test tests/unit/sw.test.js sẽ báo nếu thiếu).
 // Thư viện bài app/shared/ (file .json + index.json) KHÔNG lưu offline: tải từ mạng khi bố mẹ mở Thư viện bài / chuông kiểm tra.
 
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const CACHE = `kid-english-6-${VERSION}`;
 
 const ASSETS = [
@@ -49,6 +49,24 @@ const ASSETS = [
   'js/ui.js',
   'js/zones.js',
   'manifest.webmanifest',
+  'sounds/phonics/a.mp3',
+  'sounds/phonics/b.mp3',
+  'sounds/phonics/d.mp3',
+  'sounds/phonics/e.mp3',
+  'sounds/phonics/f.mp3',
+  'sounds/phonics/g.mp3',
+  'sounds/phonics/h.mp3',
+  'sounds/phonics/i.mp3',
+  'sounds/phonics/k.mp3',
+  'sounds/phonics/l.mp3',
+  'sounds/phonics/m.mp3',
+  'sounds/phonics/n.mp3',
+  'sounds/phonics/o.mp3',
+  'sounds/phonics/p.mp3',
+  'sounds/phonics/r.mp3',
+  'sounds/phonics/s.mp3',
+  'sounds/phonics/t.mp3',
+  'sounds/phonics/u.mp3',
 ];
 
 self.addEventListener('install', (event) => {

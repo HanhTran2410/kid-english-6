@@ -24,7 +24,11 @@ export const AFTER_GROUPS = 8; // "nhóm" của split digraph
 export const SOUND_IDS = new Set(GROUPS.flatMap((g) => g.sounds));
 
 /** Mã âm đã có file ghi âm trong app (bố mẹ đã nghe duyệt — xem app/sounds/CREDITS.md). Thêm dần theo nhóm. */
-export const RECORDED_SOUNDS = new Set(['s', 'a', 't', 'i', 'p', 'n']);
+export const RECORDED_SOUNDS = new Set([
+  's', 'a', 't', 'i', 'p', 'n', // nhóm 1
+  'k', 'e', 'h', 'r', 'm', 'd', // nhóm 2
+  'g', 'o', 'u', 'l', 'f', 'b', // nhóm 3
+]);
 
 export const soundUrl = (soundId) => `sounds/phonics/${soundId}.mp3`;
 
