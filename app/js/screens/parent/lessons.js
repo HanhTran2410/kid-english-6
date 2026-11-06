@@ -65,7 +65,7 @@ async function renderList(app, box) {
 }
 
 function importPanel(app, refresh) {
-  const area = h('textarea.lesson-json', { rows: 8, placeholder: 'Dán JSON của bài vào đây (AI trả về thế nào cứ dán nguyên, kể cả khối ```json).', spellcheck: false });
+  const area = h('textarea.lesson-json.import-json', { rows: 8, placeholder: 'Dán JSON của bài vào đây (AI trả về thế nào cứ dán nguyên, kể cả khối ```json).', spellcheck: false });
   const file = h('input', { type: 'file', accept: '.json,application/json,text/plain' });
   const result = h('div.import-result');
 

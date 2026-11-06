@@ -25,7 +25,7 @@ async function openLessons(page) {
 }
 
 const paste = async (page, data) => {
-  await page.locator('.lesson-json').fill(typeof data === 'string' ? data : `\`\`\`json\n${JSON.stringify(data)}\n\`\`\``);
+  await page.locator('.import-json').fill(typeof data === 'string' ? data : `\`\`\`json\n${JSON.stringify(data)}\n\`\`\``);
   await page.getByRole('button', { name: 'Kiểm tra' }).click();
 };
 
