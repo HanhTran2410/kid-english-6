@@ -348,7 +348,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.1.4 *(xong)* | 18 file âm rời nhóm 1–3 (`app/sounds/phonics/`, nguồn trong `app/sounds/CREDITS.md`), bố mẹ đã duyệt |
 | 0.2.0 *(xong)* | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0); số phiên bản ở màn hình chính. **Chưa làm, để sau:** nhắc "còn 2 phút" (1.1), đưa thẻ tricky quá hạn của bài khác vào lượt ôn (3.1.4), bài Theo sách mới chơi được các hoạt động sounds / blend / tricky |
 | 0.3.0 *(xong)* | Spell: xếp ô + điền ô (bài nhóm 1–3 có sẵn, sao riêng của khu Spell) |
-| **0.3.1** | prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
+| 0.3.1 *(xong)* | Tạo bài theo sách bằng AI, 2 bước (5.7): Góc bố mẹ → Bài học → ✨ Tạo bài theo sách (chọn sách + Unit, prompt 1 lấy từ từ ảnh, prompt 2 tạo bài, nháp tự lưu, dán JSON vào Nhập bài); lúc học, từ có âm chưa có file ghi âm tự chuyển sang tricky (`adaptForPlay`) — thêm file âm nhóm 4–7 thì bài cũ tự ghép âm được |
+| **0.3.2** | Màn cắt ảnh lưới (5.6); file âm nhóm 4–7 (bố mẹ duyệt) |
 | 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |

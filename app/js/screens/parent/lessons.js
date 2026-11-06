@@ -1,5 +1,5 @@
 // Góc bố mẹ → 📚 Bài học (SPEC mục 5.5, 6.3): danh sách bài, nhập bài JSON (dán / chọn file) có kiểm tra, xuất, xóa;
-// Thư viện bài (bài dùng chung trên GitHub) — nhập bài bất kỳ, kể cả bài cũ chuông thông báo không báo.
+// ✨ Tạo bài theo sách bằng AI (create.js); Thư viện bài (bài dùng chung trên GitHub) — nhập bài bất kỳ, kể cả bài cũ chuông thông báo không báo.
 
 import { h, toast, confirmDialog, formatDateTime } from '../../ui.js';
 import { parseLessonText, validateLesson, itemsToReset } from '../../lesson.js';
@@ -7,6 +7,7 @@ import { saveLesson, replaceLesson, deleteLesson } from '../../db.js';
 import { parentLayout, goParent, section, notice } from './common.js';
 import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
+import { createPanel } from './create.js';
 
 const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
 
@@ -17,7 +18,12 @@ export function lessonsView(app) {
     console.error(err);
     toast('Không đọc được danh sách bài.');
   });
-  body.append(importPanel(app, refresh), libraryPanel(app, refresh), section('Các bài đã có', listBox));
+  const imp = importPanel(app, refresh);
+  const focusImport = () => {
+    imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    imp.querySelector('textarea')?.focus({ preventScroll: true });
+  };
+  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox));
   refresh();
 }
 

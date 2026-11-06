@@ -13,6 +13,7 @@ import { getLessonProgress, recordLessonDone, starsFor } from '../progress.js';
 import { activityLayout, Teacher } from '../read/teacher.js';
 import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
 import { spellWords, fillWords } from '../read/spell-stages.js';
+import { adaptForPlay } from '../lesson-prompts.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -22,11 +23,13 @@ const partOf = (zone) => (zone === 'read' ? '' : zone);
 /** Mọi bài khu `zone` chơi được: bài có sẵn (theo nhóm) rồi bài bố mẹ nhập (cũ trước). */
 export async function zoneLessons(db, zone = 'read') {
   const imported = (await db.getAll('lessons')).filter((l) => !BUILTIN_BY_ID.has(l.id)).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
-  return [...BUILTIN_LESSONS, ...imported].filter((l) => isPlayable(l, zone));
+  return [...BUILTIN_LESSONS, ...imported].map(adaptForPlay).filter((l) => isPlayable(l, zone));
 }
 
+/** Bài để học: từ có âm chưa có file → học như tricky word (adaptForPlay). */
 async function getLesson(app, id) {
-  return BUILTIN_BY_ID.get(id) ?? app.db.get('lessons', id);
+  const lesson = BUILTIN_BY_ID.get(id) ?? await app.db.get('lessons', id);
+  return lesson ? adaptForPlay(lesson) : null;
 }
 
 const lessonEmoji = (l) => l.words.find((w) => w.emoji)?.emoji ?? (l.track === 'book' ? '📘' : '🔤');
