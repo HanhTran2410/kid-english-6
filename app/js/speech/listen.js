@@ -1,6 +1,6 @@
-// Gộp đo âm lượng + nhận dạng + ghi âm → KHỚP / CÓ TIẾNG / IM LẶNG / CHỈ NGHE (SPEC mục 4.3.1).
+// Gộp đo âm lượng + nhận dạng + ghi âm → KHỚP / CÓ TIẾNG / IM LẶNG / CHỈ NGHE; khi chấm đọc thêm `outcome` (SPEC mục 4.2).
 
-import { matches } from '../match.js';
+import { matches, exactMatch } from '../match.js';
 import { sleep, checkAbort, scaled } from '../timing.js';
 import { VoiceRecorder, canRecord } from './recorder.js';
 import { audioContext } from './sfx.js';
@@ -25,23 +25,52 @@ export function decideResult({ micReady, matched, voiced, heardAnything }) {
 }
 
 /**
+ * Kết quả khi bé ĐỌC một từ / cụm cần chấm (Olly English, SPEC 4.2). Nghe giọng trẻ em không đáng tin,
+ * nên chỉ `MISS` mới tính là sai; `UNCLEAR` / `UNHEARD` mời đọc lại, không ghi đúng / sai;
+ * `NONE` = không đánh giá được (không mic / không nhận dạng) → bé bấm ✅.
+ */
+export const OUTCOME = {
+  OK: 'ok',
+  UNCLEAR: 'unclear',
+  MISS: 'miss',
+  UNHEARD: 'unheard',
+  NONE: 'none',
+};
+
+/**
+ * @param {{ micReady: boolean, recognizing: boolean, heard: string[] }} state
+ * @param {string} target từ / cụm cần đọc
+ * @param {string[]} [homophones] từ đồng âm được chấp nhận
+ */
+export function readingOutcome({ micReady, recognizing, heard }, target, homophones = []) {
+  if (!micReady || !recognizing) return OUTCOME.NONE;
+  const alts = (heard ?? []).filter((h) => String(h).trim());
+  if (!alts.length) return OUTCOME.UNHEARD;
+  if (exactMatch(alts, target, homophones)) return OUTCOME.OK;
+  if (matches(alts, [target, ...homophones])) return OUTCOME.UNCLEAR;
+  return OUTCOME.MISS;
+}
+
+/**
  * Nghe bé nói một lượt.
  * @param {{ mic: import('./microphone.js').Microphone, recognizer: import('./recognition.js').Recognizer,
  *           keywords: string[], record?: boolean, maxMs?: number, signal?: AbortSignal,
  *           onLevel?: (ratio: number) => void }} options
  *   `matcher` (tùy chọn): thay cách so khớp mặc định theo `keywords`; `stopWhen`: nghe ra gì thì dừng sớm
  *   (mặc định = khớp). Mẫu câu (SPEC-patterns mục 4.4) chỉ dừng sớm khi bé nói đủ câu.
- * @returns {Promise<{ result: string, recording: null | { blob: Blob, mimeType: string, durationMs: number }, heard: string[] }>}
+ * @returns {Promise<{ result: string, recording: null | { blob: Blob, mimeType: string, durationMs: number }, heard: string[], outcome?: string }>}
+ *   outcome: chỉ có khi truyền `target` (từ / cụm bé cần đọc) — xem `readingOutcome`
  *   heard: các phương án nhận dạng nghe được (rỗng khi không có nhận dạng)
  */
-export async function listen({ mic, recognizer, keywords, record = false, maxMs = 5500, signal, onLevel, matcher = null, stopWhen = null }) {
+export async function listen({ mic, recognizer, keywords, record = false, maxMs = 5500, signal, onLevel, matcher = null, stopWhen = null, target = null, homophones = [] }) {
   if (!mic?.ready) {
     // Chế độ chỉ nghe: chờ 3 giây cho bé nói theo, không đánh giá.
     await sleep(3000, signal);
-    return { result: RESULT.LISTEN_ONLY, recording: null, heard: [] };
+    return { result: RESULT.LISTEN_ONLY, recording: null, heard: [], ...(target != null && { outcome: OUTCOME.NONE }) };
   }
-  const isMatch = matcher ?? ((alts) => matches(alts, keywords));
-  const shouldStop = stopWhen ?? isMatch;
+  const isMatch = matcher ?? ((alts) => matches(alts, keywords ?? (target != null ? [target, ...homophones] : [])));
+  // Đang chấm đọc (`target`): chỉ dừng sớm khi nghe ĐÚNG từ, không dừng khi mới nghe "gần giống".
+  const shouldStop = stopWhen ?? (target != null ? (alts) => exactMatch(alts, target, homophones) : isMatch);
 
   // AudioContext bị iOS tạm dừng (sau cuộc gọi, khi mic vừa bật…) thì đo âm lượng luôn ra 0: thử bật lại.
   const ctx = audioContext();
@@ -108,5 +137,8 @@ export async function listen({ mic, recognizer, keywords, record = false, maxMs 
 
   const result = decideResult({ micReady: true, matched, voiced, heardAnything: heard.some((h) => h.trim()) });
   const keep = recording && result !== RESULT.SILENT && recording.blob.size > 0;
-  return { result, recording: keep ? recording : null, heard };
+  const outcome = target != null
+    ? readingOutcome({ micReady: true, recognizing: Boolean(session && recognizer?.enabled), heard }, target, homophones)
+    : undefined;
+  return { result, recording: keep ? recording : null, heard, ...(outcome && { outcome }) };
 }

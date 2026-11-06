@@ -7,7 +7,7 @@ export const DB_NAME = 'kid-english-6';
 export const STORES = ['lessons', 'images', 'recordings', 'progress', 'settings'];
 
 // Mỗi phần tử là một bước nâng cấp cấu trúc. Thêm bước mới vào CUỐI khi đổi cấu trúc; dữ liệu cũ tự chuyển khi mở app.
-const MIGRATIONS = [
+export const MIGRATIONS = [
   (db) => {
     db.createObjectStore('lessons', { keyPath: 'id' });
     const images = db.createObjectStore('images', { keyPath: 'id' });
@@ -16,9 +16,13 @@ const MIGRATIONS = [
     const recordings = db.createObjectStore('recordings', { keyPath: 'id' });
     recordings.createIndex('lessonId', 'lessonId');
     recordings.createIndex('word', 'word');
-    // Tiến độ theo "mục" (từ đọc, từ đánh vần, câu…): key dạng "<loại>:<nội dung>", ví dụ "read:ship", "spell:cat".
     db.createObjectStore('progress', { keyPath: 'key' });
     db.createObjectStore('settings', { keyPath: 'key' });
+  },
+  // 0.1.2: tiến độ theo bài / hoạt động / mục (SPEC 4.3) — chỉ mục lessonId để lấy / xóa tiến độ theo bài.
+  // (Bản 0.1.x chưa ghi tiến độ nào nên không có dữ liệu cũ phải chuyển.)
+  (db, tx) => {
+    tx.objectStore('progress').createIndex('lessonId', 'lessonId');
   },
 ];
 
@@ -112,20 +116,45 @@ export async function hasRecordingToday(db, word, now = Date.now()) {
   return list.some((r) => dayKey(new Date(r.date)) === today);
 }
 
-// ---------- Tiến độ ----------
+// ---------- Bài học (SPEC 5.5) — tiến độ: xem progress.js ----------
 
-/** Khóa tiến độ: "read:ship", "spell:cat", "talk:greetings/1"… */
-export const progressKey = (kind, item) => `${kind}:${normalizeWord(item)}`;
-
-export const emptyProgress = (key) => ({ key, seen: 0, correct: 0, streak: 0, lastAt: null });
-
-export async function getProgress(db, key) {
-  return (await db.get('progress', key)) ?? emptyProgress(key);
+/** Lưu bài mới (bài đã qua `validateLesson`). */
+export async function saveLesson(db, lesson, now = Date.now()) {
+  const record = { ...lesson, createdAt: lesson.createdAt ?? now, updatedAt: now };
+  await db.put('lessons', record);
+  return record;
 }
 
-/** Đọc → biến đổi → lưu tiến độ một mục. */
-export async function updateProgress(db, key, fn) {
-  const next = fn(await getProgress(db, key));
-  await db.put('progress', next);
-  return next;
+/**
+ * Thay bài cũ cùng id bằng bản mới. Mục bị xóa / đổi chữ thì xóa tiến độ của mục đó; mục còn nguyên giữ tiến độ.
+ * @param {string[]} resetItemIds từ `itemsToReset(cũ, mới)`
+ */
+export async function replaceLesson(db, lesson, resetItemIds, now = Date.now()) {
+  const old = await db.get('lessons', lesson.id);
+  const reset = new Set(resetItemIds);
+  const drop = reset.size ? (await db.getAllByIndex('progress', 'lessonId', lesson.id)).filter((p) => reset.has(p.itemId)) : [];
+  const record = { ...lesson, createdAt: old?.createdAt ?? lesson.createdAt ?? now, updatedAt: now };
+  await db.write(['lessons', 'progress'], (tx) => {
+    tx.objectStore('lessons').put(record);
+    for (const p of drop) tx.objectStore('progress').delete(p.key);
+  });
+  return record;
+}
+
+/** Xóa bài + tiến độ, ảnh, ghi âm của bài (tiến độ tricky words dùng chung giữ nguyên). Bài có sẵn không xóa. */
+export async function deleteLesson(db, lessonId) {
+  const lesson = await db.get('lessons', lessonId);
+  if (lesson?.builtIn) throw new Error('Bài có sẵn của app không xóa được.');
+  const [progress, images, recordings] = await Promise.all([
+    db.getAllByIndex('progress', 'lessonId', lessonId),
+    db.getAllByIndex('images', 'lessonId', lessonId),
+    db.getAllByIndex('recordings', 'lessonId', lessonId),
+  ]);
+  await db.write(['lessons', 'progress', 'images', 'recordings'], (tx) => {
+    tx.objectStore('lessons').delete(lessonId);
+    for (const p of progress) tx.objectStore('progress').delete(p.key);
+    for (const i of images) tx.objectStore('images').delete(i.id);
+    for (const r of recordings) tx.objectStore('recordings').delete(r.id);
+  });
+  return { progress: progress.length, images: images.length, recordings: recordings.length };
 }

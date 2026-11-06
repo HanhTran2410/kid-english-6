@@ -70,6 +70,28 @@ function containsPhrase(heardTokens, target) {
   return heardTokens.some((t) => similarWord(t, targetTokens.join('')));
 }
 
+/**
+ * So khớp CHẶT để chấm bé đọc (SPEC 4.2): một phương án nhận dạng chứa đúng từ / cụm cần đọc
+ * (chuẩn hóa xong bằng nhau), hoặc một từ đồng âm bài cho phép (sea / see). Không chấp nhận "gần giống":
+ * ship ≠ shop ≠ sheep — `matches()` ở trên quá lỏng cho việc này.
+ * @param {string|string[]} heard
+ * @param {string} target
+ * @param {string[]} [homophones]
+ */
+export function exactMatch(heard, target, homophones = []) {
+  const targets = [target, ...homophones].map((t) => tokenize(t)).filter((t) => t.length);
+  const alternatives = Array.isArray(heard) ? heard : [heard];
+  return alternatives.some((alt) => {
+    const tokens = tokenize(alt);
+    return targets.some((tt) => {
+      for (let i = 0; i + tt.length <= tokens.length; i++) {
+        if (tt.every((w, k) => tokens[i + k] === w)) return true;
+      }
+      return false;
+    });
+  });
+}
+
 /** Các từ khóa cần nghe: từ của lượt + các từ chính trong câu mẫu của bé (SPEC 4.3 B). */
 export function keywordsFor(word, childSentence = '') {
   const keys = [];

@@ -144,3 +144,16 @@ test('speak role "alt": dùng giọng thứ hai; máy chỉ có một giọng th
     delete globalThis.SpeechSynthesisUtterance;
   }
 });
+
+test('kết quả khi bé đọc (SPEC 4.2): ok / unclear / miss / unheard / none', async () => {
+  const { readingOutcome, OUTCOME } = await import('../../app/js/speech/listen.js');
+  const on = { micReady: true, recognizing: true };
+  assert.equal(readingOutcome({ ...on, heard: ['a ship'] }, 'ship'), OUTCOME.OK);
+  assert.equal(readingOutcome({ ...on, heard: ['shop'] }, 'ship'), OUTCOME.UNCLEAR);
+  assert.equal(readingOutcome({ ...on, heard: ['banana'] }, 'ship'), OUTCOME.MISS);
+  assert.equal(readingOutcome({ ...on, heard: ['', '  '] }, 'ship'), OUTCOME.UNHEARD);
+  assert.equal(readingOutcome({ ...on, heard: [] }, 'ship'), OUTCOME.UNHEARD);
+  assert.equal(readingOutcome({ micReady: true, recognizing: false, heard: ['ship'] }, 'ship'), OUTCOME.NONE);
+  assert.equal(readingOutcome({ micReady: false, recognizing: true, heard: ['ship'] }, 'ship'), OUTCOME.NONE);
+  assert.equal(readingOutcome({ ...on, heard: ['see'] }, 'sea', ['see']), OUTCOME.OK);
+});

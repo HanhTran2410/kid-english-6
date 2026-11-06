@@ -1,10 +1,9 @@
-// Giới hạn thời gian mỗi buổi (SPEC mục 4.6): giới hạn mềm, bố mẹ cho học thêm.
+// Giới hạn thời gian mỗi buổi (SPEC mục 1.1): giới hạn mềm, bố mẹ cho học thêm. Mặc định ở settings.js (`limitMinutes`).
 // Thời gian chỉ được cộng khi bé đang học (người gọi quyết định lúc nào gọi addTime).
 
 export const NEW_SESSION_GAP_MS = 60 * 60 * 1000; // không dùng app quá 1 tiếng → buổi mới
 export const EXTEND_MS = 15 * 60 * 1000;
 export const LIMIT_OPTIONS = [15, 20, 30, null]; // null = tắt giới hạn
-export const DEFAULT_LIMIT_MINUTES = 15;
 
 export function newSession(now = Date.now()) {
   return { usedMs: 0, extraMs: 0, lastSeenAt: now };

@@ -39,3 +39,14 @@ test('từ dài cho phép sai 2 chữ', () => {
   assert.equal(similarWord('elefant', 'elephant'), true);
   assert.equal(similarWord('banana', 'bandana'), true);
 });
+
+test('so khớp chặt để chấm đọc: ship ≠ shop ≠ sheep; nhận dấu câu / chữ hoa / từ đồng âm bài cho phép', async () => {
+  const { exactMatch } = await import('../../app/js/match.js');
+  assert.equal(exactMatch('Ship.', 'ship'), true);
+  assert.equal(exactMatch(['shop', 'a ship'], 'ship'), true);
+  for (const heard of ['shop', 'sheep', 'ships', 'chip', '']) assert.equal(exactMatch(heard, 'ship'), false, heard);
+  assert.equal(exactMatch('see', 'sea'), false);
+  assert.equal(exactMatch('see', 'sea', ['see']), true);
+  assert.equal(exactMatch('I like ice cream', 'ice cream'), true);
+  assert.equal(exactMatch('icecream', 'ice cream'), false);
+});

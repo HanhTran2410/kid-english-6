@@ -1,4 +1,4 @@
-// Góc bố mẹ: menu và Cài đặt. Các trang khác (tiến độ, ghi âm, tạo bài, sao lưu) thêm dần theo SPEC.md mục 6.
+// Góc bố mẹ: menu, Bài học, Cài đặt. Các trang khác (tiến độ, ghi âm, tạo bài, sao lưu) thêm dần theo SPEC.md mục 6.
 
 import { h, toast } from '../../ui.js';
 import { APP_VERSION } from '../../app.js';
@@ -6,10 +6,12 @@ import { englishVoices } from '../../speech/tts.js';
 import { LIMIT_OPTIONS } from '../../session.js';
 import { VI_HELP_AFTER } from '../../settings.js';
 import { parentLayout, goParent, section, field } from './common.js';
+import { lessonsView } from './lessons.js';
 
 const VIEWS = {
   menu: menuView,
   settings: settingsView,
+  lessons: lessonsView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -23,6 +25,7 @@ function menuView(app) {
   body.append(
     h('button.exit-to-child', { type: 'button', onclick: () => app.go('home') }, h('span', { text: '▶ Về màn hình của bé' })),
     h('div.menu', {},
+      item('📚', 'Bài học', () => goParent(app, 'lessons')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );

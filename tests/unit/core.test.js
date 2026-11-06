@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import 'fake-indexeddb/auto';
 import { ZONES, ZONE_BY_ID, greeting } from '../../app/js/zones.js';
-import { openDatabase, STORES, progressKey, getProgress, updateProgress } from '../../app/js/db.js';
+import { openDatabase, STORES } from '../../app/js/db.js';
 import { loadSettings, saveSetting, DEFAULT_SETTINGS, VI_HELP_AFTER, needsVietnameseHelp } from '../../app/js/settings.js';
 import { newSession, addTime, isTimeUp } from '../../app/js/session.js';
 
@@ -22,21 +22,13 @@ test('câu chào: có tên bé thì gọi tên', () => {
   assert.equal(greeting(undefined), 'Hi! What do you want to do today?');
 });
 
-test('kho dữ liệu: đủ các kho; cài đặt mặc định + đã lưu; tiến độ theo khóa "<loại>:<mục>"', async () => {
+test('kho dữ liệu: đủ các kho; cài đặt mặc định + đã lưu', async () => {
   const db = await openDatabase(`test-${Math.random()}`);
   assert.deepEqual([...db.idb.objectStoreNames].sort(), [...STORES].sort());
 
   assert.equal((await loadSettings(db)).characterName, DEFAULT_SETTINGS.characterName);
   await saveSetting(db, 'childName', 'Minh');
   assert.equal((await loadSettings(db)).childName, 'Minh');
-
-  const key = progressKey('read', ' Ship! ');
-  assert.equal(key, 'read:ship');
-  assert.equal((await getProgress(db, key)).seen, 0);
-  await updateProgress(db, key, (p) => ({ ...p, seen: p.seen + 1, correct: p.correct + 1 }));
-  const p = await getProgress(db, key);
-  assert.equal(p.seen, 1);
-  assert.equal(p.correct, 1);
   db.close();
 });
 
