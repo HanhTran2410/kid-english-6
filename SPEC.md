@@ -1,6 +1,8 @@
-# SPEC — Olly English (bé 6 tuổi) — draft1
+# SPEC — Olly English (bé 6 tuổi) — draft2
 
 App anh em của **kid-english** (Bông, bé 3 tuổi): cùng cách làm (PWA chạy offline trên iPad / điện thoại, dữ liệu chỉ lưu trên máy, giọng đọc + nhận dạng giọng nói của máy, Góc bố mẹ nhấn giữ 3 giây), nhưng nội dung và cách chơi cho **bé 6 tuổi** — tuổi bắt đầu đi học lớp 1, tập đọc, tập viết.
+
+**Draft2 sửa theo review draft1 (2026-11-06):** phonics tách chữ / âm (3.1.1), lộ trình và mở bài (3.1.2), nhận dạng giọng nói không phải phán quyết (4.2), tiến độ theo bài + hoạt động + mục (4.3), sao (4.4), bảng kiểm tra lõi chép từ kid-english (2.1–2.2), cấu trúc gói bài + kiểm tra dữ liệu + nhập JSON sớm (5.3–5.7), thời gian buổi (1.1), ghi âm và dữ liệu riêng tư (6.2), test nghiệm thu (8). Chi tiết Spell viết tay, Talk, Quest ở mức đủ để chốt hướng; viết kỹ khi tới phiên bản đó.
 
 ## 1. Bé 6 tuổi khác bé 3 tuổi thế nào
 
@@ -8,103 +10,381 @@ App anh em của **kid-english** (Bông, bé 3 tuổi): cùng cách làm (PWA ch
 |---|---|---|
 | Mục tiêu | Nghe → nói lại từ / câu ngắn | **Đọc** được từ, câu, truyện ngắn; **đánh vần**, viết được từ; nói câu trọn vẹn |
 | Chữ trên màn | Ít, chủ yếu hình | Chữ là trung tâm: chữ to, sáng theo nhịp đọc |
-| Một lượt | 5–8 phút, nhiều hình động | 10–15 phút, có mục tiêu rõ (nhiệm vụ, sao, cấp độ) |
+| Thời lượng | 5–8 phút / lượt | xem 1.1 |
 | Phản hồi | Luôn khen | Khen + chỉ chỗ sai cụ thể ("Listen: /sh/ — ship") |
 | Tự chơi | Bố mẹ ngồi cùng | Bé tự chơi được; bố mẹ xem tiến độ |
-| Nhân vật | Thỏ Bông | **Cú Olly** (đeo kính, "thích đọc sách") — tên đổi được trong Cài đặt |
-| Giới hạn buổi | 15 phút | 20 phút (đổi được) |
+| Nhân vật | Thỏ Bông | **Cú Olly** (đeo kính, "thích đọc sách") — tên đổi được (6.1) |
 
-## 2. Cấu trúc thư mục — dùng lại gì từ kid-english
-
-Cách dùng lại: **chép phần lõi sang** (không chia sẻ code giữa hai repo) — mỗi app sửa tự do, không làm hỏng app kia. Sửa lỗi ở phần lõi của một app thì nhớ chép sang app kia nếu cần.
-
-| File | Nguồn | Ghi chú |
+### 1.1. Thời gian
+| | Mặc định | Ghi chú |
 |---|---|---|
-| `js/speech/tts.js, microphone.js, recognition.js, recorder.js, listen.js, sfx.js` | chép nguyên | giọng đọc, giọng thứ hai, mic, nhận dạng, ghi âm, nghe bé nói, tiếng hiệu ứng |
-| `js/timing.js, text.js, match.js, ui.js, session.js, image.js` | chép nguyên | chờ hủy được + `?fast`, chuẩn hóa chữ, so khớp lời bé nói, `h()` / toast / hộp thoại / nút nhấn giữ, thời gian buổi học, cắt ảnh lưới |
-| `js/app.js` | chép, sửa nhỏ | điều hướng màn hình, mở khóa âm thanh iOS, giữ màn hình sáng, ra nền / quay lại; Bông → Olly |
-| `js/db.js` | chép, bỏ bớt | kho: `lessons, images, recordings, progress, settings`; tiến độ theo khóa `"<loại>:<mục>"` (`read:ship`, `spell:cat`) thay vì theo từ |
-| `js/settings.js` | viết lại | cài đặt riêng (tên bé, giọng, tốc độ 0.9, 20 phút) |
-| `js/mascot.js, zones.js, screens/child.js, screens/parent/*` | mới | Olly, 4 khu học, màn chính, Góc bố mẹ |
-| `sw.js, index.html, manifest, css/app.css` | mới (theo mẫu) | cache riêng `kid-english-6-*`, IndexedDB riêng `kid-english-6` — hai app cài cùng máy không đụng nhau |
-| `scripts/serve.mjs, make-icons.mjs`, `playwright.config.js`, `tests/ui/helpers.js` | chép | chạy thử, tạo icon PNG, test giao diện |
+| Một hoạt động (ví dụ 6 từ ghép âm) | 3–5 phút | dữ liệu bài quyết định số mục |
+| Một lượt (bé chọn vài hoạt động liền nhau) | 10–15 phút | chỉ là mục tiêu khi soạn bài, app không ép |
+| Giới hạn buổi | **20 phút** (15 / 20 / 30 / tắt) | `limitMinutes` |
 
-Sẽ chép thêm khi làm tới: sao lưu / khôi phục (`backup.js` + JSZip), Nghe lại giọng bé (`parent/recordings.js`), tạo bài bằng prompt AI (`prompts.js`, `parent/create.js`), ảnh lưới (`image.js` đã có), Google Drive / GitHub (sau cùng).
+- Thời gian chỉ cộng khi bé đang trong hoạt động (đã có trong `session.js`).
+- Còn ≤ 2 phút: hết hoạt động hiện tại thì Olly nói *"One more and then rest!"* + chữ tiếng Việt "Còn một chút nữa thôi".
+- Hết giờ: **không bao giờ cắt ngang** hoạt động. Bé làm xong hoạt động đang dở → lưu tiến độ → Olly khen và đi ngủ (đã đúng như `app.afterActivity` hiện tại). Bố mẹ cho học thêm 15 phút.
 
-## 3. Bốn khu học (màn hình chính)
+## 2. Lõi chép từ kid-english
 
-Màn chính: Olly chào (gọi tên bé nếu bố mẹ đã nhập) + 4 thẻ to (2 × 2). Khu chưa làm vẫn hiện, chạm vào Olly nói *"Coming soon!"*.
+Cách dùng lại: **chép phần lõi sang** (không chia sẻ code giữa hai repo) — mỗi app sửa tự do, không làm hỏng app kia.
+
+### 2.1. Bảng kiểm tra (đã chép ở 0.1.0 — kết quả xem code thực tế)
+
+| File | Tình trạng | Việc cần làm |
+|---|---|---|
+| `speech/tts.js, sfx.js` | chép nguyên, dùng được | thêm tốc độ theo loại nội dung (6.1) |
+| `speech/microphone.js, recognition.js, listen.js` | chép nguyên. Nhận dạng đã là **phần phụ** (lỗi bất kỳ → tắt cho cả buổi, chỉ còn đo âm lượng) | `listen.js` trả thêm kết quả `ok / unclear / miss / unheard` (4.2) |
+| `speech/recorder.js` | chép nguyên; db giới hạn 1 bản ghi / mục / ngày | thêm giới hạn độ dài + tổng dung lượng (6.2) |
+| `match.js` | so khớp **rất lỏng** (`soundKey` gộp mọi nguyên âm: *ship ≈ shop ≈ sheep*) — đúng mục đích của kid-english (chỉ để khen) | **không dùng để chấm đọc**. Viết thêm so khớp chặt (4.2); `soundKey` chỉ còn dùng để phân biệt "chưa rõ" với "sai hẳn" |
+| `timing.js, text.js, ui.js` | dùng được | — |
+| `session.js` | dùng được; còn sót `DEFAULT_LIMIT_MINUTES = 15` (không dùng, lệch với 20 trong `settings.js`) và chú thích trỏ SPEC của kid-english | xóa hằng số thừa, sửa chú thích |
+| `image.js` | không phụ thuộc nội dung cũ | — |
+| `db.js` | cấu trúc nền tốt (mảng `MIGRATIONS`); khóa tiến độ `read:ship` sẽ **trùng** giữa các bài | đổi khóa (4.3); chưa có dữ liệu tiến độ thật nên đổi ngay không mất gì |
+| `app.js` | đã sửa cho Olly | — |
+
+### 2.2. Giữ hai bản lõi không lệch
+- Danh sách file lõi để trong `CORE.md`: mỗi dòng gồm file, commit kid-english đã chép từ đó, mã băm (sha-256) của bản hiện tại, các chỗ đã sửa riêng.
+- Test `tests/unit/core-sync.test.js` tính lại mã băm từng file lõi và so với `CORE.md` → sửa file lõi mà chưa cập nhật `CORE.md` thì test đỏ. Lúc cập nhật, người sửa phải ghi: **sửa lỗi chung** (cần chép sang kid-english, ghi việc cần làm) hay **sửa riêng cho Olly**.
+- Không có bản "gốc" cố định: bản nào sửa lỗi trước là nguồn, ghi rõ trong `CORE.md`.
+
+## 3. Bốn khu học
+
+### 3.0. Màn chính
+- Olly chào (gọi tên bé nếu bố mẹ đã nhập) + 4 thẻ to (2 × 2).
+- Khu chưa làm: thẻ mờ, có nhãn **Sắp mở**, không nhún. Chạm vào → Olly nói một câu ngắn tiếng Việt (giọng vi-VN nếu có) *"Khu này Olly đang chuẩn bị nhé!"* + chữ; không tính thời gian, không ghi tiến độ.
 
 ### 3.1. 📖 Read / Tập đọc
-- **Ghép âm (blending)**: chữ cái hiện từng âm *s – h – i – p* → bé chạm từng chữ nghe âm → kéo các chữ lại gần → đọc cả từ **ship**. Bé đọc to, app nhận dạng → đúng thì hình hiện ra.
-- **Sight words** (the, is, was, said, you…): thẻ chớp; bé đọc to; ôn lại theo kiểu "từ hay sai gặp lại sớm".
-- **Đọc câu**: câu 4–8 từ, từng từ sáng khi Olly đọc (karaoke, dùng lại cách tính nhịp của kid-english); rồi bé tự đọc, từ nào app nghe được thì sáng xanh.
-- **Truyện ngắn** 4–6 trang (mỗi trang 1–2 câu + hình), câu hỏi hiểu bài cuối truyện (*"Where did the cat go?"* → chọn hình).
-- Cấp độ theo âm: CVC (cat, dog) → âm ghép (sh, ch, th) → nguyên âm dài (cake, bike) → từ 2 âm tiết.
+
+#### 3.1.1. Chữ và âm (nền của Read và Spell)
+- Học **âm của chữ** (letter sound), không phải tên chữ (letter name). Tên chữ (*ess, aitch…*) không dùng ở Read / Spell cho tới khi có hoạt động bảng chữ cái riêng, ghi rõ "tên chữ".
+- **Grapheme** (nhóm chữ viết ra một âm) ≠ chữ cái: *ship* = **sh – i – p** (3 âm), không phải s – h – i – p.
+
+  | Từ | Grapheme | Âm |
+  |---|---|---|
+  | cat | c – a – t | /k/ /æ/ /t/ |
+  | duck | d – u – ck | /d/ /ʌ/ /k/ |
+  | ship | sh – i – p | /ʃ/ /ɪ/ /p/ |
+  | thin / this | th – i – n / th – i – s | /θ/ … / /ð/ … |
+  | rain | r – ai – n | /r/ /eɪ/ /n/ |
+  | cake | c – a_e – k | /k/ /eɪ/ /k/ (a_e: hai chữ tách nhau, một âm) |
+
+- Âm có mã riêng (`soundId`) — trùng chữ trừ vài trường hợp: `c, k, ck` cùng âm `k`; `th` (/θ/ thin) và `th-v` (/ð/ this); `oo` (/ʊ/ book) và `oo-l` (/uː/ moon); `x` là /ks/, `qu` là /kw/ (một ô, một file).
+- **Âm rời luôn phát từ file ghi âm thật** `app/sounds/phonics/<soundId>.mp3` (như kid-english: giọng máy không đọc được âm rời — đọc "s" thành *ess*). Giọng máy chỉ đọc **từ trọn vẹn** và câu. Nguồn file: Wikimedia Commons (bản ghi IPA / cắt từ bản ghi từ), ghi giấy phép trong `app/sounds/CREDITS.md`, bố mẹ nghe duyệt từng âm trước khi đưa vào. Chép 6 âm nhóm 1 từ kid-english.
+- Nhận dạng giọng nói **không** dùng cho âm rời (máy chỉ nhận ra từ) — bé nói âm rời thì chỉ khen theo âm lượng.
+
+#### 3.1.2. Lộ trình và mở bài
+- Thứ tự theo **7 nhóm âm kiểu Jolly** (5.2) — đã chốt. Mỗi từ có thêm nhãn dạng từ để lọc và báo cáo (không quyết định thứ tự):
+
+  | Nhãn | Ví dụ | Có từ nhóm |
+  |---|---|---|
+  | `cvc` (âm đơn) | sat, pin, dog | 1 |
+  | `blend` (cụm phụ âm) | stop, hand | 1–3 |
+  | `digraph` (2 chữ 1 âm phụ âm: sh ch th ng ck qu) | ship, chat, thin | 5–7 (ck từ nhóm 2) |
+  | `vowel-team` (ai oa ie ee or oo ou oi ue er ar) | rain, boat, feet | 4–7 |
+  | `split` (a_e i_e o_e u_e) | cake, bike, home | sau nhóm 7 |
+  | `multi` (2 âm tiết) | rabbit, sunset | sau nhóm 7 |
+
+- Sau nhóm 7: các cách viết khác của cùng âm (ay, ea, igh, ow…), rồi từ 2 âm tiết.
+- **Mở bài (đã chốt)**: **không khóa bài nào** — mọi bài đều mở sẵn, bé chọn bài nào cũng được. Danh sách bài xếp theo lộ trình; bài nên học tiếp theo có dấu ⭐ "Tiếp theo" (bài đầu tiên chưa hoàn thành). Nếu bài vừa xong có < 60% mục làm được độc lập (4.3), Olly gợi ý "Ôn lại nhé?" nhưng không bắt buộc. Bài cũ luôn chơi lại được.
+
+#### 3.1.3. Ghép âm (blending)
+1. Từ hiện thành các **ô grapheme** (*sh | i | p*), dưới mỗi ô có dấu: chấm cho ô một chữ, gạch cho ô nhiều chữ.
+2. Bé chạm từng ô → phát **âm** của ô (file).
+3. Nút **Ghép** → phát lần lượt các âm, khoảng cách ngắn dần, rồi giọng máy đọc cả từ (tốc độ chậm, 6.1); các ô trượt lại sát nhau.
+4. Bé đọc to cả từ (có mic thì nghe — 4.2; không thì bấm **✅ Con đọc xong**).
+5. **Kiểm tra bằng hình**: chọn hình đúng trong 3 hình → đây là kết quả chấm. Từ không có hình rõ (*at, in, it*) thì không chọn hình; mục đó chỉ tính "đã luyện".
+
+#### 3.1.4. Tricky words (từ cần nhận diện)
+- Chia ba loại, không gom chung:
+  - **Đọc được bằng âm đã học** → không phải tricky với bé lúc đó; học như từ thường.
+  - **Tricky** (cách viết / đọc bất quy tắc: *the, said, was, you, are*): danh sách theo nhóm kiểu Jolly (nhóm 1: *I, the, he, she, me, we, be, was, to, do, are, all*), xen giữa các nhóm âm.
+  - **Từ thường gặp chưa đọc được bằng âm** (*like, my*): tạm học nhận diện, đánh dấu "sẽ đọc được khi học âm …".
+- Một lượt thẻ (không có hiệu ứng chớp): hiện từ → Olly đọc → bé đọc lại → **Olly đọc một từ, bé chọn đúng thẻ trong 3 thẻ** (đây là kết quả chấm) → từ hộp 2 trở lên: chọn từ điền vào câu ngắn đã đọc được.
+- Ôn theo hộp (Leitner, khóa tiến độ chung `tricky/…` cho mọi bài — 4.3):
+
+  | Kết quả | Hộp | Gặp lại |
+  |---|---|---|
+  | Sai | về hộp 0 | trong buổi, sau 2–3 thẻ khác (không bao giờ hai lần liền) |
+  | Đúng sau khi nghe gợi ý | giữ hộp | buổi sau |
+  | Đúng độc lập | +1 | hộp 1: 1 ngày · 2: 3 ngày · 3: 7 ngày · 4: 14 ngày |
+  | Quá hạn | — | vào đầu bài ôn kế tiếp, tối đa 5 thẻ ôn / lượt |
+
+#### 3.1.5. Đọc câu
+1. Câu + hình. Olly đọc mẫu, từ sáng theo nhịp (karaoke — cách tính ở SPEC-ta-tranh mục 5.4, dùng chung).
+2. Bé chạm từng từ để nghe riêng; từ có grapheme đã học thì có thể mở ô ghép âm.
+3. Bé bấm 🎤 và đọc cả câu. App hiện từ nào máy nghe được (xanh), từ chưa nghe được để **xám** (không tô đỏ).
+4. Olly đọc riêng các từ xám rồi đọc lại cả câu mẫu.
+5. Câu hỏi hiểu (chọn hình) — đây là kết quả chấm của câu.
+- So khớp câu: bỏ dấu câu, so theo **tập từ** (không xét thứ tự — máy nhận dạng hay đảo / gộp từ). Đọc thiếu từ → từ đó xám, không tính sai.
+- Mức đọc ghi lại (để bố mẹ xem, không chặn bé): nhận từ → đọc cụm → đọc cả câu (≥ 80% từ nghe được) → trôi chảy (cả câu trong một lần, không ngắt quá 2 giây). Câu > 6 từ cho đọc theo cụm (cụm do dữ liệu bài chia sẵn).
+- Không có mic / nhận dạng: bỏ bước 3–4, bé bấm **✅ Con đọc xong**.
+
+#### 3.1.6. Truyện ngắn
+- 4–6 trang, mỗi trang 1–2 câu + hình. Mỗi trang: nghe cả trang, nghe từng câu, chạm từ khó để nghe, bật / tắt dòng tiếng Việt (`showVi`, 6.1).
+- Cuối truyện **2–3 câu hỏi**: chọn hình, chọn đáp án (chữ ngắn), hoặc xếp 3 hình theo thứ tự. Câu hỏi chỉ dùng từ có trong truyện hoặc đã học; bé **không** phải trả lời bằng lời.
+
+#### 3.1.7. 🖼️ Tả tranh
+Một bức tranh, Olly đọc lần lượt các câu tả tranh; mũi tên chỉ vào chỗ câu đang tả; câu chạy ở thanh chữ dưới tranh; dòng tiếng Việt bật / tắt được. Chi tiết: [SPEC-ta-tranh.md](SPEC-ta-tranh.md).
 
 ### 3.2. ✏️ Spell / Đánh vần và viết
-- **Nghe – xếp chữ**: Olly đọc từ → bé kéo thẻ chữ vào ô (có chữ nhiễu); sai chữ nào thì ô đó rung, Olly đọc âm đúng.
-- **Điền chữ thiếu**: *c _ t* + hình con mèo.
-- **Tập viết chữ**: vẽ theo nét trên màn (chữ thường a–z), có mũi tên thứ tự nét, chấm điểm theo độ khớp nét.
-- **Viết từ**: sau khi xếp đúng 2 lần, bé tự viết từ bằng tay (vẽ) — so khớp nét đơn giản, không cần nhận dạng chữ viết tay.
+- **Nghe – xếp ô**: Olly đọc từ → bé kéo **ô grapheme** (ô *sh* là một miếng, khi đã học âm đó) vào chỗ trống, có ô nhiễu. Ô sai rung, Olly phát **âm** đúng của chỗ đó (file). Chạm ô bất kỳ → nghe âm của ô.
+- **Điền ô thiếu**: *c _ t* + hình.
+- **Tập viết chữ** (chữ thường a–z), làm ở 0.6. Mỗi chữ có dữ liệu nét: danh sách nét theo thứ tự, mỗi nét là đường điểm theo chiều viết.
+  - Chấm từng nét theo: **điểm bắt đầu** (trong 15% khung chữ), **hướng** (đi cùng chiều đường mẫu), **phủ đường** (≥ 75% điểm mẫu nằm gần nét bé vẽ), **thứ tự nét**, **đủ nét**.
+  - Nhấc tay = hết một nét. Nút xóa nét vừa vẽ. Viết ngược chiều hoặc bắt đầu sai chỗ → nét mờ đi, Olly vẽ mẫu nét đó có mũi tên, bé viết lại nét đó (không chê, không trừ sao lần đầu).
+  - Bản đầu **dễ dãi**: ưu tiên đúng điểm bắt đầu và hướng; độ khớp hình chỉ cần đạt ngưỡng thấp. Siết dần khi có dữ liệu thử thật.
+- **Viết từ**: mở khi bé xếp ô đúng **2 lần liên tiếp** cho từ đó (sai một lần thì đếm lại). Mỗi chữ một ô, có chữ mẫu mờ, xóa từng ô viết lại được; xong thì hiện từ in đúng cạnh chữ bé viết để bé tự so. Không chấm điểm hình chữ, chỉ ghi "đã viết" (khóa riêng `write`).
 
-### 3.3. 💬 Talk / Nói chuyện
-- Hội thoại ngắn theo chủ đề (giới thiệu bản thân, ở trường, mua đồ, hỏi đường…): Olly hỏi, bé trả lời **câu trọn vẹn** (*"I am six years old."*), có câu gợi ý mờ nếu bé im lặng.
-- Nhân vật phụ dùng **giọng thứ hai** (đã có trong lõi).
-- Ghi âm câu bé nói để bố mẹ nghe lại.
+### 3.3. 💬 Talk / Nói chuyện (0.5)
+- Hội thoại ngắn theo chủ đề / mẫu câu Unit. Nhân vật phụ dùng **giọng thứ hai** (đã có trong lõi). Ghi âm câu bé nói để bố mẹ nghe lại.
+- Ba mức hỗ trợ (mỗi câu trong dữ liệu có đủ: câu hỏi, câu mẫu, phần đầu câu, từ khóa):
 
-### 3.4. 🧩 Quest / Thử thách
-- Nhiệm vụ nhiều bước dùng tiếng Anh: đọc chỉ dẫn *"Put the red ball in the box."* → làm theo trong tranh.
-- Sắp xếp câu (kéo các từ thành câu đúng), đoán từ theo gợi ý, ô chữ nhỏ.
-- Bản đồ phiêu lưu: mỗi nhiệm vụ xong mở một chặng; thưởng huy hiệu thay sticker.
+  | Mức | Cách làm |
+  |---|---|
+  | 1. Nghe – nhắc lại | Olly nói câu mẫu, bé nói lại |
+  | 2. Nói tiếp | Olly: *"I am…"* → bé: *"six years old"* |
+  | 3. Tự trả lời | Bé tự nói cả câu |
+
+- Bé im lặng: chờ 5 giây → Olly hỏi lại → hiện từ khóa → 5 giây nữa → Olly nói câu mẫu, bé nhắc lại → sang câu sau.
+- Nút: nghe lại câu hỏi, nói lại, bỏ qua. Máy không nghe ra ≠ bé sai (4.2).
+
+### 3.4. 🧩 Quest / Thử thách (0.7, chia nhỏ)
+| Bước | Trò | Ghi chú |
+|---|---|---|
+| Quest 1 | **Read and Do** — đọc chỉ dẫn (*"Put the red ball in the box."*), kéo đồ vật trong tranh | làm trước: dùng lại từ + hình của Read / Spell |
+| Quest 2 | **Build a Sentence** — kéo từ thành câu | |
+| Quest 3 | **Guess the Word** — đoán từ theo gợi ý | |
+| Quest 4 | **Mini Crossword** | |
+| Sau | Bản đồ phiêu lưu, huy hiệu | |
 
 ## 4. Phản hồi và tiến độ
-- Mỗi mục có tiến độ riêng (`progress`: seen / correct / streak / lastAt); ôn lại mục hay sai.
-- Sao theo bài (1–3 sao), huy hiệu theo khu.
 - Không có "Try again" kiểu chê: sai thì Olly chỉ chỗ sai và làm mẫu.
 
 ### 4.1. Olly giải thích bằng tiếng Việt (đã chốt)
-- Bé sai **2 lần liên tiếp** ở cùng một mục (`VI_HELP_AFTER`) → Olly nói **một lần** lời giải thích ngắn bằng tiếng Việt, rồi làm mẫu lại bằng tiếng Anh. Ví dụ: *"Chữ s và h đứng cạnh nhau đọc là /sh/, như khi mình bảo im lặng: shhh. Ship!"*
+- Bé **sai** 2 lần liên tiếp ở cùng một mục (`VI_HELP_AFTER`) → Olly nói **một lần** lời giải thích ngắn bằng tiếng Việt, rồi làm mẫu lại bằng tiếng Anh. Ví dụ: *"Hai chữ s và h đi cùng nhau thành một âm /sh/, như khi mình bảo im lặng: shhh. Ship!"*
+- "Sai" chỉ gồm: chạm / kéo sai (chọn hình, xếp ô, chọn thẻ…) và kết quả nghe `miss` (4.2). **Không** tính `unheard` / `unclear` (máy không nghe rõ) — khi đó Olly chỉ mời đọc lại to hơn.
 - Lần sai thứ 3 trở đi không giải thích lại (tránh lặp); Olly làm mẫu tiếng Anh và cho qua như cũ.
 - Lời giải thích hiện kèm phụ đề tiếng Việt. Máy không có giọng tiếng Việt thì chỉ hiện chữ.
-- Mỗi bài viết sẵn lời giải thích cho từng mục (trường `vi`); bài tạo bằng prompt AI thì prompt yêu cầu AI viết luôn.
+- Mỗi bài viết sẵn lời giải thích cho từng mục (trường `vi` / `explainVi`); bài tạo bằng prompt AI thì prompt yêu cầu AI viết luôn.
 - Bố mẹ tắt được ở Cài đặt → 🇻🇳 Giải thích tiếng Việt (mặc định bật).
 
+### 4.2. Nghe bé nói — kết quả không phải phán quyết
+Nhận dạng giọng nói của trình duyệt nghe giọng trẻ em kém, phụ thuộc mạng và máy. Mỗi lần nghe trả về một trong:
+
+| Kết quả | Điều kiện | Olly làm gì | Ghi tiến độ |
+|---|---|---|---|
+| `ok` | một kết quả nhận dạng khớp **chặt** với từ cần đọc (chuẩn hóa xong bằng nhau, hoặc nằm trong danh sách từ đồng âm của mục, ví dụ *sea / see*) | khen | `independent` |
+| `unclear` | chỉ khớp **lỏng** (`soundKey`) — ví dụ đọc *ship* máy nghe *shop* | "Read it again, a bit louder!" — tối đa 1 lần, rồi làm mẫu và đi tiếp | không ghi đúng / sai |
+| `miss` | có kết quả rõ nhưng khác hẳn | làm mẫu, mời đọc lại (tối đa 2 lần) | `missed` |
+| `unheard` | không có kết quả, lỗi, hết giờ chờ, bé nói quá nhỏ | mời nói lại 1 lần, rồi đi tiếp | không ghi đúng / sai |
+| không mic / không nhận dạng / bị từ chối quyền | — | hiện nút **✅ Con đọc xong** thay cho nghe | `practiced` |
+
+- Kết quả **sao, mở bài** chỉ dựa trên phần chấm bằng chạm (chọn hình, chọn thẻ, xếp ô). Kết quả nghe là để khen, để luyện và cho bố mẹ xem.
+- Bé từ chối quyền micro: màn của bé không hiện hộp thoại; Góc bố mẹ hiện hướng dẫn cấp lại quyền (Safari: Cài đặt → Safari → Micro).
+- Nhận dạng lỗi giữa buổi → tắt cho hết buổi (như hiện có), các hoạt động tự chuyển sang nút ✅.
+
+### 4.3. Tiến độ
+Kho `progress` (khóa `key`), ba loại bản ghi:
+
+- **Mục** — khóa `<lessonId>/<activity>/<itemId>`, ví dụ `phonics-g6/blend/ship`, `book-gs1-u3/spell/ship`. Cùng từ ở hai bài là hai bản ghi riêng.
+  ```json
+  { "key": "phonics-g6/blend/ship", "lessonId": "phonics-g6", "activity": "blend", "itemId": "ship",
+    "seen": 3, "independent": 2, "helped": 1, "missed": 0, "practiced": 0,
+    "streak": 2, "lastAt": 1793950000000 }
+  ```
+  `independent`: đúng ngay lần đầu, không gợi ý · `helped`: đúng sau khi thử lại / nghe gợi ý · `missed`: phải xem đáp án (hoặc `miss` khi nghe) · `practiced`: làm xong phần không chấm.
+- **Tricky words** dùng chung bộ thẻ cho mọi bài: `tricky/card/<từ>`, thêm `box`, `nextAt` (3.1.4).
+- **Bài** — khóa `lesson:<lessonId>`: `{ completedAt, plays, bestStars, lastStars, lastAt }`.
+- Tiến độ **Unit** và **tổng** không lưu, tính từ các bản ghi trên khi hiển thị.
+- Thêm chỉ mục `lessonId` cho kho `progress` (bước `MIGRATIONS` mới) để lấy / xóa theo bài.
+
+### 4.4. Sao và huy hiệu
+| Sao | Điều kiện (tính trên các mục **có chấm** của lượt chơi) |
+|---|---|
+| 3 | ≥ 90% mục `independent` |
+| 2 | ≥ 60% mục `independent` hoặc `helped`, không quá 1 mục phải xem đáp án |
+| 1 | làm xong bài |
+
+- Không tính theo thời gian hay tốc độ. Lưu `bestStars` (cao nhất) và `lastStars`; chơi lại không làm giảm sao. Thoát giữa chừng không tính sao, nhưng tiến độ từng mục đã làm vẫn ghi.
+- Bài bị sửa: giữ sao.
+- Huy hiệu (làm sau): theo khu, mở khi xong 5 / 10 / 20 bài của khu.
+
 ## 5. Bài học — hai mạch nội dung (đã chốt)
-Mỗi bài thuộc một trong hai mạch; màn chọn bài của khu có hai tab:
+Mỗi bài thuộc một trong hai mạch; màn chọn bài của khu có hai tab.
 
 ### 5.1. 📘 Theo sách lớp 1 (Việt Nam)
 - Bố mẹ chọn bộ sách bé đang học ở Cài đặt (ví dụ *Tiếng Anh 1 Global Success*, *i-Learn Smart Start 1*, *Family and Friends 1*…) — chỉ dùng để đặt tên và sắp xếp bài theo Unit.
-- App **không** chép nội dung sách (bản quyền): bài theo Unit do bố mẹ tạo bằng **prompt AI** — bố mẹ chọn sách + Unit + gõ (hoặc chụp) danh sách từ / câu của Unit; prompt yêu cầu AI dựng bài Read / Spell / Talk từ đúng các từ đó.
+- App **không** chép nội dung sách (bản quyền): bài theo Unit do bố mẹ tạo bằng **prompt AI** từ danh sách từ / mẫu câu của Unit (5.7).
 - Một Unit → một "gói bài": đọc từ, đánh vần từ, hội thoại theo mẫu câu của Unit.
 
 ### 5.2. 🔤 Phonics quốc tế
-- Bài **có sẵn trong app**, theo thứ tự âm kiểu Jolly Phonics (7 nhóm: s a t i p n → c/k e h r m d → g o u l f b → ai j oa ie ee or → z w ng v oo → y x ch sh th → qu ou oi ue er ar), rồi âm ghép, nguyên âm dài, từ 2 âm tiết. kid-english đã có nhóm 1 (`jolly.js`) — chép cách làm và mở rộng.
-- Mỗi nhóm: nghe âm → ghép âm thành từ (Read) → đánh vần từ (Spell) → đọc câu chỉ dùng âm đã học (decodable sentences).
-- Sight words theo danh sách thông dụng (the, I, to, you, said, was…), chia theo nhóm, xen giữa các nhóm âm.
+- Bài **có sẵn trong app**, theo thứ tự âm kiểu Jolly Phonics (7 nhóm: s a t i p n → c/k e h r m d → g o u l f b → ai j oa ie ee or → z w ng v oo → y x ch sh th → qu ou oi ue er ar), rồi split digraph, cách viết khác, từ 2 âm tiết. kid-english đã có nhóm 1 (`jolly.js`) — chép cách làm và mở rộng.
+- Mỗi nhóm: nghe âm → ghép âm thành từ (Read) → đánh vần từ (Spell) → đọc câu chỉ dùng âm đã học (decodable).
 
-- Ảnh: dùng lại cách "ảnh lưới" của kid-english (một ảnh nhiều ô, app tự cắt).
+### 5.3. Mỗi mạch được dùng gì
+
+| | Theo sách lớp 1 | Phonics quốc tế |
+|---|---|---|
+| Từ | danh sách bố mẹ đưa cho Unit | chỉ từ **giải mã được** bằng grapheme đã học |
+| Câu | theo mẫu câu của Unit | câu decodable (dưới đây) |
+| Truyện | từ của Unit + từ đã học + từ bố mẹ cho thêm | ưu tiên từ giải mã được |
+| Tricky words | từ của Unit, đánh dấu tricky | theo lộ trình riêng (3.1.4) |
+| Spell | từ của Unit (ô theo từng chữ cái nếu từ có grapheme chưa học) | từ theo âm, ô theo grapheme |
+| Talk | mẫu hội thoại Unit | mẫu câu đơn giản theo cấp độ |
+
+- **Decodable**: một từ đọc được khi mọi grapheme của nó nằm trong tập grapheme đã học (tính tới nhóm của bài), **hoặc** từ đó là tricky word đã học. Câu decodable: mọi từ đều đọc được. Từ tricky trong câu được gạch chân để bé biết là "từ nhận diện".
+- Bài có sẵn: test tự động kiểm tra (8). Bài AI tạo: cảnh báo, không chặn (bố mẹ quyết).
+
+### 5.4. Cấu trúc gói bài
+Kho `lessons`. Mục (từ / câu / thẻ) khai báo một lần, hoạt động tham chiếu bằng `id` → không lặp dữ liệu, mỗi hoạt động chỉ có trường nó cần.
+
+```json
+{
+  "version": 1,
+  "kind": "lesson",
+  "id": "phonics-g6",
+  "track": "phonics",
+  "book": null,
+  "unit": null,
+  "group": 6,
+  "title": "Sounds y x ch sh th",
+  "titleVi": "Âm y x ch sh th",
+  "newSounds": ["y", "x", "ch", "sh", "th", "th-v"],
+  "words": [
+    { "id": "ship", "en": "ship", "graphemes": ["sh", "i", "p"], "sounds": ["sh", "i", "p"],
+      "tags": ["digraph"], "vi": "con tàu", "emoji": "🚢", "imageId": null,
+      "explainVi": "Hai chữ s và h đi cùng nhau thành một âm /sh/." }
+  ],
+  "sentences": [
+    { "id": "s1", "en": "The ship is red.", "vi": "Con tàu màu đỏ.", "chunks": ["The ship", "is red."], "imageId": null }
+  ],
+  "activities": [
+    { "type": "sounds", "sounds": ["ch", "sh", "th"] },
+    { "type": "blend", "items": ["ship", "chop", "thin"] },
+    { "type": "spell", "items": ["ship", "chop"] },
+    { "type": "sentence", "items": ["s1"] }
+  ],
+  "builtIn": true,
+  "createdAt": 0,
+  "updatedAt": 0
+}
+```
+- `graphemes` và `sounds` cùng độ dài; `sounds` là `soundId` (3.1.1) và mọi `soundId` phải có file âm.
+- Loại hoạt động: `sounds, blend, tricky, sentence, story, spell, fill, write, talk, quest-*`. Truyện và tranh là bản ghi riêng (`kind: 'story'`, kho `scenes`) được bài tham chiếu.
+- Gói bài thiếu khu nào (ví dụ không có `talk`) thì khu đó không hiện bài này — không lỗi.
+
+### 5.5. Nhập, sửa, xóa — làm ngay từ 0.2
+- **Nhập JSON** (dán hoặc chọn file) và **xuất JSON**. Kiểm tra trước khi lưu, lỗi thì từ chối và chỉ rõ chỗ (tiếng Việt): `version` hỗ trợ được; `id` duy nhất (trùng → hỏi "Thay bài cũ / Lưu thành bài mới"); `track` hợp lệ; `title` không rỗng; `id` mục không trùng trong bài; mọi `items` trỏ tới mục có thật; `graphemes` ghép lại đúng bằng `en` (split digraph `a_e` có quy tắc riêng); `soundId` có file; trường lạ bỏ qua.
+- **Sửa bài**: mục giữ nguyên `id` → giữ tiến độ. Mục bị xóa → xóa tiến độ của mục đó (hỏi lại nếu đã có tiến độ). Đổi chữ của mục (`en`) mà giữ `id` → xóa tiến độ mục đó.
+- **Xóa bài**: xóa tiến độ (`<lessonId>/…` và `lesson:<lessonId>`), ảnh và ghi âm có `lessonId` đó. Tiến độ tricky words (chung) giữ nguyên. Bài có sẵn không xóa được (chỉ ẩn).
+- Bài có sẵn đi kèm app (file JSON trong `app/data/`, service worker cache); nâng phiên bản app thay bản mới, giữ tiến độ theo `id` mục.
+
+### 5.6. Ảnh
+- Ảnh lưới (kid-english) chỉ là **cách nhập**: cắt xong mỗi ô thành một ảnh riêng có `imageId` trong kho `images`; mục trỏ tới `imageId`, không trỏ tới vị trí ô. Ảnh lưới gốc không giữ.
+- Màn cắt cho bố mẹ: xem từng ô, gán ô cho từ, đổi / chụp lại ảnh riêng cho một từ.
+- Một mục một ảnh; ảnh thuộc một bài (`lessonId`), xóa theo bài. Bài có sẵn dùng emoji / SVG đi kèm app.
+- Ảnh trong IndexedDB và ảnh đi kèm app đều xem được offline.
+
+### 5.7. Tạo bài bằng prompt AI (0.3)
+Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
+1. **Lấy danh sách**: bố mẹ gõ, hoặc gửi ảnh trang sách cho AI kèm prompt "chỉ chép lại danh sách từ và mẫu câu". App **không** tự đọc chữ trong ảnh. Bố mẹ dán danh sách vào app, **xem và sửa** rồi mới sang bước 2.
+2. **Tạo gói bài**: app dựng prompt từ: bộ sách, Unit, danh sách từ, mẫu câu, nhóm âm bé đã học, cấp độ, (tùy chọn) từ đã có ở các bài trước. Yêu cầu AI:
+   - Chỉ trả về **một JSON** đúng 5.4, không Markdown, không giải thích (app vẫn chịu được khối ```` ```json ````).
+   - **Không** thêm từ ngoài danh sách vào các hoạt động chính; từ chức năng cần cho câu (*the, is, a*) được dùng nhưng đánh dấu tricky.
+   - Mỗi từ: `graphemes`, `sounds`, `vi`, `explainVi`, `emoji` hoặc `imagePrompt` (câu mô tả để bố mẹ tạo ảnh).
+   - Câu theo mẫu câu của Unit; hội thoại ngắn có câu hỏi + câu mẫu + phần đầu câu + từ khóa (3.3).
+- Kết quả đi qua kiểm tra 5.5 như mọi JSON nhập vào.
 
 ## 6. Góc bố mẹ
-- Đã có: Cài đặt (tên bé, giọng, tốc độ, thời gian buổi, nhận dạng giọng nói).
-- Sẽ làm: Tiến độ (theo khu, mục hay sai), Nghe lại giọng bé, Quản lý / tạo bài, Sao lưu – khôi phục.
 
-## 7. Thứ tự làm (đề xuất)
-1. **0.1.0 — khung app** *(xong)*: Bắt đầu, màn chính 4 khu, khu "sắp có", Olly đi ngủ khi hết giờ, Góc bố mẹ → Cài đặt, service worker, test. **0.1.1**: cài đặt giải thích tiếng Việt, deploy GitHub Pages.
-2. **0.2 — Read: ghép âm + sight words** theo mạch Phonics quốc tế (nhóm 1–3 có sẵn), có giải thích tiếng Việt khi sai.
-3. **0.3 — Spell: nghe – xếp chữ + điền chữ thiếu**; prompt tạo "gói bài" theo Unit sách lớp 1.
-4. **0.4 — Read: đọc câu + truyện ngắn**.
-5. **0.5 — Talk** (chép phần nghe bé nói của kid-english).
-6. **0.6 — Spell: tập viết chữ**.
-7. **0.7 — Quest**.
-8. Góc bố mẹ: tiến độ, ghi âm, sao lưu, tạo bài — làm xen kẽ khi các khu cần.
+### 6.1. Cài đặt
+| Cài đặt | Mặc định | Ghi chú |
+|---|---|---|
+| Tên bé | trống | Olly gọi tên khi chào |
+| Tên nhân vật | Olly | đổi ở đây thì **mọi** câu nói / chữ có tên nhân vật đổi theo (câu được ghép từ `characterName`, nội dung bài không được viết cứng "Olly" — test kiểm tra). Nhân vật **xưng bằng tên mình** ("Olly"; đổi tên thì xưng theo tên mới), gọi bé bằng tên (chưa có tên: "bạn") |
+| Giọng tiếng Anh, giọng thứ hai, giọng tiếng Việt | tự chọn | có nút nghe thử; giọng đã chọn biến mất (máy cập nhật) → tự chọn lại giọng tốt nhất, báo nhẹ trong Góc bố mẹ |
+| Tốc độ đọc | 0,9 | dùng cho câu, truyện, hội thoại; **từ đơn khi ghép âm / đánh vần đọc chậm hơn** (× 0,85). Âm rời là file, không đổi theo tốc độ |
+| Thời gian buổi | 20 phút | 1.1 |
+| Nhận dạng giọng nói, ghi âm | bật | 4.2, 6.2 |
+| 🇻🇳 Giải thích tiếng Việt khi sai | bật | 4.1 |
+| Hiện tiếng Việt dưới câu (`showVi`) | bật | câu, truyện, tả tranh; nút 🇻🇳 VI trên màn đổi chính giá trị này |
+| Đọc tiếng Việt thành tiếng (`readVietnamese`, đã có trong settings) | tắt | độc lập với `showVi` |
+| Bộ sách đang học | trống | 5.1 |
+
+- Sẽ làm: Tiến độ (theo khu / bài / mục hay sai, mức đọc 3.1.5), Nghe lại giọng bé, Quản lý / tạo bài, Sao lưu – khôi phục.
+
+### 6.2. Ghi âm và dữ liệu riêng tư
+- Mọi dữ liệu (tên bé, tiến độ, ghi âm, bài) **chỉ lưu trên máy**. App không gửi gì lên mạng.
+- Ghi âm: tối đa 10 giây / bản, 1 bản / mục / ngày (đã có). Tổng ghi âm vượt 150 MB → xóa bản cũ nhất (giữ bản đầu tiên của mỗi mục để so tiến bộ), báo trong Góc bố mẹ. Đầy bộ nhớ máy (`QuotaExceededError`) → ngừng ghi âm cho buổi đó, bé chơi tiếp bình thường.
+- Nghe lại theo ngày và theo bài; xóa từng bản / **xóa toàn bộ ghi âm** / **xóa toàn bộ dữ liệu học** (hỏi lại 2 bước).
+- Sao lưu / khôi phục do bố mẹ bấm (file zip, chép `backup.js` từ kid-english). Khôi phục: hỏi lại trước khi ghi đè. Google Drive / GitHub (sau cùng) cũng chỉ là **sao lưu tùy chọn bố mẹ bấm**, không đồng bộ tự động.
+- Nhắc sao lưu sau 7 ngày (`BACKUP_REMIND_DAYS`).
+
+## 7. Thứ tự làm
+| Phiên bản | Phạm vi |
+|---|---|
+| 0.1.x *(xong)* | Khung app, Cài đặt, DB, giọng đọc, service worker, deploy |
+| **0.2** | Lõi dữ liệu: khóa tiến độ mới (4.3), `listen.js` 5 kết quả (4.2), so khớp chặt, `CORE.md` + test chống lệch, **nhập / xuất / xóa bài JSON + kiểm tra** (5.5). Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, sao |
+| 0.3 | Spell: xếp ô + điền ô; prompt AI 2 bước tạo gói bài Unit (5.7); màn cắt ảnh lưới (5.6) |
+| 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |
+| 0.5 | Talk |
+| 0.6 | Spell: tập viết chữ + viết từ |
+| 0.7 | Quest 1 → 4 |
+| xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 
 ## 8. Kiểm tra
-- `npm test`: unit (lõi, service worker đủ file, phiên bản trùng nhau, import đúng file).
-- `npx playwright test`: giao diện trên Chromium cỡ iPad, `?fast` chạy nhanh, giọng đọc giả.
+- `npm test`: unit (lõi, service worker đủ file, phiên bản trùng nhau, import đúng file, `core-sync`, kiểm tra JSON bài, khóa tiến độ, sao, ôn thẻ, decodable).
+- `npx playwright test`: giao diện trên Chromium cỡ iPad, `?fast` chạy nhanh, giọng đọc giả, nhận dạng giả (trả được cả 5 kết quả ở 4.2).
 
-## 9. Đã chốt (2026-11-04)
+### 8.1. Dữ liệu phonics (unit, chạy trên mọi bài có sẵn)
+- Mỗi từ: `graphemes` ghép lại đúng chữ; `graphemes`/`sounds` cùng độ dài; mọi `soundId` có file mp3 và có dòng trong `CREDITS.md`.
+- Có mẫu chuẩn cho từng dạng: CVC (*sat → s a t*), digraph (*ship → sh i p*, *thin → th*, *this → th-v*, *ring → r i ng*, *duck → d u ck*), vowel team (*rain → r ai n*), split (*cake → c a_e k*), 2 âm tiết.
+- Bài nhóm N chỉ có từ / câu decodable với grapheme nhóm 1…N + tricky đã học.
+- Không nội dung có sẵn nào viết cứng tên "Olly" trong câu nói.
+
+### 8.2. Nghiệm thu
+| ID | Tình huống | Kết quả mong đợi |
+|---|---|---|
+| OL-01 | Mở app lần đầu | Màn chính, 4 khu |
+| OL-02 | Đã nhập tên bé | Olly gọi đúng tên |
+| OL-03 | Chưa nhập tên | Olly chào không kèm tên |
+| OL-04 | Chạm khu chưa làm | Nhãn Sắp mở, Olly nói câu tiếng Việt, không lỗi, không tính giờ |
+| OL-05 | Hết giờ khi đang làm dở | Làm xong hoạt động, lưu tiến độ, rồi mới đi ngủ |
+| OL-06 | Tắt mạng sau lần mở đầu | Bài có sẵn và bài đã nhập vẫn chạy |
+| OL-07 | Máy không có giọng tiếng Anh | Có thông báo cho bố mẹ, bé vẫn thấy chữ |
+| OL-08 | Từ chối quyền micro | Không lỗi; bé có nút ✅; Góc bố mẹ có hướng dẫn |
+| OL-09 | Trình duyệt không có nhận dạng | Mọi hoạt động có nút ✅ |
+| OL-10 | Nhận dạng trả rỗng / lỗi | `unheard`, không tính sai, không giải thích tiếng Việt |
+| OL-11 | Ghép âm *ship* | 3 ô *sh / i / p*; chạm *sh* phát file `sh.mp3`, không đọc tên chữ |
+| OL-12 | Ghép âm *sat* | Phát s, a, t rồi đọc cả từ |
+| OL-13 | Xếp ô sai ở vị trí 2 | Ô đó rung, phát âm đúng của vị trí 2 |
+| OL-14 | Xếp đúng 2 lần liên tiếp / đúng – sai – đúng | Mở Viết từ / chưa mở |
+| OL-15 | Viết nét ngược chiều | Olly vẽ mẫu nét đó, bé viết lại nét đó |
+| OL-16 | Talk, máy không nghe ra | Không kết luận sai, mời nói lại |
+| OL-17 | Bé im lặng ở Talk | Hỏi lại → từ khóa → câu mẫu, đúng thứ tự |
+| OL-18 | Tricky word sai | Gặp lại trong buổi, không liền ngay sau |
+| OL-19 | Cùng từ *ship* ở bài phonics và bài Unit | Hai bản ghi tiến độ riêng |
+| OL-20 | Nhập JSON lỗi (thiếu `title`, `items` trỏ tới mục không có) | Từ chối, chỉ rõ chỗ lỗi |
+| OL-21 | Sửa bài: đổi thứ tự / thêm mục | Tiến độ mục cũ còn nguyên |
+| OL-22 | Xóa bài | Xóa tiến độ, ảnh, ghi âm của bài; tricky giữ nguyên |
+| OL-23 | Sao lưu rồi khôi phục trên máy khác | Đủ bài, ảnh, tiến độ, ghi âm, cài đặt |
+| OL-24 | Cài cùng máy với kid-english | Hai app không thấy / không đụng dữ liệu của nhau |
+| OL-25 | Đổi tên nhân vật thành "Bo" | Màn chính, câu chào, câu nói đều dùng "Bo" |
+
+## 9. Đã chốt
+**2026-11-04**
 - Tên app **Olly English**, nhân vật **cú Olly**.
 - Nội dung **cả hai mạch**: theo sách tiếng Anh lớp 1 ở Việt Nam (bài tạo bằng prompt theo Unit) và Phonics quốc tế (bài có sẵn) — mục 5.
 - **Có** giải thích tiếng Việt khi bé sai nhiều lần — mục 4.1.
 - Deploy **GitHub Pages** như kid-english: repo `HanhTran2410/kid-english-6`, workflow `.github/workflows/deploy.yml` (chạy `npm test` rồi đưa `app/` lên Pages). Link: `https://hanhtran2410.github.io/kid-english-6/`.
+
+
+**2026-11-06** (sau review draft1)
+- Mọi bài **mở sẵn**, không khóa; bài nên học tiếp có dấu ⭐, gợi ý ôn khi < 60% — mục 3.1.2.
+- Sao: 3 sao ≥ 90% mục độc lập, 2 sao ≥ 60% — mục 4.4.
+- Nhân vật **xưng "Olly"** (theo tên nhân vật trong Cài đặt) — mục 6.1.
+- Ghi âm tối đa **10 giây / bản**, tổng **150 MB** — mục 6.2.
+- File âm rời nhóm 2–7 lấy từ **Wikimedia Commons** như kid-english, ghi giấy phép trong `CREDITS.md`, bố mẹ nghe duyệt — mục 3.1.1.
+- Tả tranh: các quyết định ở SPEC-ta-tranh mục 14.
