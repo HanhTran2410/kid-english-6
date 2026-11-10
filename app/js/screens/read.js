@@ -15,6 +15,7 @@ import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES
 import { spellWords, fillWords } from '../read/spell-stages.js';
 import { readSentences } from '../read/sentence-stages.js';
 import { adaptForPlay } from '../lesson-prompts.js';
+import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
 import { lessonImages, mediaBlob } from '../db.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
@@ -45,7 +46,8 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   const info = ZONE_BY_ID.get(zone);
   app.root.className = `child-screen read-list zone-list-${zone}`;
   const list = h('div.lesson-cards');
-  const tabs = [['phonics', '🔤 Phonics'], ['book', '📘 Theo sách']].map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
+  const tabList = [['phonics', '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : [])];
+  const tabs = tabList.map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
     type: 'button', text: label, 'aria-pressed': String(id === tab),
     onclick: () => {
       play('tap');
@@ -58,6 +60,10 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
     list,
   );
   say(app, info.intro);
+  if (tab === 'scene') {
+    sceneCards(app, list).catch((err) => console.error(err));
+    return;
+  }
   (async () => {
     const lessons = (await zoneLessons(app.db, zone)).filter((l) => l.track === tab);
     if (!lessons.length) {
@@ -152,4 +158,23 @@ function showDone(app, t, layout, lesson, stars, zone) {
       h('button.big-btn.primary', { type: 'button', 'aria-label': 'Bài khác', text: zone === 'spell' ? '✏️' : '📖', onclick: leave }))));
   t.celebrate();
   t.say(stars === 3 ? 'Wow! Three stars! Great job!' : 'Great job! You did it!').catch(() => {});
+}
+
+// ---------- Tả tranh: danh sách tranh (SPEC-ta-tranh mục 2.1) ----------
+
+async function sceneCards(app, list) {
+  const progress = await Promise.all(BUILTIN_SCENES.map((s) => getLessonProgress(app.db, s.id)));
+  BUILTIN_SCENES.forEach((s, i) => {
+    list.append(h('button.lesson-card.scene-card', {
+      type: 'button', 'aria-label': s.title, dataset: { scene: s.id },
+      onclick: () => {
+        play('tap');
+        app.go('scene', { sceneId: s.id });
+      },
+    },
+    h('div.scene-thumb', { html: s.svg }),
+    h('span.lesson-title', { text: s.title }),
+    h('span.lesson-vi', { text: `${s.titleVi} · ${s.sentences.length} câu` }),
+    progress[i].plays ? h('span.lesson-stars', { text: `👂 ${progress[i].plays}` }) : null));
+  });
 }

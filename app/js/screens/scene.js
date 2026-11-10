@@ -1,0 +1,247 @@
+// 🖼️ Tả tranh — chế độ Nghe xem (SPEC-ta-tranh mục 3–6): tranh 4:3 + mũi tên chỉ chỗ câu đang tả + thanh chữ karaoke dưới tranh
+// + dòng tiếng Việt bật / tắt. Mỗi lúc chỉ MỘT luồng chạy (đọc câu / đọc từ / nghỉ / chờ): thao tác mới hủy luồng cũ (5.1).
+
+import { h } from '../ui.js';
+import { play } from '../speech/sfx.js';
+import { isAbort, scaled } from '../timing.js';
+import { tokenize } from '../text.js';
+import { displayWords } from '../karaoke.js';
+import { arrowGeometry, pickSentence } from '../scene.js';
+import { SCENE_BY_ID } from '../data/builtin-scenes.js';
+import { recordLessonDone } from '../progress.js';
+import { Teacher } from '../read/teacher.js';
+
+const ARRIVE_MS = 400;
+const LOOK_MS = 300;
+const REST_MS = 1200;
+const WORD_IDLE_MS = 3000;
+
+export function sceneScreen(app, params = {}) {
+  const scene = SCENE_BY_ID.get(params.sceneId);
+  if (!scene) {
+    app.go('read', { tab: 'scene' });
+    return null;
+  }
+  const activity = app.startActivity();
+  const sentences = scene.sentences;
+  const last = sentences.length - 1;
+  let index = Math.min(Math.max(0, params.index ?? 0), last);
+  let paused = Boolean(params.continueDirectly); // quay lại từ nền → đang Dừng (5.3)
+  let readingDone = false;
+  let run = null;
+  let idleTimer = null;
+  let wordEls = [];
+
+  // ---------- Bố cục ----------
+  app.root.className = 'child-screen scene-screen';
+  const back = () => app.go('read', { tab: 'scene' });
+  const viBtn = h('button.scene-btn.vi-toggle', { type: 'button', 'aria-label': 'Tiếng Việt', text: '🇻🇳 VI' });
+  const pauseBtn = h('button.scene-btn', { type: 'button', 'aria-label': 'Dừng', text: '⏸' });
+  const counter = h('span.scene-counter');
+  const art = h('div.scene-art');
+  art.innerHTML = scene.svg;
+  const arrow = h('div.scene-arrow', { 'aria-hidden': 'true', hidden: true });
+  arrow.innerHTML = '<svg viewBox="0 0 100 36" preserveAspectRatio="none"><path d="M0 13 H70 V2 L100 18 L70 34 V23 H0 Z" fill="#e03131" stroke="#fff" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
+  const frame = h('div.scene-frame', { role: 'img', 'aria-label': scene.title }, art, arrow);
+  const sentenceBox = h('div.sentence.scene-sentence');
+  const viLine = h('p.sentence-vi.scene-vi');
+  const textBar = h('div.scene-text', {}, sentenceBox, viLine);
+  const prevBtn = h('button.scene-btn.big', { type: 'button', 'aria-label': 'Câu trước', text: '⏮' });
+  const againBtn = h('button.scene-btn.big', { type: 'button', 'aria-label': 'Nghe lại', text: '🔁' });
+  const nextBtn = h('button.scene-btn.big', { type: 'button', 'aria-label': 'Câu sau', text: '⏭' });
+  app.root.append(
+    h('header.scene-top', {},
+      h('button.scene-btn', { type: 'button', 'aria-label': 'Về', text: '←', onclick: () => { play('tap'); back(); } }),
+      h('h1.scene-title', { text: scene.title }), viBtn, pauseBtn, counter),
+    h('main.scene-main', {}, frame, h('div.scene-side', {}, textBar, h('div.scene-controls', {}, prevBtn, againBtn, nextBtn))),
+  );
+
+  // ---------- Luồng chạy ----------
+  /** Hủy luồng cũ, tạo Teacher mới gắn với luồng mới (5.1). */
+  const newRun = () => {
+    run?.abort();
+    clearTimeout(idleTimer);
+    run = new AbortController();
+    if (activity.aborted) run.abort();
+    else activity.addEventListener('abort', () => run.abort(), { once: true });
+    return new Teacher(app, { signal: run.signal, stage: textBar, replayBtn: h('button') });
+  };
+  const box = () => ({ w: frame.clientWidth, h: frame.clientHeight });
+
+  /** Đặt mũi tên cho câu `i`; `animate` = trượt 400 ms (từ vị trí đang đứng), không thì nhảy thẳng. */
+  function placeArrow(i, animate) {
+    const s = sentences[i];
+    const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    arrow.classList.toggle('moving', Boolean(animate && !reduce));
+    arrow.classList.remove('arrived');
+    if (!s.point || !frame.clientWidth) {
+      arrow.classList.add('gone');
+      arrow.dataset.sentence = '';
+      return;
+    }
+    const g = arrowGeometry(s.point, s.from, box());
+    if (arrow.hidden || arrow.classList.contains('gone')) {
+      // Từ câu không có điểm: hiện ra ở đúng chỗ mới (không trượt từ chỗ cũ).
+      arrow.classList.remove('moving');
+    }
+    arrow.hidden = false;
+    arrow.classList.remove('gone');
+    Object.assign(arrow.style, { left: `${g.tail.x}px`, top: `${g.tail.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
+    arrow.dataset.sentence = s.sid;
+    arrow.dataset.from = g.from;
+  }
+
+  /** Thanh chữ: chiều cao = câu dài nhất của tranh (EN + VI) ở bề rộng hiện tại → không nhảy khi đổi câu / bật tắt VI (3.2). */
+  function reserveTextHeight() {
+    const probe = h('div.scene-text.probe', { 'aria-hidden': 'true' });
+    probe.style.width = `${textBar.clientWidth}px`;
+    document.body.append(probe);
+    let max = 0;
+    for (const s of sentences) {
+      probe.replaceChildren(h('div.sentence.scene-sentence', {}, ...displayWords(s.en).map((w) => h('span.sword', { text: w }))), h('p.sentence-vi.scene-vi', { text: s.vi }));
+      max = Math.max(max, probe.scrollHeight);
+    }
+    probe.remove();
+    textBar.style.minHeight = `${Math.min(max, window.innerHeight * 0.4)}px`;
+  }
+
+  function showVi() {
+    const on = app.settings.showVi !== false;
+    viLine.style.visibility = on ? 'visible' : 'hidden';
+    viBtn.setAttribute('aria-pressed', String(on));
+    viBtn.classList.toggle('off', !on);
+  }
+
+  /** Hiện câu `i` (chưa đọc). */
+  function show(i, animate) {
+    index = i;
+    if (app.current?.name === 'scene') app.current.params.index = i; // ra nền rồi quay lại: đúng câu này
+    readingDone = false;
+    const s = sentences[i];
+    wordEls = displayWords(s.en).map((w) => h('button.sword', { type: 'button', dataset: { word: tokenize(w)[0] ?? w }, text: w }));
+    sentenceBox.replaceChildren(...wordEls);
+    viLine.textContent = s.vi ?? '';
+    counter.textContent = `${i + 1}/${sentences.length}`;
+    prevBtn.disabled = i === 0;
+    nextBtn.disabled = i === last;
+    placeArrow(i, animate);
+  }
+
+  function setPaused(on) {
+    paused = on;
+    pauseBtn.textContent = on ? '▶' : '⏸';
+    pauseBtn.setAttribute('aria-label', on ? 'Chạy' : 'Dừng');
+    pauseBtn.classList.toggle('play', on);
+  }
+
+  /** Chuyển tới câu `i` rồi đọc (5.2: ⏭ ⏮ đọc ngay, không chờ 1,2 giây). */
+  async function playFrom(i, { animate = true } = {}) {
+    const t = newRun();
+    setPaused(false);
+    show(i, animate && i !== index);
+    try {
+      await t.pause(animate ? ARRIVE_MS : 0);
+      arrow.classList.add('arrived');
+      await t.pause(LOOK_MS);
+      const s = sentences[i];
+      await t.karaoke(s.en, wordEls);
+      if (app.settings.readVietnamese && s.vi) await t.sayVi(s.vi);
+      readingDone = true;
+      await t.pause(REST_MS); // nghỉ 1,2 giây SAU khi đọc xong toàn bộ âm thanh của câu (2.4)
+      if (i < last) {
+        if (app.settings.sceneAutoNext !== false) playFrom(i + 1);
+      } else {
+        finish();
+      }
+    } catch (err) {
+      if (!isAbort(err)) console.error(err);
+    }
+  }
+
+  function finish() {
+    recordLessonDone(app.db, scene.id, null).catch(() => {});
+    play('tada');
+    const again = h('button.big-btn.primary', { type: 'button', 'aria-label': 'Nghe lại từ đầu', text: '🔁 Nghe lại', onclick: () => playFrom(0) });
+    const home = h('button.big-btn', { type: 'button', 'aria-label': 'Về', text: '📖', onclick: back });
+    const panel = h('div.scene-done', {}, h('p.done-title', { text: 'Great listening!' }), h('div.done-actions', {}, again, home));
+    sentenceBox.replaceChildren(panel);
+    viLine.textContent = '';
+    arrow.classList.add('gone');
+    newRun().say('Great listening!').catch(() => {});
+  }
+
+  // ---------- Thao tác (bảng 5.2) ----------
+  pauseBtn.addEventListener('click', () => {
+    play('tap');
+    if (paused) {
+      playFrom(index, { animate: false });
+    } else {
+      newRun(); // hủy giọng đọc + hẹn giờ
+      setPaused(true);
+      placeArrow(index, false); // mũi tên nhảy ngay về vị trí cuối của câu
+      wordEls.forEach((el) => el.classList.remove('reading'));
+    }
+  });
+  againBtn.addEventListener('click', () => { play('tap'); playFrom(index, { animate: false }); });
+  prevBtn.addEventListener('click', () => { if (index > 0) { play('tap'); playFrom(index - 1); } });
+  nextBtn.addEventListener('click', () => { if (index < last) { play('tap'); playFrom(index + 1); } });
+  viBtn.addEventListener('click', async () => {
+    play('tap');
+    await app.setSetting('showVi', app.settings.showVi === false);
+    showVi(); // chỉ ẩn / hiện chữ, không ngắt âm thanh
+  });
+
+  // Chạm từ: đọc riêng từ đó; 3 giây không chạm gì → đọc dở thì đọc lại câu, đọc xong rồi thì sang câu sau.
+  sentenceBox.addEventListener('click', (e) => {
+    const el = e.target.closest('.sword');
+    if (!el || !el.dataset.word) return;
+    const t = newRun();
+    const wasDone = readingDone;
+    wordEls.forEach((x) => x.classList.remove('reading'));
+    el.classList.add('reading');
+    t.say(el.dataset.word, { rate: app.settings.rate * 0.8 }).catch(() => {}).finally(() => {
+      el.classList.remove('reading');
+      if (run.signal.aborted || paused) return;
+      idleTimer = setTimeout(() => {
+        if (wasDone && index < last) playFrom(index + 1);
+        else if (!wasDone) playFrom(index, { animate: false });
+      }, scaled(WORD_IDLE_MS));
+    });
+  });
+  // Chạm thanh chữ (ngoài các từ) = nghe lại.
+  textBar.addEventListener('click', (e) => {
+    if (e.target.closest('.sword, .scene-done')) return;
+    playFrom(index, { animate: false });
+  });
+  // Chạm tranh: trúng vùng của câu nào thì nhảy tới câu đó; ngoài mọi vùng thì không làm gì (4.4).
+  frame.addEventListener('click', (e) => {
+    const r = frame.getBoundingClientRect();
+    const j = pickSentence(sentences, { x: e.clientX - r.left, y: e.clientY - r.top }, box(), index);
+    if (j < 0) return;
+    play('tap');
+    playFrom(j);
+  });
+
+  // Xoay màn / đổi cỡ: tính lại mũi tên + chiều cao thanh chữ, không ngắt giọng đọc (5.3).
+  const onResize = () => {
+    placeArrow(index, false);
+    reserveTextHeight();
+  };
+  window.addEventListener('resize', onResize);
+
+  showVi();
+  requestAnimationFrame(() => {
+    reserveTextHeight();
+    if (paused) {
+      show(index, false);
+      setPaused(true);
+    } else {
+      playFrom(index, { animate: false });
+    }
+  });
+  return () => {
+    window.removeEventListener('resize', onResize);
+    run?.abort();
+    clearTimeout(idleTimer);
+  };
+}

@@ -329,7 +329,7 @@ Làm sau khi "Đọc câu" (0.4) xong, vì dùng chung phần karaoke và thanh 
 
 | Mốc | Phạm vi |
 |---|---|
-| 0.4.1 | Nghe xem: mũi tên, karaoke, tiếng Việt, điều khiển âm thanh (mục 3–6), 1 tranh có sẵn, kho `scenes` |
+| 0.4.1 *(xong 2026-11-10)* | Nghe xem: mũi tên, karaoke, tiếng Việt, điều khiển âm thanh (mục 3–6), 1 tranh có sẵn ("In the park"), kho `scenes` |
 | 0.4.2 | Soạn tranh tay: câu, mũi tên, ảnh, xem trước (mục 8.1–8.2) |
 | 0.4.3 | Prompt AI, dán JSON, kiểm tra dữ liệu (mục 7.4, 8.3); đủ 3–5 tranh có sẵn |
 | 0.4.4 | Tìm trong tranh, sao, tiến độ (mục 9, 11) |

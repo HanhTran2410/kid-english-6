@@ -352,7 +352,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.3.2 *(xong)* | Đủ 42 âm rời nhóm 1–7 (bố mẹ duyệt nhóm 4–7 ngày 2026-11-10, nguồn trong `app/sounds/CREDITS.md`); bài Phonics có sẵn nhóm 4–7 (mỗi nhóm 10 từ có hình + 4 tricky words theo thứ tự kiểu Jolly); ô nhiễu khi chọn chữ không trùng chữ với đáp án (oo / oo dài, th / th this) |
 | 0.3.3 *(xong)* | Ảnh thay emoji (5.6): Góc bố mẹ → Bài học → 🖼️ Ảnh (cả bài có sẵn): ảnh lưới (chép prompt AI vẽ, app đoán kiểu lưới, cắt từng ô, bố mẹ chọn từ cho từng ô) hoặc ảnh lẻ từng từ; bé thấy ảnh ở chọn hình và khu Spell |
 | 0.4.0 *(xong)* | Đọc câu (3.1.5): karaoke dùng chung (`karaoke.js`, SPEC-ta-tranh 5.4), bé chạm từ nghe riêng, bé đọc cả câu (từ nghe được xanh / chưa nghe được xám, Olly đọc lại), câu hỏi hiểu chọn hình; 3 câu đọc được cho mỗi nhóm 1–7; cài đặt Hiện tiếng Việt dưới câu / Đọc tiếng Việt thành tiếng |
-| 0.4.1–0.4.4 | Tả tranh (SPEC-ta-tranh mục 13) |
+| 0.4.1 *(xong)* | Tả tranh — Nghe xem (SPEC-ta-tranh 3–6): tab 🖼️ Tả tranh trong khu Read, tranh có sẵn "In the park" (SVG + emoji, 7 câu cấp 2), mũi tên trượt + nhún, karaoke, 🇻🇳 VI bật / tắt, ⏸ ▶ ⏮ 🔁 ⏭, chạm từ / chạm tranh, kho `scenes` (IndexedDB bước 3) |
+| 0.4.2–0.4.4 | Tả tranh: bố mẹ soạn tranh + đặt mũi tên, prompt AI, Tìm trong tranh (SPEC-ta-tranh mục 13) |
 | sau | Truyện ngắn (3.1.6) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |

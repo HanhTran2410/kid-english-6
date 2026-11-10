@@ -4,7 +4,7 @@
 import { normalizeWord, dayKey } from './text.js';
 
 export const DB_NAME = 'kid-english-6';
-export const STORES = ['lessons', 'images', 'recordings', 'progress', 'settings'];
+export const STORES = ['lessons', 'images', 'recordings', 'progress', 'settings', 'scenes'];
 
 // Mỗi phần tử là một bước nâng cấp cấu trúc. Thêm bước mới vào CUỐI khi đổi cấu trúc; dữ liệu cũ tự chuyển khi mở app.
 export const MIGRATIONS = [
@@ -23,6 +23,10 @@ export const MIGRATIONS = [
   // (Bản 0.1.x chưa ghi tiến độ nào nên không có dữ liệu cũ phải chuyển.)
   (db, tx) => {
     tx.objectStore('progress').createIndex('lessonId', 'lessonId');
+  },
+  // 0.4.1: kho tranh của Tả tranh (SPEC-ta-tranh mục 7.1) — chỉ thêm kho, không đụng dữ liệu cũ.
+  (db) => {
+    db.createObjectStore('scenes', { keyPath: 'id' });
   },
 ];
 

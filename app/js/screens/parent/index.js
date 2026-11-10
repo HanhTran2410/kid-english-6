@@ -89,6 +89,7 @@ function settingsView(app) {
       h('label.check', {}, viHelp, h('span', { text: ` Bé sai ${VI_HELP_AFTER} lần liên tiếp thì Olly giải thích bằng tiếng Việt` })),
       showVi,
       h('label.check', {}, readVi, h('span', { text: ' Olly đọc thêm câu tiếng Việt thành tiếng' })),
+      check('sceneAutoNext', 'Tả tranh: tự chạy sang câu sau (tắt = bé tự bấm ⏭)'),
       viNote),
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test),
     section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),

@@ -316,7 +316,7 @@ input[type='text'], input[type='number'], select, textarea {
 .read-list { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto 1fr; gap: 14px; align-content: start; height: 100dvh; overflow-y: auto; }
 .read-title { flex: 1; margin: 0; font-size: clamp(28px, 4vw, 40px); }
 .read-olly { width: 72px; height: 72px; }
-.tabs { display: flex; gap: 10px; justify-content: center; }
+.tabs { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
 .tab { padding: 10px 18px; min-height: 52px; border-radius: 26px; background: var(--card); box-shadow: var(--shadow); font-size: 19px; }
 .tab.active { background: var(--sky); color: #fff; }
 .lesson-cards { display: grid; align-content: start; grid-auto-rows: max-content; padding-top: 14px; gap: 22px 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); max-width: 960px; width: 100%; margin: 0 auto; }
@@ -422,3 +422,44 @@ input[type='text'], input[type='number'], select, textarea {
 .sword.heard { color: #2b8a3e; background: #d3f9d8; }
 .sword.missed { color: #868e96; }
 .sentence-vi { margin: 0; max-width: 760px; text-align: center; font-size: clamp(18px, 3vmin, 24px); font-style: italic; color: var(--ink-soft); }
+
+/* ---------- 🖼️ Tả tranh (screens/scene.js, SPEC-ta-tranh mục 3–4) ---------- */
+.scene-screen { display: grid; grid-template-rows: auto 1fr; gap: 10px; height: 100dvh; }
+.scene-top { display: flex; align-items: center; gap: 10px; }
+.scene-title { flex: 1; margin: 0; font-size: clamp(20px, 3vw, 30px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scene-btn { display: grid; place-items: center; min-width: 56px; height: 56px; padding: 0 12px; border-radius: 28px; background: var(--card); box-shadow: var(--shadow); font-size: 24px; font-family: var(--emoji), var(--font); }
+.scene-btn.big { min-width: 76px; height: 76px; border-radius: 38px; font-size: 34px; }
+.scene-btn:disabled { opacity: 0.35; }
+.scene-btn.play { background: var(--mint); color: #fff; }
+.vi-toggle { font-size: 18px; font-weight: 800; }
+.vi-toggle.off { opacity: 0.5; text-decoration: line-through; }
+.scene-counter { min-width: 52px; text-align: center; color: var(--ink-soft); }
+.scene-main { display: grid; justify-items: center; align-content: start; gap: 12px; min-height: 0; }
+.scene-frame {
+  position: relative; aspect-ratio: 4 / 3; width: min(100%, calc((100dvh - 330px) * 4 / 3)); min-width: 240px;
+  border-radius: 20px; overflow: hidden; background: #fff; box-shadow: var(--shadow); cursor: pointer;
+}
+.scene-art, .scene-art svg { width: 100%; height: 100%; display: block; }
+.scene-art text, .scene-thumb text { font-family: var(--emoji); }
+.scene-side { display: grid; gap: 10px; justify-items: center; width: min(100%, 900px); }
+.scene-text { box-sizing: border-box; width: 100%; padding: 10px 14px; border-radius: 20px; background: var(--card); box-shadow: var(--shadow); display: grid; align-content: center; justify-items: center; gap: 4px; overflow-y: auto; }
+.scene-text.probe { position: fixed; left: -9999px; top: 0; visibility: hidden; max-height: none; }
+.scene-sentence .sword { font-size: clamp(24px, 4.2vmin, 38px); padding: 2px 6px; }
+.scene-vi { font-size: clamp(16px, 2.8vmin, 24px); }
+.scene-controls { display: flex; gap: 22px; justify-content: center; }
+.scene-done { display: grid; justify-items: center; gap: 8px; }
+.scene-done .done-title { font-size: clamp(26px, 4vw, 40px); }
+/* Mũi tên: div quay quanh ĐUÔI (trái giữa); đầu nhọn ở bên phải chạm đúng điểm. */
+.scene-arrow { position: absolute; aspect-ratio: 100 / 36; transform-origin: 0 50%; pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.35)); transition: opacity 0.2s; }
+.scene-arrow svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.scene-arrow.moving { transition: left 0.4s ease-out, top 0.4s ease-out, width 0.4s ease-out, transform 0.4s ease-out, opacity 0.2s; opacity: 0.75; }
+.scene-arrow.gone { opacity: 0; }
+.scene-arrow.arrived svg { animation: arrow-bounce 0.5s ease-out 1; }
+@keyframes arrow-bounce { 40% { transform: translateX(6px); } }
+.scene-thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; }
+.scene-thumb svg { width: 100%; height: 100%; display: block; }
+@media (max-height: 500px) and (orientation: landscape) {
+  .scene-main { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
+  .scene-frame { width: calc((100dvh - 100px) * 4 / 3); }
+}
+@media (prefers-reduced-motion: reduce) { .scene-arrow.arrived svg { animation: none; } }
