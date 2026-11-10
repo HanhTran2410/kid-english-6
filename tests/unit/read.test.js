@@ -10,8 +10,8 @@ import { QUESTIONS, translateQuestion } from '../../app/js/captions.js';
 import { RESULT, applyTricky, emptyItem, trickyRef, TRICKY_BOX_DAYS } from '../../app/js/progress.js';
 import { shuffle, distractors, countSteps, isReadable } from '../../app/js/read/stages.js';
 
-test('bài có sẵn nhóm 1–3: hợp lệ, không cảnh báo, mọi từ đọc được bằng âm đã học, mọi âm có file', () => {
-  assert.deepEqual(BUILTIN_LESSONS.map((l) => l.id), ['phonics-g1', 'phonics-g2', 'phonics-g3']);
+test('bài có sẵn nhóm 1–7: hợp lệ, không cảnh báo, mọi từ đọc được bằng âm đã học, mọi âm có file', () => {
+  assert.deepEqual(BUILTIN_LESSONS.map((l) => l.id), [1, 2, 3, 4, 5, 6, 7].map((g) => `phonics-g${g}`));
   for (const l of BUILTIN_LESSONS) {
     const r = validateLesson(l, { builtIn: true });
     assert.deepEqual([r.errors, r.warnings], [[], []], l.id);

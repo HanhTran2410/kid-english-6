@@ -21,6 +21,8 @@ async function playLesson(page, { onFirstCheck }) {
         await onFirstCheck();
         continue;
       }
+      const labels = await page.locator('.letter-choice').allTextContents();
+      if (new Set(labels).size !== labels.length) throw new Error(`Hai ô cùng chữ: ${labels.join(', ')}`);
       const target = await stage.getAttribute('data-last-sound');
       await tap(page.locator(`.letter-choice[data-choice="${target}"]`));
     } else if (await page.locator('.pic-choice').first().isVisible()) {
@@ -49,7 +51,7 @@ test('Read: học hết bài nhóm 1 → sao, ⭐ Tiếp theo sang nhóm 2; 🔊
   await expect(page.locator('.home-version')).toHaveText(/^v\d+\.\d+\.\d+$/);
 
   await page.getByRole('button', { name: 'Tập đọc' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(3);
+  await expect(page.locator('.lesson-card')).toHaveCount(7);
   await expect(page.locator('.lesson-card.next')).toHaveAttribute('data-lesson', 'phonics-g1');
   await page.locator('.lesson-card[data-lesson="phonics-g1"]').click();
 
@@ -101,3 +103,17 @@ test('Read: học hết bài nhóm 1 → sao, ⭐ Tiếp theo sang nhóm 2; 🔊
   await expect(page.locator('.lesson-card.next')).toHaveAttribute('data-lesson', 'phonics-g2');
   await expect(page.locator('.lesson-card[data-lesson="phonics-g1"] .lesson-stars')).toContainText('⭐');
 });
+
+for (const group of [5, 6]) {
+  test(`Read: học hết bài nhóm ${group} (oo / oo dài, th / th this không bao giờ cùng hiện làm lựa chọn)`, async ({ page }) => {
+    test.setTimeout(300_000);
+    await fakeSpeech(page);
+    await startApp(page);
+    await page.getByRole('button', { name: 'Tập đọc' }).click();
+    await page.locator(`.lesson-card[data-lesson="phonics-g${group}"]`).click();
+    await playLesson(page, { onFirstCheck: async () => {} });
+    await expect(page.locator('.done-stars')).toHaveText(/⭐/);
+    const said = await spoken(page);
+    expect(said.filter((x) => /^(sh|ch|th|oo|ng|qu|ee|ai)$/.test(x))).toEqual([]); // âm rời không đọc bằng giọng máy
+  });
+}

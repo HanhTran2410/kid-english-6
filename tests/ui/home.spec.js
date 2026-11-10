@@ -15,7 +15,7 @@ test('màn chính: Olly chào, 4 khu học; khu chưa làm "Sắp mở" → Olly
   await expect(page.locator('.zone-card')).toHaveCount(4);
 
   await page.getByRole('button', { name: 'Tập đọc' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(3);
+  await expect(page.locator('.lesson-card')).toHaveCount(7);
   await page.getByRole('button', { name: 'Về màn hình chính' }).click();
   await expect(page.locator('.zone-card')).toHaveCount(4);
 });

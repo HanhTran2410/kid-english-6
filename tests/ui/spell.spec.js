@@ -9,7 +9,7 @@ test('Spell: xếp ô + điền ô thiếu bài nhóm 1 → sao riêng của khu
   await startApp(page);
   await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
   await expect(page.locator('.read-title')).toHaveText('✏️ Spell');
-  await expect(page.locator('.lesson-card')).toHaveCount(3);
+  await expect(page.locator('.lesson-card')).toHaveCount(7);
   await page.locator('.lesson-card[data-lesson="phonics-g1"]').click();
   const lesson = await page.evaluate(async () => (await import('./js/data/builtin-lessons.js')).BUILTIN_BY_ID.get('phonics-g1'));
   const word = (en) => lesson.words.find((w) => w.en === en);

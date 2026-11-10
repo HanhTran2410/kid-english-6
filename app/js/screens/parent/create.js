@@ -87,7 +87,7 @@ export function createPanel(app, { focusImport }) {
     copy1,
     field('Danh sách từ', words),
     field('Mẫu câu', patterns),
-    field('Bé đã học Phonics tới', groupSel, 'Từ có âm bé chưa học vẫn được dạy như "từ cần nhớ mặt chữ".'),
+    field('Bé đã học Phonics tới', groupSel, 'Để AI biết bé đã học những âm nào.'),
     h('h3.step', { text: 'Bước 2 — Tạo bài' }),
     h('p.field-hint', { text: 'Bấm "Chép prompt 2", dán vào AI. AI trả về một khối JSON — dán vào ô "Nhập bài (JSON)" ngay bên dưới, bấm Kiểm tra rồi Lưu bài.' }),
     copy2);

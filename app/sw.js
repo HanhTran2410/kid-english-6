@@ -3,7 +3,7 @@
 // Thêm/bớt file trong app/ thì cập nhật ASSETS (test tests/unit/sw.test.js sẽ báo nếu thiếu).
 // Thư viện bài app/shared/ (file .json + index.json) KHÔNG lưu offline: tải từ mạng khi bố mẹ mở Thư viện bài / chuông kiểm tra.
 
-const VERSION = '0.3.1';
+const VERSION = '0.3.2';
 const CACHE = `kid-english-6-${VERSION}`;
 
 const ASSETS = [
@@ -59,23 +59,47 @@ const ASSETS = [
   'js/zones.js',
   'manifest.webmanifest',
   'sounds/phonics/a.mp3',
+  'sounds/phonics/ai.mp3',
+  'sounds/phonics/ar.mp3',
   'sounds/phonics/b.mp3',
+  'sounds/phonics/ch.mp3',
   'sounds/phonics/d.mp3',
   'sounds/phonics/e.mp3',
+  'sounds/phonics/ee.mp3',
+  'sounds/phonics/er.mp3',
   'sounds/phonics/f.mp3',
   'sounds/phonics/g.mp3',
   'sounds/phonics/h.mp3',
   'sounds/phonics/i.mp3',
+  'sounds/phonics/ie.mp3',
+  'sounds/phonics/j.mp3',
   'sounds/phonics/k.mp3',
   'sounds/phonics/l.mp3',
   'sounds/phonics/m.mp3',
   'sounds/phonics/n.mp3',
+  'sounds/phonics/ng.mp3',
   'sounds/phonics/o.mp3',
+  'sounds/phonics/oa.mp3',
+  'sounds/phonics/oi.mp3',
+  'sounds/phonics/oo-l.mp3',
+  'sounds/phonics/oo.mp3',
+  'sounds/phonics/or.mp3',
+  'sounds/phonics/ou.mp3',
   'sounds/phonics/p.mp3',
+  'sounds/phonics/qu.mp3',
   'sounds/phonics/r.mp3',
   'sounds/phonics/s.mp3',
+  'sounds/phonics/sh.mp3',
   'sounds/phonics/t.mp3',
+  'sounds/phonics/th-v.mp3',
+  'sounds/phonics/th.mp3',
   'sounds/phonics/u.mp3',
+  'sounds/phonics/ue.mp3',
+  'sounds/phonics/v.mp3',
+  'sounds/phonics/w.mp3',
+  'sounds/phonics/x.mp3',
+  'sounds/phonics/y.mp3',
+  'sounds/phonics/z.mp3',
 ];
 
 self.addEventListener('install', (event) => {

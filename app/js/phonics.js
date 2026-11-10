@@ -24,11 +24,7 @@ export const AFTER_GROUPS = 8; // "nhóm" của split digraph
 export const SOUND_IDS = new Set(GROUPS.flatMap((g) => g.sounds));
 
 /** Mã âm đã có file ghi âm trong app (bố mẹ đã nghe duyệt — xem app/sounds/CREDITS.md). Thêm dần theo nhóm. */
-export const RECORDED_SOUNDS = new Set([
-  's', 'a', 't', 'i', 'p', 'n', // nhóm 1
-  'k', 'e', 'h', 'r', 'm', 'd', // nhóm 2
-  'g', 'o', 'u', 'l', 'f', 'b', // nhóm 3
-]);
+export const RECORDED_SOUNDS = new Set(GROUPS.flatMap((g) => g.sounds)); // đủ 42 âm của 7 nhóm (nhóm 4–7 duyệt 2026-11-10)
 
 export const soundUrl = (soundId) => `sounds/phonics/${soundId}.mp3`;
 
@@ -55,16 +51,44 @@ export const SOUND_INFO = {
   l: { letters: 'l', word: 'leg', emoji: '🦵', vi: 'Âm /l/ đặt lưỡi lên răng ngân: lll. Chữ l, như trong "leg" (cái chân).' },
   f: { letters: 'f', word: 'fish', emoji: '🐟', vi: 'Âm /f/ cắn nhẹ môi dưới thổi hơi: fff. Chữ f, như trong "fish" (con cá).' },
   b: { letters: 'b', word: 'bed', emoji: '🛏️', vi: 'Âm /b/ bật ở môi, có rung: b, b. Chữ b, như trong "bed" (cái giường).' },
+  ai: { letters: 'ai', word: 'rain', emoji: '🌧️', vi: 'Hai chữ a và i đi cùng nhau đọc là /ai/, gần giống "ây": ai, ai. Như trong "rain" (mưa).' },
+  j: { letters: 'j', word: 'jam', emoji: '🍯', vi: 'Âm /j/ bật ở đầu lưỡi, gần giống "chờ" nhưng có rung: j, j. Chữ j, như trong "jam" (mứt).' },
+  oa: { letters: 'oa', word: 'boat', emoji: '⛵', vi: 'Hai chữ o và a đi cùng nhau đọc là /oa/, gần giống "âu": oa. Như trong "boat" (con thuyền).' },
+  ie: { letters: 'ie', word: 'tie', emoji: '👔', vi: 'Hai chữ i và e đi cùng nhau đọc là /ie/, gần giống "ai": ie. Như trong "tie" (cà vạt).' },
+  ee: { letters: 'ee', word: 'bee', emoji: '🐝', vi: 'Hai chữ e đi cùng nhau đọc là /ee/, như "i" kéo dài: eee. Như trong "bee" (con ong).' },
+  or: { letters: 'or', word: 'fork', emoji: '🍴', vi: 'Hai chữ o và r đi cùng nhau đọc là /or/, như "o" kéo dài: or. Như trong "fork" (cái nĩa).' },
+  z: { letters: 'z', word: 'zip', emoji: '🤐', vi: 'Âm /z/ giống tiếng ong bay: zzz. Chữ z, như trong "zip" (khóa kéo).' },
+  w: { letters: 'w', word: 'web', emoji: '🕸️', vi: 'Âm /w/ chu tròn môi rồi mở ra: w, w. Chữ w, như trong "web" (mạng nhện).' },
+  ng: { letters: 'ng', word: 'ring', emoji: '💍', vi: 'Hai chữ n và g đi cùng nhau đọc là /ng/, ngân trong mũi như cuối chữ "trăng": ng. Như trong "ring" (cái nhẫn).' },
+  v: { letters: 'v', word: 'van', emoji: '🚐', vi: 'Âm /v/ cắn nhẹ môi dưới, có rung: vvv. Chữ v, như trong "van" (xe tải nhỏ).' },
+  oo: { letters: 'oo', word: 'book', emoji: '📖', vi: 'Hai chữ o đi cùng nhau, đọc /oo/ ngắn như "u" ngắn: oo. Như trong "book" (quyển sách).' },
+  'oo-l': { letters: 'oo', word: 'moon', emoji: '🌙', vi: 'Hai chữ o đi cùng nhau, đọc /oo/ dài như "u" kéo dài: ooo. Như trong "moon" (mặt trăng).' },
+  y: { letters: 'y', word: 'yes', emoji: '👍', vi: 'Âm /y/ như "i" lướt thật nhanh: y, y. Chữ y, như trong "yes" (vâng).' },
+  x: { letters: 'x', word: 'box', emoji: '📦', vi: 'Chữ x đọc là /ks/ — âm k rồi âm s liền nhau: ks. Như trong "box" (cái hộp).' },
+  ch: { letters: 'ch', word: 'chick', emoji: '🐥', vi: 'Hai chữ c và h đi cùng nhau đọc là /ch/, giống "ch" tiếng Việt: ch, ch. Như trong "chick" (gà con).' },
+  sh: { letters: 'sh', word: 'ship', emoji: '🚢', vi: 'Hai chữ s và h đi cùng nhau đọc là /sh/, như khi bảo im lặng: shhh. Như trong "ship" (con tàu).' },
+  th: { letters: 'th', word: 'three', emoji: '3️⃣', vi: 'Hai chữ t và h đi cùng nhau: đặt đầu lưỡi giữa hai răng rồi thổi hơi, không rung: th. Như trong "three" (số ba).' },
+  'th-v': { letters: 'th', word: 'this', emoji: '👉', vi: 'Hai chữ t và h đi cùng nhau: đặt đầu lưỡi giữa hai răng, có rung: th. Như trong "this" (cái này).' },
+  qu: { letters: 'qu', word: 'queen', emoji: '👸', vi: 'Hai chữ q và u đi cùng nhau đọc là /kw/: kw, kw. Như trong "queen" (nữ hoàng).' },
+  ou: { letters: 'ou', word: 'cloud', emoji: '☁️', vi: 'Hai chữ o và u đi cùng nhau đọc là /ou/, gần giống "ao": ou. Như trong "cloud" (đám mây).' },
+  oi: { letters: 'oi', word: 'coin', emoji: '🪙', vi: 'Hai chữ o và i đi cùng nhau đọc là /oi/, giống "oi" tiếng Việt: oi. Như trong "coin" (đồng xu).' },
+  ue: { letters: 'ue', word: 'statue', emoji: '🗽', vi: 'Hai chữ u và e đi cùng nhau đọc là /ue/, gần giống "iu": ue. Như trong "statue" (bức tượng).' },
+  er: { letters: 'er', word: 'hammer', emoji: '🔨', vi: 'Hai chữ e và r đi cùng nhau đọc là /er/, như "ơ" kéo dài: er. Như trong "hammer" (cái búa).' },
+  ar: { letters: 'ar', word: 'car', emoji: '🚗', vi: 'Hai chữ a và r đi cùng nhau đọc là /ar/, như "a" kéo dài, miệng mở to: ar. Như trong "car" (ô tô).' },
 };
 
-/** Tricky words nhóm 1 kiểu Jolly, chia theo nhóm âm đang học (SPEC 3.1.4). */
+/** Tricky words theo thứ tự kiểu Jolly (nhóm 1: I the he she me we be was to do are all; nhóm 2: you your come some…), chia theo nhóm âm đang học (SPEC 3.1.4). */
 export const TRICKY_BY_GROUP = {
   1: ['I', 'the'],
   2: ['he', 'she', 'me', 'we'],
   3: ['be', 'was', 'to', 'do'],
+  4: ['are', 'all', 'you', 'your'],
+  5: ['come', 'some', 'said', 'here'],
+  6: ['there', 'they', 'go', 'no'],
+  7: ['so', 'my', 'one', 'by'],
 };
 
-/** c, k, ck cùng âm `k`; các grapheme khác trùng mã âm (tới nhóm 3). */
+/** c, k, ck cùng âm `k`; các grapheme khác trùng mã âm. oo / th có hai âm — từ dùng âm thứ hai (oo-l, th-v) ghi riêng. */
 export const soundOfGrapheme = (g) => (g === 'c' || g === 'ck' ? 'k' : g);
 
 /** Tách từ thành grapheme theo tập đã học, ưu tiên grapheme dài (ck trước c). Không tách được → null. */

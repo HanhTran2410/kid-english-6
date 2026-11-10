@@ -63,7 +63,9 @@ export async function meetSounds(ctx, sounds) {
   // Kiểm tra: nghe âm → chọn chữ.
   const pool = GROUPS.filter((g) => g.group <= (ctx.lesson.group ?? 3)).flatMap((g) => g.sounds).filter((s) => SOUND_INFO[s] && RECORDED_SOUNDS.has(s));
   for (const s of shuffle(list)) {
-    const choices = shuffle([s, ...distractors(s, list, pool)]);
+    // Ô nhiễu không được trùng chữ với đáp án (oo ngắn / oo dài, th thin / th this cùng viết là oo, th).
+    const differs = (x) => SOUND_INFO[x].letters !== SOUND_INFO[s].letters;
+    const choices = shuffle([s, ...distractors(s, list.filter(differs), pool.filter(differs))]);
     const buttons = choices.map((c) => h('button.letter-choice', { type: 'button', 'aria-label': SOUND_INFO[c].letters, dataset: { choice: c }, text: SOUND_INFO[c].letters }));
     const correct = buttons[choices.indexOf(s)];
     stage.replaceChildren(h('div.choices', {}, ...buttons));

@@ -60,7 +60,7 @@ test('Tạo bài theo sách: chép prompt, nháp không mất, dán kết quả 
   await page.getByRole('button', { name: /Lưu bài/ }).click();
   await expect(page.locator('.my-lessons .lesson-row')).toContainText('📘 Theo sách');
 
-  // Khu Read → Theo sách: bài hiện ra, học được; fish (sh) và zoo (z, oo chưa có file) thành tricky.
+  // Khu Read → Theo sách: bài hiện ra, học được; đủ 42 âm nên mọi từ có ô chữ đều ghép âm được (không chuyển sang tricky).
   await page.getByRole('button', { name: '← Quay lại' }).click();
   await page.getByRole('button', { name: /Về màn hình của bé/ }).click();
   await page.getByRole('button', { name: 'Tập đọc' }).click();
@@ -68,12 +68,7 @@ test('Tạo bài theo sách: chép prompt, nháp không mất, dán kết quả 
   const card = page.locator('.lesson-card[data-lesson="book-tieng-anh-1-global-success-unit-3"]');
   await expect(card).toContainText('Unit 3: At the zoo');
   const play = await page.evaluate(async (data) => (await import('./js/lesson-prompts.js')).adaptForPlay(data).activities, aiResult);
-  expect(play).toEqual([
-    { type: 'blend', items: ['cat', 'dog', 'pig'] },
-    { type: 'spell', items: ['cat', 'dog'] },
-    { type: 'fill', items: ['pig'] },
-    { type: 'tricky', items: ['fish', 'zoo'] },
-  ]);
+  expect(play).toEqual(aiResult.activities);
   await card.click();
   await expect(page.locator('.tile-row .tile')).toHaveText(['c', 'a', 't']);
 });

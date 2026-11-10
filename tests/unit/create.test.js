@@ -34,12 +34,13 @@ test('prompt 2: có id cố định, danh sách từ, nhóm âm đã học, quy 
   assert.equal(r.lesson.track, 'book');
 });
 
-test('lúc học: từ có âm chưa có file (sh) rời ghép âm / xếp ô sang tricky; bài có sẵn giữ nguyên; dữ liệu gốc không đổi', () => {
-  const data = validateLesson({
+test('lúc học: từ có âm chưa có file ghi âm rời ghép âm / xếp ô sang tricky; bài có sẵn giữ nguyên; dữ liệu gốc không đổi', () => {
+  // Đã đủ 42 âm nên giả lập một âm chưa có file ("zz") để kiểm tra cơ chế.
+  const data = {
     version: 1, id: 'book-x-unit-1', track: 'book', title: 'Unit 1',
     words: [
       { id: 'cat', en: 'cat', emoji: '🐱', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'] },
-      { id: 'ship', en: 'ship', emoji: '🚢', graphemes: ['sh', 'i', 'p'], sounds: ['sh', 'i', 'p'] },
+      { id: 'ship', en: 'ship', emoji: '🚢', graphemes: ['sh', 'i', 'p'], sounds: ['zz', 'i', 'p'] },
       { id: 'hello', en: 'hello', tags: ['tricky'] },
     ],
     activities: [
@@ -48,7 +49,7 @@ test('lúc học: từ có âm chưa có file (sh) rời ghép âm / xếp ô sa
       { type: 'spell', items: ['ship'] },
       { type: 'fill', items: ['cat', 'ship'] },
     ],
-  }).lesson;
+  };
   const before = JSON.stringify(data);
   const play = adaptForPlay(data);
   assert.deepEqual(play.activities.map((a) => [a.type, a.items]), [
