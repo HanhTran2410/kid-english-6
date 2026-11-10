@@ -188,3 +188,29 @@ export async function removeWordImage(db, lessonId, wordId) {
 export async function lessonImages(db, lessonId) {
   return new Map((await db.getAllByIndex('images', 'lessonId', lessonId)).map((r) => [r.word, r]));
 }
+
+// ---------- Tranh của Tả tranh (SPEC-ta-tranh mục 7–8) — ảnh tranh lưu trong `images` (lessonId = id tranh) ----------
+
+export const SCENE_IMAGE = '__scene';
+
+export async function saveScene(db, scene, now = Date.now()) {
+  const old = await db.get('scenes', scene.id);
+  const record = { ...scene, createdAt: old?.createdAt ?? scene.createdAt ?? now, updatedAt: now };
+  await db.put('scenes', record);
+  return record;
+}
+
+/** Xóa tranh + ảnh + tiến độ của tranh. Tranh có sẵn của app không xóa được. */
+export async function deleteScene(db, sceneId) {
+  const scene = await db.get('scenes', sceneId);
+  if (scene?.builtIn) throw new Error('Tranh có sẵn của app không xóa được.');
+  const [progress, images] = await Promise.all([
+    db.getAllByIndex('progress', 'lessonId', sceneId),
+    db.getAllByIndex('images', 'lessonId', sceneId),
+  ]);
+  await db.write(['scenes', 'progress', 'images'], (tx) => {
+    tx.objectStore('scenes').delete(sceneId);
+    for (const p of progress) tx.objectStore('progress').delete(p.key);
+    for (const i of images) tx.objectStore('images').delete(i.id);
+  });
+}

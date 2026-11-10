@@ -9,6 +9,7 @@ import { displayWords } from '../karaoke.js';
 import { arrowGeometry, pickSentence } from '../scene.js';
 import { SCENE_BY_ID } from '../data/builtin-scenes.js';
 import { recordLessonDone } from '../progress.js';
+import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
 import { Teacher } from '../read/teacher.js';
 
 const ARRIVE_MS = 400;
@@ -16,12 +17,36 @@ const LOOK_MS = 300;
 const REST_MS = 1200;
 const WORD_IDLE_MS = 3000;
 
+/** Tranh có sẵn (SVG) hoặc tranh bố mẹ tạo (kho `scenes` + ảnh trong `images`). */
 export function sceneScreen(app, params = {}) {
-  const scene = SCENE_BY_ID.get(params.sceneId);
-  if (!scene) {
-    app.go('read', { tab: 'scene' });
-    return null;
-  }
+  const builtin = SCENE_BY_ID.get(params.sceneId);
+  if (builtin) return buildScene(app, params, builtin, (art) => { art.innerHTML = builtin.svg; });
+  let cleanup = null;
+  let url = null;
+  let left = false;
+  (async () => {
+    const scene = await app.db.get('scenes', params.sceneId);
+    if (left) return;
+    if (!scene || !scene.sentences?.length) {
+      app.go('read', { tab: 'scene' });
+      return;
+    }
+    const img = (await lessonImages(app.db, scene.id)).get(SCENE_IMAGE);
+    if (left) return;
+    if (img) url = URL.createObjectURL(mediaBlob(img));
+    cleanup = buildScene(app, params, scene, (art) => {
+      if (url) art.append(h('img', { src: url, alt: '', draggable: false }));
+      else art.append(h('div.scene-missing', { text: 'Tranh này đang bị lỗi — nhờ bố mẹ sửa nhé' }));
+    });
+  })().catch((err) => console.error(err));
+  return () => {
+    left = true;
+    cleanup?.();
+    if (url) URL.revokeObjectURL(url);
+  };
+}
+
+function buildScene(app, params, scene, fillArt) {
   const activity = app.startActivity();
   const sentences = scene.sentences;
   const last = sentences.length - 1;
@@ -39,7 +64,7 @@ export function sceneScreen(app, params = {}) {
   const pauseBtn = h('button.scene-btn', { type: 'button', 'aria-label': 'Dừng', text: '⏸' });
   const counter = h('span.scene-counter');
   const art = h('div.scene-art');
-  art.innerHTML = scene.svg;
+  fillArt(art);
   const arrow = h('div.scene-arrow', { 'aria-hidden': 'true', hidden: true });
   arrow.innerHTML = '<svg viewBox="0 0 100 36" preserveAspectRatio="none"><path d="M0 13 H70 V2 L100 18 L70 34 V23 H0 Z" fill="#e03131" stroke="#fff" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
   const frame = h('div.scene-frame', { role: 'img', 'aria-label': scene.title }, art, arrow);

@@ -16,7 +16,7 @@ import { spellWords, fillWords } from '../read/spell-stages.js';
 import { readSentences } from '../read/sentence-stages.js';
 import { adaptForPlay } from '../lesson-prompts.js';
 import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
-import { lessonImages, mediaBlob } from '../db.js';
+import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -163,8 +163,15 @@ function showDone(app, t, layout, lesson, stars, zone) {
 // ---------- Tả tranh: danh sách tranh (SPEC-ta-tranh mục 2.1) ----------
 
 async function sceneCards(app, list) {
-  const progress = await Promise.all(BUILTIN_SCENES.map((s) => getLessonProgress(app.db, s.id)));
-  BUILTIN_SCENES.forEach((s, i) => {
+  const own = (await app.db.getAll('scenes')).filter((s) => s.sentences?.length).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
+  const scenes = [...BUILTIN_SCENES, ...own];
+  const progress = await Promise.all(scenes.map((s) => getLessonProgress(app.db, s.id)));
+  const thumbs = await Promise.all(scenes.map(async (s) => {
+    if (s.svg) return h('div.scene-thumb', { html: s.svg });
+    const img = (await lessonImages(app.db, s.id)).get(SCENE_IMAGE);
+    return h('div.scene-thumb', {}, img ? h('img', { src: URL.createObjectURL(mediaBlob(img)), alt: '' }) : h('span.lesson-emoji', { text: '🖼️' }));
+  }));
+  scenes.forEach((s, i) => {
     list.append(h('button.lesson-card.scene-card', {
       type: 'button', 'aria-label': s.title, dataset: { scene: s.id },
       onclick: () => {
@@ -172,7 +179,7 @@ async function sceneCards(app, list) {
         app.go('scene', { sceneId: s.id });
       },
     },
-    h('div.scene-thumb', { html: s.svg }),
+    thumbs[i],
     h('span.lesson-title', { text: s.title }),
     h('span.lesson-vi', { text: `${s.titleVi} · ${s.sentences.length} câu` }),
     progress[i].plays ? h('span.lesson-stars', { text: `👂 ${progress[i].plays}` }) : null));

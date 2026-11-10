@@ -73,3 +73,44 @@ test('tranh có sẵn: câu đầu tả chung (không mũi tên), điểm trong 
     }
   }
 });
+
+test('kiểm tra tranh (bảng 7.4): lỗi chỉ rõ câu; thiếu thì điền mặc định; hit kẹp + cảnh báo; point null bỏ qua hit', async () => {
+  const { validateScene, parseSceneText, scenePrompt } = await import('../../app/js/scene-data.js');
+  const ok = validateScene({
+    title: 'At the beach',
+    sentences: [
+      { en: 'It is a hot day.', vi: 'Hôm nay trời nóng.', point: null, hit: 0.5 },
+      { en: 'A girl is on the sand.', vi: 'Một bạn gái ở trên cát.', point: { x: 0.3, y: 0.6 }, hit: 0.5 },
+      { en: 'A crab is red.', point: { x: 0.7, y: 0.8 } },
+    ],
+  });
+  assert.equal(ok.ok, true);
+  assert.equal(ok.scene.level, 2);
+  assert.match(ok.scene.id, /^scene-/);
+  assert.equal(ok.scene.sentences[1].hit, 0.2);
+  assert.equal(ok.scene.sentences[1].from, 'auto');
+  assert.equal(new Set(ok.scene.sentences.map((s) => s.sid)).size, 3);
+  assert.ok(ok.warnings.some((w) => /Câu 2: vùng chạm/.test(w)));
+  assert.ok(ok.warnings.some((w) => /Câu 3: chưa có tiếng Việt/.test(w)));
+  assert.ok(!ok.warnings.some((w) => /Câu 1: vùng chạm/.test(w)));
+
+  const errs = (d) => validateScene(d).errors.join('\n');
+  assert.match(errs({ title: 'X', sentences: [{ en: 'A', point: { x: 1.3, y: 0.5 } }] }), /Câu 1: vị trí mũi tên phải từ 0 đến 1/);
+  assert.match(errs({ title: 'X', sentences: [{ en: 'A' }, { vi: 'b' }] }), /Câu 2: thiếu câu tiếng Anh/);
+  assert.match(errs({ title: 'X', sentences: [{ en: 'A', from: 'up' }] }), /hướng mũi tên "up"/);
+  assert.match(errs({ sentences: [] }), /Thiếu tên tranh[\s\S]*1–12 câu/);
+  assert.match(errs({ title: 'X', level: 5, sentences: [{ en: 'A' }] }), /"level"/);
+  assert.match(errs({ title: 'X', sentences: [{ en: 'A', keywords: 'boy' }] }), /"keywords"/);
+
+  const w = validateScene({ title: 'X', level: 1, sentences: [{ en: 'He is a very big and happy boy today.', point: null }] }).warnings.join('\n');
+  assert.match(w, /dài hơn mức cấp 1/);
+  assert.match(w, /đại từ/);
+  assert.match(w, /Chưa câu nào có mũi tên/);
+
+  assert.equal(parseSceneText('```json\n{"title":"A"}\n```').data.title, 'A');
+  const p = scenePrompt({ level: 1 });
+  assert.match(p, /Cấp độ 1: mỗi câu 3–6 từ/);
+  assert.match(p, /"point": null/);
+  const example = JSON.parse(p.slice(p.indexOf('{', p.indexOf('VÍ DỤ CẤU TRÚC'))));
+  assert.equal(validateScene(example).ok, true);
+});

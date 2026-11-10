@@ -8,12 +8,14 @@ import { VI_HELP_AFTER } from '../../settings.js';
 import { parentLayout, goParent, section, field } from './common.js';
 import { lessonsView } from './lessons.js';
 import { picturesView } from './pictures.js';
+import { sceneEditView } from './scene-edit.js';
 
 const VIEWS = {
   menu: menuView,
   settings: settingsView,
   lessons: lessonsView,
   pictures: picturesView,
+  'scene-edit': sceneEditView,
 };
 
 export function parentScreen(app, params = {}) {

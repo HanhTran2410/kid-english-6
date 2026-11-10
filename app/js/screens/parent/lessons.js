@@ -24,7 +24,7 @@ export function lessonsView(app) {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), builtinPanel(app));
+  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
   refresh();
 }
 
@@ -230,4 +230,22 @@ function builtinPanel(app) {
     h('div.lesson-list.builtin-lessons', {}, ...BUILTIN_LESSONS.map((lesson) => h('div.lesson-row', {},
       h('div.lesson-info', {}, h('strong', { text: lesson.title }), lesson.titleVi ? h('span', { text: ` — ${lesson.titleVi}` }) : null),
       h('div.lesson-actions', {}, picturesButton(app, lesson))))));
+}
+
+/** Tranh của Tả tranh do bố mẹ tạo (SPEC-ta-tranh mục 8). */
+function scenesPanel(app) {
+  const box = h('div.lesson-list.scene-list');
+  app.db.getAll('scenes').then((scenes) => {
+    if (!scenes.length) box.append(h('p.muted', { text: 'Chưa có tranh nào. Bé đang có tranh có sẵn "In the park".' }));
+    for (const s of scenes.sort((a, b) => (b.updatedAt ?? 0) - (a.updatedAt ?? 0))) {
+      box.append(h('div.lesson-row', { dataset: { scene: s.id } },
+        h('div.lesson-info', {}, h('strong', { text: s.title }), s.titleVi ? h('span', { text: ` — ${s.titleVi}` }) : null,
+          h('div.field-hint', { text: `${s.sentences.length} câu · cấp ${s.level} · ${s.sentences.filter((x) => x.point).length} mũi tên` })),
+        h('div.lesson-actions', {}, h('button.btn', { type: 'button', text: '✏️ Sửa', 'aria-label': `Sửa tranh ${s.title}`, onclick: () => goParent(app, 'scene-edit', { sceneId: s.id }) }))));
+    }
+  }).catch(() => {});
+  return section('🖼️ Tả tranh',
+    h('p.field-hint', { text: 'Tạo tranh cho mục Tả tranh: chọn ảnh, viết câu (hoặc nhờ AI), chạm vào tranh để đặt mũi tên.' }),
+    h('button.btn.primary', { type: 'button', text: '+ Tạo tranh mới', onclick: () => goParent(app, 'scene-edit') }),
+    box);
 }
