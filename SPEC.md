@@ -289,7 +289,7 @@ Kho `lessons`. Mục (từ / câu / thẻ) khai báo một lần, hoạt động
 - Bài có sẵn đi kèm app (file JSON trong `app/data/`, service worker cache); nâng phiên bản app thay bản mới, giữ tiến độ theo `id` mục.
 
 ### 5.6. Ảnh
-- Ảnh lưới (kid-english) chỉ là **cách nhập**: cắt xong mỗi ô thành một ảnh riêng có `imageId` trong kho `images`; mục trỏ tới `imageId`, không trỏ tới vị trí ô. Ảnh lưới gốc không giữ.
+- Ảnh lưới (kid-english) chỉ là **cách nhập**: cắt xong mỗi ô thành một ảnh riêng trong kho `images`, gắn theo **(id bài, id của từ)** — không trỏ tới vị trí ô, không cần sửa dữ liệu bài, nên bài có sẵn của app cũng thêm ảnh được (đã làm 0.3.3). Ảnh lưới gốc không giữ.
 - Màn cắt cho bố mẹ: xem từng ô, gán ô cho từ, đổi / chụp lại ảnh riêng cho một từ.
 - Một mục một ảnh; ảnh thuộc một bài (`lessonId`), xóa theo bài. Bài có sẵn dùng emoji / SVG đi kèm app.
 - Ảnh trong IndexedDB và ảnh đi kèm app đều xem được offline.
@@ -350,7 +350,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.3.0 *(xong)* | Spell: xếp ô + điền ô (bài nhóm 1–3 có sẵn, sao riêng của khu Spell) |
 | 0.3.1 *(xong)* | Tạo bài theo sách bằng AI, 2 bước (5.7): Góc bố mẹ → Bài học → ✨ Tạo bài theo sách (chọn sách + Unit, prompt 1 lấy từ từ ảnh, prompt 2 tạo bài, nháp tự lưu, dán JSON vào Nhập bài); lúc học, từ có âm chưa có file ghi âm tự chuyển sang tricky (`adaptForPlay`) — thêm file âm nhóm 4–7 thì bài cũ tự ghép âm được |
 | 0.3.2 *(xong)* | Đủ 42 âm rời nhóm 1–7 (bố mẹ duyệt nhóm 4–7 ngày 2026-11-10, nguồn trong `app/sounds/CREDITS.md`); bài Phonics có sẵn nhóm 4–7 (mỗi nhóm 10 từ có hình + 4 tricky words theo thứ tự kiểu Jolly); ô nhiễu khi chọn chữ không trùng chữ với đáp án (oo / oo dài, th / th this) |
-| **0.3.3** | Màn cắt ảnh lưới (5.6) |
+| 0.3.3 *(xong)* | Ảnh thay emoji (5.6): Góc bố mẹ → Bài học → 🖼️ Ảnh (cả bài có sẵn): ảnh lưới (chép prompt AI vẽ, app đoán kiểu lưới, cắt từng ô, bố mẹ chọn từ cho từng ô) hoặc ảnh lẻ từng từ; bé thấy ảnh ở chọn hình và khu Spell |
 | 0.4 | Read: đọc câu + truyện ngắn; rồi Tả tranh 0.4.1–0.4.4 (SPEC-ta-tranh mục 13) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |

@@ -14,6 +14,7 @@ import { activityLayout, Teacher } from '../read/teacher.js';
 import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
 import { spellWords, fillWords } from '../read/spell-stages.js';
 import { adaptForPlay } from '../lesson-prompts.js';
+import { lessonImages, mediaBlob } from '../db.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -90,11 +91,19 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
   const signal = app.startActivity();
   const layout = activityLayout(app, { onHome: () => app.go(zone) });
   const t = new Teacher(app, { signal, stage: layout.stage, replayBtn: layout.replayBtn });
+  const urls = [];
   (async () => {
     const lesson = await getLesson(app, lessonId);
     if (!lesson) {
       app.go(zone);
       return;
+    }
+    // Ảnh bố mẹ thêm cho từ (SPEC 5.6) thay cho emoji.
+    const pictures = new Map();
+    for (const [wordId, rec] of await lessonImages(app.db, lesson.id)) {
+      const url = URL.createObjectURL(mediaBlob(rec));
+      urls.push(url);
+      pictures.set(wordId, url);
     }
     app.root.dataset.lesson = lesson.id;
     app.root.dataset.zone = zone;
@@ -103,6 +112,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     const results = [];
     const ctx = {
       app, t, stage: layout.stage, signal, lesson,
+      picture: (w) => pictures.get(w.id) ?? null,
       tick: () => layout.setProgress(++done / total),
       scored: (r) => results.push(r),
     };
@@ -125,6 +135,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     console.error(err);
     toast('Có lỗi khi học bài này.');
   });
+  return () => urls.forEach((u) => URL.revokeObjectURL(u));
 }
 
 function showDone(app, t, layout, lesson, stars, zone) {

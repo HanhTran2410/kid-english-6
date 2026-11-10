@@ -7,11 +7,13 @@ import { LIMIT_OPTIONS } from '../../session.js';
 import { VI_HELP_AFTER } from '../../settings.js';
 import { parentLayout, goParent, section, field } from './common.js';
 import { lessonsView } from './lessons.js';
+import { picturesView } from './pictures.js';
 
 const VIEWS = {
   menu: menuView,
   settings: settingsView,
   lessons: lessonsView,
+  pictures: picturesView,
 };
 
 export function parentScreen(app, params = {}) {

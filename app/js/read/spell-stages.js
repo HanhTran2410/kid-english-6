@@ -9,7 +9,7 @@ import { QUESTIONS } from '../captions.js';
 import { SOUND_INFO, RECORDED_SOUNDS, learnedGraphemes, soundOfGrapheme } from '../phonics.js';
 import { needsVietnameseHelp } from '../settings.js';
 import { RESULT, recordItem } from '../progress.js';
-import { shuffle } from './stages.js';
+import { shuffle, hasPicture, pictureEl } from './stages.js';
 
 const snd = (ctx, s) => playPhoneme(s, { stage: ctx.stage, signal: ctx.signal });
 const record = (ctx, activity, itemId, result) => recordItem(ctx.app.db, { lessonId: ctx.lesson.id, activity, itemId }, result).catch(() => {});
@@ -37,7 +37,7 @@ export function missingIndex(word) {
 }
 
 const tileFor = (g, sound) => h('button.tile', { type: 'button', 'aria-label': g, dataset: { grapheme: g, sound }, text: g });
-const picture = (w) => (w.emoji ? h('div.spell-pic', { 'aria-hidden': 'true', text: w.emoji }) : null);
+const picture = (ctx, w) => (hasPicture(ctx, w) ? h('div.spell-pic', { 'aria-hidden': 'true' }, pictureEl(ctx, w)) : null);
 
 // ---------- Nghe – xếp ô ----------
 
@@ -48,7 +48,7 @@ export async function spellWords(ctx, words) {
     const extra = spellDistractors(w, ctx.lesson.group);
     const tiles = shuffle([...w.graphemes.map((g, i) => tileFor(g, w.sounds[i])), ...extra.map((g) => tileFor(g, soundOfGrapheme(g)))]);
     const tray = h('div.tray', {}, ...tiles);
-    stage.replaceChildren(picture(w), h('div.slot-row', {}, ...slots), tray);
+    stage.replaceChildren(picture(ctx, w), h('div.slot-row', {}, ...slots), tray);
     const sayWord = () => t.say(w.en, { rate: app.settings.rate * 0.85 });
     await t.ask(QUESTIONS.spellIt(w.en), { meaning: w.vi, speak: async () => { await t.say(QUESTIONS.spellIt(w.en)); await sayWord(); } });
 
@@ -126,7 +126,7 @@ export async function fillWords(ctx, words) {
     const choices = shuffle([missing, ...spellDistractors(w, ctx.lesson.group)]);
     const buttons = choices.map((g) => h('button.tile.fill-choice', { type: 'button', 'aria-label': g, dataset: { choice: g, sound: soundOfGrapheme(g) }, text: g }));
     const correct = buttons[choices.indexOf(missing)];
-    stage.replaceChildren(picture(w), row, h('div.choices', {}, ...buttons));
+    stage.replaceChildren(picture(ctx, w), row, h('div.choices', {}, ...buttons));
     const sound = w.sounds[gap];
     const result = await t.choose({
       options: buttons, correct, question: QUESTIONS.whatsMissing(w.en), meaning: w.vi,

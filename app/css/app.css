@@ -396,3 +396,20 @@ input[type='text'], input[type='number'], select, textarea {
 .fill-choice { background: #f3f0ff; border: 4px solid var(--lilac); color: #5f3dc4; }
 .slot-row + .choices { margin-top: 18px; padding-top: 18px; border-top: 3px dotted rgba(38, 33, 92, 0.15); }
 .parent-body h3.step { margin: 16px 0 4px; font-size: 16px; color: #5f3dc4; }
+
+/* ---------- Góc bố mẹ → 🖼️ Ảnh của bài (screens/parent/pictures.js) ---------- */
+.picture-list { display: grid; gap: 8px; }
+.picture-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 6px 0; border-top: 1px solid #eef0f6; }
+.picture-row:first-child { border-top: 0; }
+.picture-thumb { width: 64px; height: 64px; flex: none; border-radius: 12px; object-fit: contain; background: #f7f8fc; display: grid; place-items: center; font-size: 36px; }
+.grid-preview { display: grid; gap: 10px; margin-top: 10px; }
+.grid-cells { display: grid; gap: 8px; grid-template-columns: repeat(var(--cols, 3), minmax(0, 1fr)); }
+.grid-cell { margin: 0; display: grid; gap: 4px; }
+.grid-cell img { width: 100%; aspect-ratio: 1; object-fit: contain; border-radius: 10px; background: #fff; border: 1px solid #e3e5f0; }
+.grid-cell select { width: 100%; font-size: 14px; min-height: 36px; padding: 4px 6px; }
+/* Ảnh thật thay emoji khi bé học (read/stages.js, read/spell-stages.js) */
+.pic-choice img { width: clamp(90px, 16vmin, 140px); height: clamp(90px, 16vmin, 140px); object-fit: contain; display: block; }
+.spell-pic img { width: clamp(110px, 20vmin, 170px); height: clamp(110px, 20vmin, 170px); object-fit: contain; display: block; border-radius: 18px; }
+.picture-row { flex-wrap: nowrap; }
+.picture-row .lesson-info { flex: 1 1 auto; min-width: 0; }
+.picture-row .lesson-actions { margin-top: 0; flex: none; }

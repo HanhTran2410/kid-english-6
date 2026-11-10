@@ -83,9 +83,16 @@ export async function meetSounds(ctx, sounds) {
 
 // ---------- Ghép âm ----------
 
+/** Hình của từ: ảnh bố mẹ thêm (nếu có) hoặc emoji. */
+export const hasPicture = (ctx, w) => Boolean(ctx.picture?.(w) || w.emoji);
+export function pictureEl(ctx, w) {
+  const url = ctx.picture?.(w);
+  return url ? h('img', { src: url, alt: '', draggable: false }) : w.emoji;
+}
+
 export async function blendWords(ctx, words) {
   const { t, stage, app } = ctx;
-  const pictured = ctx.lesson.words.filter((w) => w.emoji && w.graphemes);
+  const pictured = ctx.lesson.words.filter((w) => w.graphemes && hasPicture(ctx, w));
   for (const w of words) {
     const tiles = w.graphemes.map((g, i) => h('button.tile', { type: 'button', 'aria-label': g, dataset: { sound: w.sounds[i] }, text: g }));
     for (const tile of tiles) tile.addEventListener('click', () => snd(ctx, tile.dataset.sound));
@@ -107,10 +114,10 @@ export async function blendWords(ctx, words) {
     const outcome = await t.readAloud(w.en, w.homophones);
     record(ctx, 'read-aloud', w.id, outcomeResult(outcome));
 
-    if (w.emoji && pictured.length >= 3) {
-      const others = distractors(w, pictured.filter((x) => x.emoji !== w.emoji), []);
+    if (hasPicture(ctx, w) && pictured.length >= 3) {
+      const others = distractors(w, pictured.filter((x) => x.id !== w.id && (ctx.picture?.(x) || ctx.picture?.(w) || x.emoji !== w.emoji)), []);
       const choices = shuffle([w, ...others]);
-      const buttons = choices.map((c) => h('button.pic-choice', { type: 'button', 'aria-label': c.en, dataset: { choice: c.id }, text: c.emoji }));
+      const buttons = choices.map((c) => h('button.pic-choice', { type: 'button', 'aria-label': c.en, dataset: { choice: c.id } }, pictureEl(ctx, c)));
       const correct = buttons[choices.indexOf(w)];
       stage.replaceChildren(h('div.word-shown', { text: w.en }), h('div.choices', {}, ...buttons));
       const result = await t.choose({

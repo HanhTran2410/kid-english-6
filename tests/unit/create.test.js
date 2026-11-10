@@ -58,3 +58,37 @@ test('lúc học: từ có âm chưa có file ghi âm rời ghép âm / xếp ô
   assert.equal(JSON.stringify(data), before);
   for (const l of BUILTIN_LESSONS) assert.equal(adaptForPlay(l), l);
 });
+
+test('prompt ảnh lưới: đúng số cột × hàng, thứ tự ô, nghĩa tiếng Việt, ô thừa để trống, không có chữ', async () => {
+  const { gridImagePrompt } = await import('../../app/js/lesson-prompts.js');
+  const p = gridImagePrompt([{ en: 'ant', vi: 'con kiến' }, { en: 'pin' }, { en: 'pan', vi: 'cái chảo' }], { cols: 2, rows: 2 });
+  assert.match(p, /exact 2-column × 2-row grid of 4 equal square cells/);
+  assert.match(p, /Cell 1: one ant \(meaning in Vietnamese: con kiến\)/);
+  assert.match(p, /Cell 2: one pin\. Only/);
+  assert.match(p, /Cell 4: EMPTY/);
+  assert.match(p, /Exactly 3 illustrations/);
+  assert.match(p, /No text anywhere/);
+});
+
+test('ảnh của từ: lưu / thay / xóa theo (bài, từ); xóa bài thì xóa ảnh', async () => {
+  await import('fake-indexeddb/auto');
+  const { openDatabase, setWordImage, removeWordImage, lessonImages, deleteLesson, saveLesson } = await import('../../app/js/db.js');
+  const db = await openDatabase(`pics-${Math.random()}`);
+  const blob = (s) => new Blob([s], { type: 'image/jpeg' });
+  await setWordImage(db, { lessonId: 'phonics-g1', wordId: 'ant', blob: blob('a1'), width: 10, height: 10 });
+  await setWordImage(db, { lessonId: 'phonics-g1', wordId: 'ant', blob: blob('a2'), width: 10, height: 10 });
+  await setWordImage(db, { lessonId: 'phonics-g1', wordId: 'pin', blob: blob('p'), width: 10, height: 10 });
+  let imgs = await lessonImages(db, 'phonics-g1');
+  assert.deepEqual([...imgs.keys()].sort(), ['ant', 'pin']);
+  assert.equal(new TextDecoder().decode(imgs.get('ant').data), 'a2');
+  assert.equal(await removeWordImage(db, 'phonics-g1', 'pin'), 1);
+  imgs = await lessonImages(db, 'phonics-g1');
+  assert.deepEqual([...imgs.keys()], ['ant']);
+
+  const lesson = validateLesson({ version: 1, id: 'book-x', track: 'book', title: 'X', words: [{ id: 'cat', en: 'cat', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'] }], activities: [{ type: 'blend', items: ['cat'] }] }).lesson;
+  await saveLesson(db, lesson);
+  await setWordImage(db, { lessonId: 'book-x', wordId: 'cat', blob: blob('c'), width: 1, height: 1 });
+  await deleteLesson(db, 'book-x');
+  assert.equal((await lessonImages(db, 'book-x')).size, 0);
+  db.close();
+});

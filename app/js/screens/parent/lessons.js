@@ -8,6 +8,7 @@ import { parentLayout, goParent, section, notice } from './common.js';
 import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
 import { createPanel } from './create.js';
+import { BUILTIN_LESSONS } from '../../data/builtin-lessons.js';
 
 const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
 
@@ -23,7 +24,7 @@ export function lessonsView(app) {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox));
+  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), builtinPanel(app));
   refresh();
 }
 
@@ -49,6 +50,7 @@ async function renderList(app, box) {
           ].filter(Boolean).join(' · '),
         })),
       h('div.lesson-actions', {},
+        picturesButton(app, lesson),
         h('button.btn', { type: 'button', text: '⬇️ Xuất', onclick: () => exportLesson(lesson) }),
         lesson.builtIn ? null : h('button.btn.danger', {
           type: 'button',
@@ -214,4 +216,18 @@ function libraryPanel(app, refresh) {
   };
   load();
   return section('📚 Thư viện bài', h('p.field-hint', { text: 'Bài dùng chung đặt trên GitHub (thư mục app/shared/). Có bài mới thì chuông 🔔 báo.' }), box);
+}
+
+const picturesButton = (app, lesson) => h('button.btn', {
+  type: 'button', text: '🖼️ Ảnh', 'aria-label': `Ảnh của bài ${lesson.title}`,
+  onclick: () => goParent(app, 'pictures', { lessonId: lesson.id }),
+});
+
+/** Bài có sẵn của app: không sửa / xóa được, nhưng thêm được ảnh thay cho emoji (SPEC 5.6). */
+function builtinPanel(app) {
+  return section('Bài có sẵn của app',
+    h('p.field-hint', { text: 'Có thể thêm ảnh thật / ảnh AI vẽ thay cho emoji.' }),
+    h('div.lesson-list.builtin-lessons', {}, ...BUILTIN_LESSONS.map((lesson) => h('div.lesson-row', {},
+      h('div.lesson-info', {}, h('strong', { text: lesson.title }), lesson.titleVi ? h('span', { text: ` — ${lesson.titleVi}` }) : null),
+      h('div.lesson-actions', {}, picturesButton(app, lesson))))));
 }

@@ -123,3 +123,41 @@ export function adaptForPlay(lesson) {
   return { ...lesson, activities };
 }
 
+
+/**
+ * Prompt vẽ ẢNH LƯỚI (SPEC 5.6, theo cách của kid-english): 1 ảnh, mỗi ô một hình theo đúng thứ tự trái → phải,
+ * trên → dưới; app cắt từng ô. `words`: [{ en, vi? }] (tối đa cols × rows).
+ */
+export function gridImagePrompt(words, { cols, rows }) {
+  const cells = cols * rows;
+  const items = words.slice(0, cells);
+  const square = cols === rows ? 'square ' : '';
+  const fraction = (n) => (n === 2 ? 'half' : n === 3 ? 'one third' : `1/${n}`);
+  const placement = [];
+  for (let r = 0; r < rows; r++) {
+    placement.push('', `ROW ${r + 1}`);
+    for (let c = 0; c < cols; c++) {
+      const i = r * cols + c;
+      const w = items[i];
+      placement.push(w
+        ? `Cell ${i + 1}: one ${w.en}${w.vi ? ` (meaning in Vietnamese: ${w.vi})` : ''}. Only this one subject in the cell.`
+        : `Cell ${i + 1}: EMPTY — completely blank, pure white, nothing inside.`);
+    }
+  }
+  return [
+    `Create ONE ${square}image containing an exact ${cols}-column × ${rows}-row grid of ${cells} equal ${square}cells. The grid fills the whole canvas; every cell is ${fraction(cols)} of the image width and ${fraction(rows)} of the image height.`,
+    `Separate cells with thin, straight, light-gray divider lines: exactly ${cols - 1} vertical and ${rows - 1} horizontal, perfectly aligned. No outer border.`,
+    '',
+    'EXACT CELL ORDER — LEFT TO RIGHT, TOP TO BOTTOM (the cell descriptions are for you only — never write them in the image)',
+    ...placement,
+    '',
+    'STYLE',
+    "Picture-word flashcards for a 6-year-old child learning to read English. Simple, clear, colorful cartoon illustrations with clean outlines, the same style in every cell. Each subject is centered, large (about 70% of the cell) and instantly recognizable, on a plain pure-white background, never touching the divider lines.",
+    '',
+    'STRICT RULES',
+    `- Exactly ${items.length} illustrations in the order above${cells > items.length ? '; the empty cells stay pure white' : ''}.`,
+    '- One subject per cell; nothing from another cell.',
+    '- No text anywhere: no letters, words, numbers, labels, captions, logos or watermarks.',
+    '- Do not merge or resize cells; nothing crosses a cell boundary.',
+  ].join('\n');
+}

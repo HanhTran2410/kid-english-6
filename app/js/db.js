@@ -158,3 +158,29 @@ export async function deleteLesson(db, lessonId) {
   });
   return { progress: progress.length, images: images.length, recordings: recordings.length };
 }
+
+// ---------- Ảnh của từ (SPEC 5.6): gắn theo (lessonId, id của từ) — dùng được cả cho bài có sẵn ----------
+
+/** Lưu / thay ảnh cho một từ của bài. `blob` từ ảnh đã thu nhỏ / ô cắt từ ảnh lưới. */
+export async function setWordImage(db, { lessonId, wordId, blob, mimeType, width, height }, now = Date.now()) {
+  const old = (await db.getAllByIndex('images', 'lessonId', lessonId)).filter((r) => r.word === wordId);
+  const record = { id: crypto.randomUUID(), lessonId, word: wordId, data: await blob.arrayBuffer(), mimeType: mimeType || blob.type, width, height, createdAt: now };
+  await db.write(['images'], (tx) => {
+    for (const r of old) tx.objectStore('images').delete(r.id);
+    tx.objectStore('images').put(record);
+  });
+  return record;
+}
+
+export async function removeWordImage(db, lessonId, wordId) {
+  const old = (await db.getAllByIndex('images', 'lessonId', lessonId)).filter((r) => r.word === wordId);
+  await db.write(['images'], (tx) => {
+    for (const r of old) tx.objectStore('images').delete(r.id);
+  });
+  return old.length;
+}
+
+/** Ảnh của các từ trong bài: Map id của từ → bản ghi ảnh. */
+export async function lessonImages(db, lessonId) {
+  return new Map((await db.getAllByIndex('images', 'lessonId', lessonId)).map((r) => [r.word, r]));
+}
