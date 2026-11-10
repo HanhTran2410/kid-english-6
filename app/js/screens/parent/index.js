@@ -73,12 +73,23 @@ function settingsView(app) {
 
   const viHelp = h('input', { type: 'checkbox', checked: s.explainVietnamese });
   viHelp.addEventListener('change', () => app.setSetting('explainVietnamese', viHelp.checked));
+  const check = (key, label) => {
+    const box = h('input', { type: 'checkbox', checked: s[key] !== false && Boolean(s[key] ?? true) });
+    box.addEventListener('change', () => app.setSetting(key, box.checked));
+    return h('label.check', {}, box, h('span', { text: ` ${label}` }));
+  };
+  const showVi = check('showVi', 'Hiện dòng tiếng Việt dưới câu (đọc câu, truyện, tả tranh)');
+  const readVi = h('input', { type: 'checkbox', checked: Boolean(s.readVietnamese) });
+  readVi.addEventListener('change', () => app.setSetting('readVietnamese', readVi.checked));
   const viNote = app.speaker.hasVietnamese ? null : h('p.field-hint', { text: 'Máy chưa có giọng tiếng Việt: Olly sẽ hiện lời giải thích bằng chữ.' });
 
   body.append(
     section('👧 Bé', field('Tên bé (Olly gọi tên khi chào)', childName)),
     section('🇻🇳 Giải thích tiếng Việt',
-      h('label.check', {}, viHelp, h('span', { text: ` Bé sai ${VI_HELP_AFTER} lần liên tiếp thì Olly giải thích bằng tiếng Việt` })), viNote),
+      h('label.check', {}, viHelp, h('span', { text: ` Bé sai ${VI_HELP_AFTER} lần liên tiếp thì Olly giải thích bằng tiếng Việt` })),
+      showVi,
+      h('label.check', {}, readVi, h('span', { text: ' Olly đọc thêm câu tiếng Việt thành tiếng' })),
+      viNote),
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test),
     section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),
     section('🎤 Nhận dạng giọng nói', h('label.check', {}, recog, h('span', { text: ' Dùng nhận dạng giọng nói khi bé đọc / nói' }))),

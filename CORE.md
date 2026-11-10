@@ -10,7 +10,7 @@ Không có bản "gốc" cố định: bên nào sửa lỗi trước thì là n
 
 | File | Chép từ kid-english | Mã băm | Ghi chú |
 |---|---|---|---|
-| `app/js/speech/tts.js` | 8833a4b | 6af79c631062 | Giống kid-english |
+| `app/js/speech/tts.js` | 8833a4b | 75031c7df070 | Sửa riêng cho Olly (0.4.0): thêm tùy chọn `onStart` của `speak()` (karaoke). Phần cũ không đổi; kid-english không cần |
 | `app/js/speech/microphone.js` | 8833a4b | b07f2f34f0fa | Giống kid-english |
 | `app/js/speech/recognition.js` | 8833a4b | a6c3a0918f5b | Giống kid-english |
 | `app/js/speech/recorder.js` | 8833a4b | b1fbd1798e64 | Giống kid-english |

@@ -55,7 +55,7 @@ test('phụ đề 🔊 (SPEC 4.5): mọi mẫu câu hỏi của Olly đều có 
 });
 
 test('màn học chỉ dùng câu hỏi trong QUESTIONS (để phụ đề luôn dịch được)', async () => {
-  for (const f of ['read/stages.js', 'read/teacher.js', 'read/spell-stages.js']) {
+  for (const f of ['read/stages.js', 'read/teacher.js', 'read/spell-stages.js', 'read/sentence-stages.js']) {
     const src = await readFile(new URL(`../../app/js/${f}`, import.meta.url), 'utf8');
     for (const m of src.matchAll(/(?:ask|choose)\(\s*\{?[^)]*?question:\s*([^,}]+)/g)) {
       assert.match(m[1].trim(), /^QUESTIONS\./, `${f}: câu hỏi "${m[1].trim()}" phải lấy từ QUESTIONS`);
@@ -125,4 +125,18 @@ test('Spell trong bài có sẵn: mỗi bài có xếp ô + điền ô thiếu (
   assert.equal(lessonKey('phonics-g1'), 'lesson:phonics-g1');
   assert.equal(lessonKey('phonics-g1', 'spell'), 'lesson:phonics-g1/spell');
   assert.equal(emptyLesson('phonics-g1', 'spell').lessonId, 'phonics-g1');
+});
+
+test('nghe âm → chọn chữ: 3 ô luôn khác chữ nhau (oo / oo dài, th / th this không cùng hiện) — chạy nhiều lần', async () => {
+  const { letterDistractors } = await import('../../app/js/read/stages.js');
+  const { GROUPS } = await import('../../app/js/phonics.js');
+  const all = GROUPS.flatMap((g) => g.sounds);
+  for (const g of GROUPS) {
+    for (const s of g.sounds) {
+      for (let k = 0; k < 30; k++) {
+        const labels = [s, ...letterDistractors(s, g.sounds, all)].map((x) => SOUND_INFO[x].letters);
+        assert.equal(new Set(labels).size, 3, `${s}: ${labels.join(', ')}`);
+      }
+    }
+  }
 });

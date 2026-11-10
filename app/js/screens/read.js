@@ -13,6 +13,7 @@ import { getLessonProgress, recordLessonDone, starsFor } from '../progress.js';
 import { activityLayout, Teacher } from '../read/teacher.js';
 import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
 import { spellWords, fillWords } from '../read/spell-stages.js';
+import { readSentences } from '../read/sentence-stages.js';
 import { adaptForPlay } from '../lesson-prompts.js';
 import { lessonImages, mediaBlob } from '../db.js';
 
@@ -116,7 +117,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
       tick: () => layout.setProgress(++done / total),
       scored: (r) => results.push(r),
     };
-    const byId = new Map(lesson.words.map((w) => [w.id, w]));
+    const byId = new Map([...lesson.words, ...lesson.sentences].map((w) => [w.id, w]));
     const items = (a) => a.items.map((id) => byId.get(id)).filter(Boolean);
     const withGraphemes = (a) => items(a).filter((w) => w.graphemes);
     for (const a of lesson.activities) {
@@ -126,6 +127,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
       else if (a.type === 'tricky') await trickyWords(ctx, items(a));
       else if (a.type === 'spell') await spellWords(ctx, withGraphemes(a));
       else if (a.type === 'fill') await fillWords(ctx, withGraphemes(a));
+      else if (a.type === 'sentence') await readSentences(ctx, items(a));
     }
     const stars = starsFor(results);
     await recordLessonDone(app.db, lesson.id, stars, Date.now(), partOf(zone));

@@ -6,7 +6,8 @@ export const DEFAULT_SETTINGS = {
   voiceURI: null, // null = tự chọn giọng en-US
   voiceURI2: null, // giọng thứ hai (nhân vật phụ trong Nói chuyện); null = tự chọn
   rate: 0.9, // bé 6 tuổi nghe được nhanh hơn bé 3 tuổi (kid-english: 0.8)
-  readVietnamese: false,
+  readVietnamese: false, // Olly đọc thêm câu tiếng Việt thành tiếng (SPEC 6.1)
+  showVi: true, // hiện dòng tiếng Việt dưới câu: đọc câu, truyện, tả tranh (SPEC 6.1)
   // Bé sai nhiều lần (VI_HELP_AFTER lần liên tiếp cùng một mục) thì Olly giải thích bằng tiếng Việt (SPEC mục 4.1).
   explainVietnamese: true,
   recordVoice: true,

@@ -25,6 +25,10 @@ async function playLesson(page, { onFirstCheck }) {
       if (new Set(labels).size !== labels.length) throw new Error(`Hai ô cùng chữ: ${labels.join(', ')}`);
       const target = await stage.getAttribute('data-last-sound');
       await tap(page.locator(`.letter-choice[data-choice="${target}"]`));
+    } else if (await page.locator('.sentence.small').isVisible() && await page.locator('.pic-choice').first().isVisible()) {
+      // Câu hỏi hiểu của Đọc câu: hình đúng mang aria-label = câu.
+      const en = (await page.locator('.sentence.small .sword').allTextContents()).join(' ');
+      await tap(page.locator(`.pic-choice[aria-label="${en}"]`));
     } else if (await page.locator('.pic-choice').first().isVisible()) {
       const word = await page.locator('.word-shown').textContent();
       await tap(page.locator(`.pic-choice[data-choice="${word}"]`));
@@ -111,9 +115,21 @@ for (const group of [5, 6]) {
     await startApp(page);
     await page.getByRole('button', { name: 'Tập đọc' }).click();
     await page.locator(`.lesson-card[data-lesson="phonics-g${group}"]`).click();
+    // Đọc câu: theo dõi karaoke (từ sáng theo nhịp) và dòng tiếng Việt dưới câu.
+    await page.evaluate(() => {
+      window.__seen = { reading: 0, vi: 0 };
+      new MutationObserver(() => {
+        if (document.querySelector('.sentence .sword.reading')) window.__seen.reading++;
+        if (document.querySelector('.sentence-vi')) window.__seen.vi++;
+      }).observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+    });
     await playLesson(page, { onFirstCheck: async () => {} });
-    await expect(page.locator('.done-stars')).toHaveText(/⭐/);
+    const seen = await page.evaluate(() => window.__seen);
+    expect(seen.reading).toBeGreaterThan(3);
+    expect(seen.vi).toBeGreaterThan(0);
     const said = await spoken(page);
+    expect(said).toContain('Your turn! Read the sentence!');
+    await expect(page.locator('.done-stars')).toHaveText(/⭐/);
     expect(said.filter((x) => /^(sh|ch|th|oo|ng|qu|ee|ai)$/.test(x))).toEqual([]); // âm rời không đọc bằng giọng máy
   });
 }

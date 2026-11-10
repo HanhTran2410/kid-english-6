@@ -33,6 +33,25 @@ export function distractors(target, near, pool, n = 2, rand = Math.random) {
   return out;
 }
 
+/**
+ * 2 âm nhiễu cho "nghe âm → chọn chữ": cả 3 ô phải KHÁC CHỮ nhau (oo ngắn / oo dài, th thin / th this cùng viết là
+ * oo, th — hai ô cùng chữ thì bé không phân biệt được). Ưu tiên âm trong bài (`near`), thiếu thì lấy thêm từ `pool`.
+ */
+export function letterDistractors(target, near, pool, n = 2, rand = Math.random) {
+  const used = new Set([SOUND_INFO[target].letters]);
+  const out = [];
+  for (const list of [shuffle(near, rand), shuffle(pool, rand)]) {
+    for (const x of list) {
+      if (out.length >= n) break;
+      const letters = SOUND_INFO[x]?.letters;
+      if (!letters || used.has(letters)) continue;
+      used.add(letters);
+      out.push(x);
+    }
+  }
+  return out;
+}
+
 const record = (ctx, activity, itemId, result) => recordItem(ctx.app.db, { lessonId: ctx.lesson.id, activity, itemId }, result).catch(() => {});
 
 const outcomeResult = (o) => (o === OUTCOME.OK ? RESULT.INDEPENDENT : o === OUTCOME.MISS ? RESULT.MISSED : RESULT.PRACTICED);
@@ -63,9 +82,7 @@ export async function meetSounds(ctx, sounds) {
   // Kiểm tra: nghe âm → chọn chữ.
   const pool = GROUPS.filter((g) => g.group <= (ctx.lesson.group ?? 3)).flatMap((g) => g.sounds).filter((s) => SOUND_INFO[s] && RECORDED_SOUNDS.has(s));
   for (const s of shuffle(list)) {
-    // Ô nhiễu không được trùng chữ với đáp án (oo ngắn / oo dài, th thin / th this cùng viết là oo, th).
-    const differs = (x) => SOUND_INFO[x].letters !== SOUND_INFO[s].letters;
-    const choices = shuffle([s, ...distractors(s, list.filter(differs), pool.filter(differs))]);
+    const choices = shuffle([s, ...letterDistractors(s, list, pool)]);
     const buttons = choices.map((c) => h('button.letter-choice', { type: 'button', 'aria-label': SOUND_INFO[c].letters, dataset: { choice: c }, text: SOUND_INFO[c].letters }));
     const correct = buttons[choices.indexOf(s)];
     stage.replaceChildren(h('div.choices', {}, ...buttons));
@@ -166,7 +183,7 @@ export async function trickyWords(ctx, words) {
 
 /** Loại hoạt động của từng khu (màn học chỉ chạy các loại của khu mình). */
 export const ZONE_TYPES = {
-  read: new Set(['sounds', 'blend', 'tricky']),
+  read: new Set(['sounds', 'blend', 'tricky', 'sentence']),
   spell: new Set(['spell', 'fill']),
 };
 
@@ -182,6 +199,7 @@ export function countSteps(lesson, zone = 'read') {
     if (!ZONE_TYPES[zone].has(a.type)) continue;
     if (a.type === 'sounds') n += 2 * a.sounds.filter((x) => RECORDED_SOUNDS.has(x) && SOUND_INFO[x]).length;
     if (a.type === 'tricky') n += 2 * a.items.length;
+    if (a.type === 'sentence') n += a.items.length;
     if (['blend', 'spell', 'fill'].includes(a.type)) n += a.items.filter((id) => byId.get(id)?.graphemes).length;
   }
   return n;

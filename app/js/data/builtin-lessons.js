@@ -1,5 +1,5 @@
 // Bài Phonics có sẵn trong app (SPEC mục 5.2): 7 nhóm âm kiểu Jolly. Khu Read: gặp âm mới → ghép âm thành từ → tricky words;
-// khu Spell: nghe – xếp ô → điền ô thiếu.
+// → đọc câu; khu Spell: nghe – xếp ô → điền ô thiếu.
 // Ô chữ (grapheme) và mã âm tính bằng `toGraphemes` theo các âm đã học tới nhóm của bài — test kiểm tra mọi từ
 // đọc được bằng âm đã học (decodable) và mọi âm có file ghi âm.
 
@@ -45,6 +45,17 @@ const WORDS = {
   ],
 };
 
+/** Câu đọc được (decodable): chỉ dùng âm đã học tới nhóm đó + tricky words đã học (test kiểm tra). [câu, emoji, nghĩa] */
+const SENTENCES = {
+  1: [['The ant sat.', '🐜', 'Con kiến đã ngồi.'], ['I tap the tin.', '🥫', 'Mình gõ vào cái hộp thiếc.'], ['I nap.', '😴', 'Mình ngủ trưa.']],
+  2: [['The hen ran.', '🐔', 'Con gà mái đã chạy.'], ['The cat can nap.', '🐱', 'Con mèo có thể ngủ trưa.'], ['He has a map.', '🗺️', 'Bạn ấy có một tấm bản đồ.']],
+  3: [['The dog is on the bed.', '🐶', 'Con chó ở trên giường.'], ['The sun is hot.', '☀️', 'Mặt trời nóng.'], ['A big pig.', '🐷', 'Một con lợn to.']],
+  4: [['I see a boat.', '⛵', 'Mình thấy một con thuyền.'], ['The goat is in the rain.', '🐐', 'Con dê ở ngoài mưa.'], ['A bee is on a tree.', '🐝', 'Một con ong ở trên cây.']],
+  5: [['The king has a ring.', '👑', 'Nhà vua có một chiếc nhẫn.'], ['I can see the moon.', '🌙', 'Mình có thể thấy mặt trăng.'], ['A book is on the bed.', '📖', 'Một quyển sách ở trên giường.']],
+  6: [['The fox is in the box.', '🦊', 'Con cáo ở trong cái hộp.'], ['The fish can see a ship.', '🐟', 'Con cá có thể thấy một con tàu.'], ['The chick is in the shop.', '🐥', 'Gà con ở trong cửa hàng.']],
+  7: [['A star is in the dark.', '⭐', 'Một ngôi sao trong bóng tối.'], ['The queen has a coin.', '👸', 'Nữ hoàng có một đồng xu.'], ['My sister has a car.', '🚗', 'Chị gái mình có một chiếc ô tô.']],
+};
+
 const TRICKY_VI = {
   I: 'tôi, mình', the: '(đứng trước danh từ, không dịch)', he: 'anh ấy, bạn trai ấy', she: 'cô ấy, bạn gái ấy',
   me: 'tôi, mình (sau động từ)', we: 'chúng mình', be: 'là, thì', was: 'đã là', to: 'đến, tới', do: 'làm',
@@ -75,10 +86,12 @@ function lessonFor(group) {
     titleVi: `Nhóm âm ${group}: ${g.graphemes.join(' ')}`,
     newSounds: g.sounds,
     words: [...words, ...tricky],
+    sentences: SENTENCES[group].map(([en, emoji, vi], i) => ({ id: `s${i + 1}`, en, vi, emoji })),
     activities: [
       { type: 'sounds', sounds: g.sounds },
       { type: 'blend', items: words.map((w) => w.id) },
       { type: 'tricky', items: tricky.map((w) => w.id) },
+      { type: 'sentence', items: SENTENCES[group].map((_, i) => `s${i + 1}`) },
       // Khu Spell (SPEC 3.2): xếp ô tối đa 6 từ có hình (chừa ≥ 2 từ), điền ô thiếu các từ có hình còn lại (tối đa 4).
       { type: 'spell', items: pictured.slice(0, spellCount).map((w) => w.id) },
       { type: 'fill', items: pictured.slice(spellCount, spellCount + 4).map((w) => w.id) },

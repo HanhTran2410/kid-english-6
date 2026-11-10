@@ -206,7 +206,7 @@ function checkSentence(s, where, errors) {
   if (!en) errors.push(`${where}: thiếu câu tiếng Anh ("en").`);
   const chunks = Array.isArray(s.chunks) ? s.chunks.map(str).filter(Boolean) : [];
   if (chunks.length && chunks.join(' ') !== en) errors.push(`${where}: các cụm "chunks" ghép lại phải đúng bằng câu.`);
-  return { en, vi: str(s.vi), chunks, imageId: str(s.imageId) || null };
+  return { en, vi: str(s.vi), chunks, emoji: str(s.emoji) || null, imageId: str(s.imageId) || null };
 }
 
 /**

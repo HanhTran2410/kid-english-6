@@ -10,6 +10,8 @@ import { mascotElement } from '../mascot.js';
 import { translateQuestion, QUESTIONS } from '../captions.js';
 import { needsVietnameseHelp } from '../settings.js';
 import { RESULT } from '../progress.js';
+import { tokenize } from '../text.js';
+import { displayWords, schedule, initialMsPerUnit, calibrate, activeIndex } from '../karaoke.js';
 
 const CAPTION_MS = 5000;
 const IDLE_CALL_MS = 20_000;
@@ -176,6 +178,69 @@ export class Teacher {
     try {
       const r = await listen({ mic: app.mic, recognizer: app.recognizer, target, homophones, signal: this.signal });
       return r.outcome;
+    } finally {
+      app.listening = false;
+      this.stage.classList.remove('listening');
+    }
+  }
+
+  /**
+   * Olly đọc `text`, từng từ trong `wordEls` sáng theo nhịp (karaoke, SPEC-ta-tranh 5.4). Bắt đầu tô ngay, canh lại khi
+   * giọng đọc thật sự bắt đầu (`onStart`); ước lượng nhanh hơn giọng đọc thì từ cuối giữ sáng tới hết; đọc xong thì tắt
+   * hết. Câu đọc trọn → hiệu chỉnh `msPerUnit` cho các câu sau (đổi tốc độ đọc thì làm lại từ đầu).
+   */
+  async karaoke(text, wordEls, { rate } = {}) {
+    const { app } = this;
+    const speed = rate ?? app.settings.rate;
+    if (app.karaokeRate !== speed) {
+      app.karaokeRate = speed;
+      app.karaokeMs = initialMsPerUnit(speed);
+    }
+    const words = displayWords(text);
+    const slots = schedule(words, app.karaokeMs);
+    let t0 = performance.now();
+    let startedAt = null;
+    const paint = () => {
+      const elapsed = performance.now() - t0;
+      let i = activeIndex(slots, elapsed);
+      if (i < 0 && elapsed >= slots.at(-1).end) i = slots.length - 1; // giọng đọc chậm hơn ước lượng: giữ từ cuối
+      wordEls.forEach((el, k) => el.classList.toggle('reading', k === i));
+    };
+    const timer = setInterval(paint, 40);
+    paint();
+    try {
+      await this.say(text, {
+        rate: speed,
+        onStart: () => {
+          t0 = performance.now();
+          startedAt = t0;
+        },
+      });
+      if (startedAt != null) app.karaokeMs = calibrate(app.karaokeMs, performance.now() - startedAt, words);
+    } finally {
+      clearInterval(timer);
+      wordEls.forEach((el) => el.classList.remove('reading'));
+    }
+  }
+
+  /**
+   * Nghe bé đọc cả câu (SPEC 3.1.5): trả về tập từ (đã chuẩn hóa) máy nghe được, hoặc null khi không đánh giá được
+   * (không mic / không nhận dạng). Không xét thứ tự từ, bỏ dấu câu.
+   */
+  async hearSentence(text) {
+    const { app } = this;
+    if (!app.mic.ready || !app.recognizer.enabled) return null;
+    const words = [...new Set(tokenize(text))];
+    const heardOf = (alts) => new Set(alts.flatMap((a) => tokenize(a)));
+    app.listening = true;
+    this.stage.classList.add('listening');
+    try {
+      const r = await listen({
+        mic: app.mic, recognizer: app.recognizer, keywords: words, maxMs: 9000, signal: this.signal,
+        stopWhen: (alts) => { const s = heardOf(alts); return words.every((w) => s.has(w)); },
+      });
+      if (!app.recognizer.enabled) return null;
+      return heardOf(r.heard);
     } finally {
       app.listening = false;
       this.stage.classList.remove('listening');

@@ -172,9 +172,10 @@ export class Speaker {
    * @param {string} text
    * @param {{ lang?: 'en'|'vi', signal?: AbortSignal, rate?: number, pitch?: number, role?: 'alt' }} [options] — `pitch`: cao độ
    *   (1 = thường; bạn thú ở Bác sĩ nhí mỗi bạn một cao độ). Máy không hỗ trợ thì giọng thường. `role: 'alt'`: nhân vật khác
-   *   Bông — dùng giọng thứ hai (máy chỉ có một giọng thì nói cao giọng hơn).
+   *   Bông — dùng giọng thứ hai (máy chỉ có một giọng thì nói cao giọng hơn). `onStart`: gọi một lần khi giọng đọc thật sự
+   *   bắt đầu (karaoke của Olly English canh nhịp từ lúc này).
    */
-  speak(text, { lang = 'en', signal, rate, pitch, role } = {}) {
+  speak(text, { lang = 'en', signal, rate, pitch, role, onStart } = {}) {
     const s = synth();
     const alt = lang !== 'vi' && role === 'alt';
     const voice = lang === 'vi' ? this.vi : alt && this.en2 ? this.en2 : this.en;
@@ -217,7 +218,9 @@ export class Speaker {
         current = u;
         // Chỉ xử lý sự kiện của câu đang đọc (câu bị hủy khi thử lại sẽ báo lỗi "canceled").
         u.onstart = () => {
-          if (u === current) started = true;
+          if (u !== current || started) return;
+          started = true;
+          onStart?.();
         };
         u.onend = () => u === current && finish();
         u.onerror = () => u === current && finish();
