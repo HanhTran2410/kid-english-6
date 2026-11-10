@@ -9,6 +9,7 @@ import { parentLayout, goParent, section, field } from './common.js';
 import { lessonsView } from './lessons.js';
 import { picturesView } from './pictures.js';
 import { sceneEditView } from './scene-edit.js';
+import { libraryView } from './library.js';
 
 const VIEWS = {
   menu: menuView,
@@ -16,6 +17,7 @@ const VIEWS = {
   lessons: lessonsView,
   pictures: picturesView,
   'scene-edit': sceneEditView,
+  library: libraryView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -30,6 +32,7 @@ function menuView(app) {
     h('button.exit-to-child', { type: 'button', onclick: () => app.go('home') }, h('span', { text: '▶ Về màn hình của bé' })),
     h('div.menu', {},
       item('📚', 'Bài học', () => goParent(app, 'lessons')),
+      item('🖼️', 'Kho ảnh', () => goParent(app, 'library')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );

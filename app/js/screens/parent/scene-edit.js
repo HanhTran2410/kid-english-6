@@ -6,7 +6,8 @@ import { h, toast, copyText, confirmDialog } from '../../ui.js';
 import { resizeCover } from '../../image.js';
 import { setWordImage, lessonImages, mediaBlob, saveScene, deleteScene, SCENE_IMAGE } from '../../db.js';
 import { arrowGeometry, hitRadius, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
-import { validateScene, parseSceneText, scenePrompt, newSid, newSceneId } from '../../scene-data.js';
+import { validateScene, parseSceneText, scenePrompt, scenePicturePrompt, newSid, newSceneId } from '../../scene-data.js';
+import { SCENE_BY_ID } from '../../data/builtin-scenes.js';
 import { parentLayout, goParent, section, field, notice } from './common.js';
 import { imageErrorMessage } from './pictures.js';
 
@@ -14,7 +15,7 @@ const ARROW_SVG = '<svg viewBox="0 0 100 36" preserveAspectRatio="none"><path d=
 const FROM_VI = { auto: 'Tự chọn', right: 'Từ phải', left: 'Từ trái', top: 'Từ trên', bottom: 'Từ dưới', 'top-right': 'Từ trên-phải', 'top-left': 'Từ trên-trái', 'bottom-right': 'Từ dưới-phải', 'bottom-left': 'Từ dưới-trái' };
 const blankSentence = () => ({ sid: newSid(), en: '', vi: '', point: null, from: 'auto', hit: 0.08, keywords: [] });
 
-export function sceneEditView(app, { sceneId } = {}) {
+export function sceneEditView(app, { sceneId, copyOf } = {}) {
   const body = parentLayout(app, { title: '🖼️ Soạn tranh', back: () => goParent(app, 'lessons') });
   const urls = [];
   let offEditor = null;
@@ -22,7 +23,8 @@ export function sceneEditView(app, { sceneId } = {}) {
   (async () => {
     const old = sceneId ? await app.db.get('scenes', sceneId) : null;
     const oldImg = old ? (await lessonImages(app.db, old.id)).get(SCENE_IMAGE) : null;
-    if (!left) offEditor = editor(app, body, old, oldImg, urls);
+    const base = !old && copyOf ? SCENE_BY_ID.get(copyOf) : null;
+    if (!left) offEditor = editor(app, body, old, oldImg, urls, base);
   })().catch((err) => {
     console.error(err);
     toast('Không mở được tranh.');
@@ -34,8 +36,11 @@ export function sceneEditView(app, { sceneId } = {}) {
   };
 }
 
-function editor(app, body, old, oldImg, urls) {
-  const draft = old ? structuredClone(old) : { id: newSceneId(), title: '', titleVi: '', level: 2, track: 'phonics', sentences: [blankSentence()] };
+function editor(app, body, old, oldImg, urls, base = null) {
+  // `base`: tranh có sẵn đang được thay → bản sao giữ nguyên câu + mũi tên, chọn ảnh mới rồi đặt lại mũi tên.
+  const draft = old ? structuredClone(old) : base
+    ? { id: newSceneId(), title: base.title, titleVi: base.titleVi ?? '', level: base.level, track: base.track, copyOf: base.id, sentences: structuredClone(base.sentences) }
+    : { id: newSceneId(), title: '', titleVi: '', level: 2, track: 'phonics', sentences: [blankSentence()] };
   let image = oldImg ? { blob: mediaBlob(oldImg), mimeType: oldImg.mimeType, width: oldImg.width, height: oldImg.height, fresh: false } : null;
   let active = draft.sentences.findIndex((s) => s.point) >= 0 ? draft.sentences.findIndex((s) => s.point) : 0;
   let needsCheck = false;
@@ -206,7 +211,11 @@ function editor(app, body, old, oldImg, urls) {
         await setWordImage(app.db, { lessonId: r.scene.id, wordId: SCENE_IMAGE, ...image });
         image.fresh = false;
       }
-      Object.assign(draft, await saveScene(app.db, { ...r.scene, createdAt: old?.createdAt ?? null }));
+      Object.assign(draft, await saveScene(app.db, { ...r.scene, copyOf: draft.copyOf ?? null, createdAt: old?.createdAt ?? null }));
+      // Bản sao thay cho tranh có sẵn: ẩn tranh gốc ở danh sách của bé (Kho ảnh → Hiện lại).
+      if (draft.copyOf && !(app.settings.hiddenScenes ?? []).includes(draft.copyOf)) {
+        await app.setSetting('hiddenScenes', [...(app.settings.hiddenScenes ?? []), draft.copyOf]);
+      }
       toast(r.warnings.length ? `Đã lưu tranh. Lưu ý: ${r.warnings[0]}` : 'Đã lưu tranh.', 4000);
       return true;
     } catch (err) {
@@ -219,7 +228,13 @@ function editor(app, body, old, oldImg, urls) {
   renderList();
   body.append(
     section('Ảnh tranh', h('p.field-hint', { text: 'Tranh nhiều người / vật đang làm các việc khác nhau, nét rõ, không có chữ. App cắt về khung 4:3.' }),
-      h('div.lesson-actions', {}, pickBtn), fileInput),
+      base ? notice('info', `Đang thay tranh có sẵn "${base.title}": giữ nguyên ${base.sentences.length} câu. Bấm "Chép prompt vẽ tranh" để AI vẽ tranh mới đúng các câu này, lưu ảnh rồi chọn ảnh, sau đó đặt lại mũi tên.`) : null,
+      h('div.lesson-actions', {}, pickBtn,
+        h('button.btn', { type: 'button', text: '📋 Chép prompt vẽ tranh theo các câu', onclick: () => {
+          const ok = draft.sentences.some((s) => s.en.trim());
+          if (!ok) return toast('Chưa có câu nào để vẽ.');
+          copyText(scenePicturePrompt(draft)).then((done) => toast(done ? 'Đã chép prompt vẽ tranh. Dán vào ChatGPT / Gemini để AI vẽ.' : 'Không chép được.'));
+        } })), fileInput),
     section('Tên và cấp độ', field('Tên tranh (tiếng Anh)', title), field('Tên tiếng Việt', titleVi), field('Cấp độ câu', level)),
     section('🎯 Đặt mũi tên', activeLabel, frame, h('div.lesson-actions', {}, noPoint, fromSel), field('Cỡ vùng chạm (vòng tròn mờ)', hitRange), checkNote),
     section('Các câu', list, h('button.btn', { type: 'button', text: '+ Thêm câu', onclick: () => { draft.sentences.push(blankSentence()); active = draft.sentences.length - 1; renderList(); renderStage(); } })),

@@ -92,3 +92,44 @@ test('ảnh của từ: lưu / thay / xóa theo (bài, từ); xóa bài thì xó
   assert.equal((await lessonImages(db, 'book-x')).size, 0);
   db.close();
 });
+
+test('Kho ảnh: gộp theo từ (cùng từ ở nhiều bài = 1 mục), bỏ tricky, có câu; khóa từ / câu; chuyển ảnh theo bài cũ sang kho', async () => {
+  const { pictureItems, wordKey, sentenceKey, migrateLessonPictures, libraryImages, LIB } = await import('../../app/js/picture-library.js');
+  const { BUILTIN_LESSONS } = await import('../../app/js/data/builtin-lessons.js');
+  const { openDatabase, setWordImage, SCENE_IMAGE } = await import('../../app/js/db.js');
+  const book = { title: 'Unit 1', words: [{ id: 'pin-1', en: 'Pin', vi: '', emoji: '📍' }, { id: 'the', en: 'the', tags: ['tricky'] }], sentences: [] };
+  const items = pictureItems([...BUILTIN_LESSONS, book]);
+  assert.ok(!items.some((it) => it.en === 'the'));
+  const pin = items.filter((it) => it.key === 'pin');
+  assert.equal(pin.length, 1);
+  assert.deepEqual(pin[0].lessons, [BUILTIN_LESSONS[0].title, 'Unit 1']);
+  assert.equal(pin[0].vi, 'cái ghim'); // nghĩa lấy từ bài có nghĩa
+  assert.equal(pin[0].emoji, '📌');
+  assert.equal(wordKey(' Cat! '), 'cat');
+  assert.equal(sentenceKey('The cat can nap.'), 's:the cat can nap');
+  assert.ok(items.some((it) => it.kind === 'sentence' && it.key === 's:the cat can nap'));
+
+  const db = await openDatabase(`lib-${Math.random()}`);
+  const blob = (s) => new Blob([s], { type: 'image/jpeg' });
+  await setWordImage(db, { lessonId: 'phonics-g1', wordId: 'ant', blob: blob('old-ant'), width: 1, height: 1 });
+  await setWordImage(db, { lessonId: LIB, wordId: 'pin', blob: blob('lib-pin'), width: 1, height: 1 });
+  await setWordImage(db, { lessonId: 'phonics-g1', wordId: 'pin', blob: blob('old-pin'), width: 1, height: 1 });
+  await setWordImage(db, { lessonId: 'scene-x', wordId: SCENE_IMAGE, blob: blob('scene'), width: 1, height: 1 });
+  assert.equal(await migrateLessonPictures(db), 2);
+  const lib = await libraryImages(db);
+  assert.equal(new TextDecoder().decode(lib.get('ant').data), 'old-ant');
+  assert.equal(new TextDecoder().decode(lib.get('pin').data), 'lib-pin'); // kho đã có → giữ ảnh kho
+  assert.equal((await db.getAll('images')).filter((r) => r.lessonId === 'phonics-g1').length, 0);
+  assert.equal((await db.getAll('images')).filter((r) => r.word === SCENE_IMAGE).length, 1);
+  assert.equal(await migrateLessonPictures(db), 0);
+  db.close();
+});
+
+test('prompt vẽ tranh Tả tranh theo các câu: đủ mọi câu, cảnh chung, không chữ', async () => {
+  const { scenePicturePrompt } = await import('../../app/js/scene-data.js');
+  const { SCENE_BY_ID } = await import('../../app/js/data/builtin-scenes.js');
+  const p = scenePicturePrompt(SCENE_BY_ID.get('scene-park'));
+  assert.match(p, /The scene: "It is a sunny day in the park\."/);
+  for (const s of SCENE_BY_ID.get('scene-park').sentences.slice(1)) assert.ok(p.includes(`- ${s.en}`), s.en);
+  assert.match(p, /No text anywhere/);
+});

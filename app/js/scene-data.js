@@ -130,3 +130,20 @@ export function scenePrompt({ level = 2, words = '' } = {}) {
     JSON.stringify(example, null, 2),
   ].join('\n');
 }
+
+/**
+ * Prompt VẼ TRANH cho Tả tranh từ các câu đã có (thay tranh có sẵn / tranh mới): mọi người / vật được tả phải có, rõ, không
+ * chồng lên nhau; không có chữ. Vẽ xong bố mẹ đặt lại mũi tên.
+ */
+export function scenePicturePrompt(scene) {
+  const overall = scene.sentences.find((s) => !s.point)?.en;
+  const parts = scene.sentences.filter((s) => s.point || s !== scene.sentences[0]).map((s) => `- ${s.en}`);
+  return [
+    `Draw ONE colorful cartoon picture in landscape 4:3 format for a 6-year-old child's English lesson${overall ? `. The scene: "${overall}"` : ''}.`,
+    'The picture must clearly show ALL of these, each one easy to see, fully visible and not hidden behind anything:',
+    ...parts,
+    '',
+    'STYLE: bright, friendly children\'s book cartoon, simple shapes, clean outlines. Spread the subjects across the picture so each can be pointed at with an arrow; keep them apart, not overlapping.',
+    'Do not add other main characters or objects. No text anywhere: no letters, words, numbers, signs or captions.',
+  ].join('\n');
+}

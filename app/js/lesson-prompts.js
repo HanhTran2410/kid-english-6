@@ -128,7 +128,7 @@ export function adaptForPlay(lesson) {
  * Prompt vẽ ẢNH LƯỚI (SPEC 5.6, theo cách của kid-english): 1 ảnh, mỗi ô một hình theo đúng thứ tự trái → phải,
  * trên → dưới; app cắt từng ô. `words`: [{ en, vi? }] (tối đa cols × rows).
  */
-export function gridImagePrompt(words, { cols, rows }) {
+export function gridImagePrompt(words, { cols, rows }) { // words: [{ en, vi?, kind?: 'word'|'sentence' }]
   const cells = cols * rows;
   const items = words.slice(0, cells);
   const square = cols === rows ? 'square ' : '';
@@ -139,8 +139,9 @@ export function gridImagePrompt(words, { cols, rows }) {
     for (let c = 0; c < cols; c++) {
       const i = r * cols + c;
       const w = items[i];
+      const what = w?.kind === 'sentence' ? `a simple picture showing: "${w.en}"` : `one ${w?.en}`;
       placement.push(w
-        ? `Cell ${i + 1}: one ${w.en}${w.vi ? ` (meaning in Vietnamese: ${w.vi})` : ''}. Only this one subject in the cell.`
+        ? `Cell ${i + 1}: ${what}${w.vi ? ` (meaning in Vietnamese: ${w.vi})` : ''}. Only this in the cell.`
         : `Cell ${i + 1}: EMPTY — completely blank, pure white, nothing inside.`);
     }
   }

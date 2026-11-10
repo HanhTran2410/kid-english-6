@@ -17,6 +17,7 @@ import { readSentences } from '../read/sentence-stages.js';
 import { adaptForPlay } from '../lesson-prompts.js';
 import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
 import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
+import { libraryImages, wordKey, sentenceKey } from '../picture-library.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -105,13 +106,20 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
       app.go(zone);
       return;
     }
-    // Ảnh bố mẹ thêm cho từ (SPEC 5.6) thay cho emoji.
-    const pictures = new Map();
-    for (const [wordId, rec] of await lessonImages(app.db, lesson.id)) {
-      const url = URL.createObjectURL(mediaBlob(rec));
-      urls.push(url);
-      pictures.set(wordId, url);
-    }
+    // Ảnh trong 🖼️ Kho ảnh dùng chung (theo từ / câu, SPEC 5.6) thay cho emoji; nạp khi cần.
+    const lib = await libraryImages(app.db);
+    const cache = new Map();
+    const urlFor = (key) => {
+      const rec = lib.get(key);
+      if (!rec) return null;
+      if (!cache.has(key)) {
+        const url = URL.createObjectURL(mediaBlob(rec));
+        urls.push(url);
+        cache.set(key, url);
+      }
+      return cache.get(key);
+    };
+    const sentenceSet = new Set(lesson.sentences);
     app.root.dataset.lesson = lesson.id;
     app.root.dataset.zone = zone;
     const total = Math.max(1, countSteps(lesson, zone));
@@ -119,7 +127,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     const results = [];
     const ctx = {
       app, t, stage: layout.stage, signal, lesson,
-      picture: (w) => pictures.get(w.id) ?? null,
+      picture: (w) => urlFor(sentenceSet.has(w) ? sentenceKey(w.en) : wordKey(w.en)),
       tick: () => layout.setProgress(++done / total),
       scored: (r) => results.push(r),
     };
@@ -164,7 +172,8 @@ function showDone(app, t, layout, lesson, stars, zone) {
 
 async function sceneCards(app, list) {
   const own = (await app.db.getAll('scenes')).filter((s) => s.sentences?.length).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
-  const scenes = [...BUILTIN_SCENES, ...own];
+  const hidden = new Set(app.settings.hiddenScenes ?? []);
+  const scenes = [...BUILTIN_SCENES.filter((s) => !hidden.has(s.id)), ...own];
   const progress = await Promise.all(scenes.map((s) => getLessonProgress(app.db, s.id)));
   const found = await Promise.all(scenes.map((s) => getLessonProgress(app.db, s.id, 'find')));
   const thumbs = await Promise.all(scenes.map(async (s) => {

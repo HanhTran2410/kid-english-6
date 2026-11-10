@@ -8,6 +8,7 @@ import { readScreen, spellScreen, lessonScreen } from './screens/read.js';
 import { sceneScreen } from './screens/scene.js';
 import { parentScreen } from './screens/parent/index.js';
 import { startNotices } from './notices.js';
+import { migrateLessonPictures } from './picture-library.js';
 
 async function registerServiceWorker(app) {
   if (!('serviceWorker' in navigator) || new URLSearchParams(location.search).has('nosw')) return;
@@ -49,6 +50,7 @@ async function boot() {
     return;
   }
   app.settings = await loadSettings(app.db);
+  await migrateLessonPictures(app.db).catch((err) => console.warn(err)); // ảnh theo bài (0.3.3) → Kho ảnh dùng chung
   if (app.settings.firstUseAt == null) await app.setSetting('firstUseAt', Date.now());
 
   navigator.storage?.persist?.().catch(() => {});

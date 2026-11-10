@@ -46,6 +46,8 @@ test('Tả tranh: tự đọc hết 7 câu theo thứ tự, mũi tên đúng câ
 
 test('Tả tranh: ⏸ dừng giữ câu, ▶ đọc lại; ⏭ ⏮; VI tắt không đổi chiều cao; chạm tranh nhảy câu; chạm ngoài vùng không đổi', async ({ page }) => {
   await openPark(page);
+  // Không tự sang câu sau (Cài đặt) — chế độ ?fast đọc rất nhanh, tránh câu tự trôi trước khi kịp kiểm tra.
+  await page.evaluate(() => window.kidEnglish6.setSetting('sceneAutoNext', false));
   await page.getByRole('button', { name: 'Dừng' }).click();
   await expect(page.getByRole('button', { name: 'Chạy' })).toBeVisible();
   const at = await counter(page).textContent();

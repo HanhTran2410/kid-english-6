@@ -289,7 +289,7 @@ Kho `lessons`. Mục (từ / câu / thẻ) khai báo một lần, hoạt động
 - Bài có sẵn đi kèm app (file JSON trong `app/data/`, service worker cache); nâng phiên bản app thay bản mới, giữ tiến độ theo `id` mục.
 
 ### 5.6. Ảnh
-- Ảnh lưới (kid-english) chỉ là **cách nhập**: cắt xong mỗi ô thành một ảnh riêng trong kho `images`, gắn theo **(id bài, id của từ)** — không trỏ tới vị trí ô, không cần sửa dữ liệu bài, nên bài có sẵn của app cũng thêm ảnh được (đã làm 0.3.3). Ảnh lưới gốc không giữ.
+- Ảnh lưới (kid-english) chỉ là **cách nhập**: cắt xong mỗi ô thành một ảnh riêng trong kho `images`. Từ 0.4.4 ảnh gắn theo **từ / câu** (lessonId `lib`, khóa = từ viết thường, câu = `s:<câu>`) trong **🖼️ Kho ảnh dùng chung** — cùng từ ở nhiều bài dùng chung một ảnh, bài có sẵn của app cũng dùng được. Ảnh lưới gốc không giữ.
 - Màn cắt cho bố mẹ: xem từng ô, gán ô cho từ, đổi / chụp lại ảnh riêng cho một từ.
 - Một mục một ảnh; ảnh thuộc một bài (`lessonId`), xóa theo bài. Bài có sẵn dùng emoji / SVG đi kèm app.
 - Ảnh trong IndexedDB và ảnh đi kèm app đều xem được offline.
@@ -355,6 +355,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.4.1 *(xong)* | Tả tranh — Nghe xem (SPEC-ta-tranh 3–6): tab 🖼️ Tả tranh trong khu Read, tranh có sẵn "In the park" (SVG + emoji, 7 câu cấp 2), mũi tên trượt + nhún, karaoke, 🇻🇳 VI bật / tắt, ⏸ ▶ ⏮ 🔁 ⏭, chạm từ / chạm tranh, kho `scenes` (IndexedDB bước 3) |
 | 0.4.2 *(xong)* | Tả tranh: Góc bố mẹ → Bài học → 🖼️ Tả tranh → Soạn tranh (ảnh, câu, chạm đặt mũi tên, hướng, vùng chạm, xem thử, xóa) + nhờ AI viết câu (prompt kèm ảnh, dán JSON, kiểm tra bảng 7.4, phải xác nhận mũi tên) — SPEC-ta-tranh 0.4.2 + 0.4.3 |
 | 0.4.3 *(xong)* | Tả tranh: 🔍 Tìm trong tranh (SPEC-ta-tranh 11): Olly đọc câu không có mũi tên, bé chạm đúng chỗ; sai → rung + đọc lại từ khóa; sai 2 lần → giải thích tiếng Việt + chỉ chỗ; sao riêng (lesson:<id>/find) |
+| 0.4.4 *(xong)* | 🖼️ Kho ảnh (5.6, giống kid-english): ảnh dùng chung theo TỪ / CÂU cho mọi bài (đặt ảnh "cat" một lần, mọi bài có "cat" dùng); Góc bố mẹ → Kho ảnh: mọi từ + câu của các bài, tìm / lọc chưa có ảnh, chọn ≤ 16 mục → 1 prompt ảnh lưới → cắt → lưu, ảnh lẻ, xóa; thay tranh có sẵn của Tả tranh (bản sao giữ câu + prompt vẽ tranh theo các câu, đặt lại mũi tên, tranh gốc ẩn / hiện lại); ảnh theo bài của 0.3.3 tự chuyển vào kho |
 | sau | Truyện ngắn (3.1.6) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |

@@ -488,3 +488,7 @@ input[type='text'], input[type='number'], select, textarea {
 .find-ring { position: absolute; border-radius: 50%; border: 4px solid var(--yellow); box-shadow: 0 0 0 6px rgba(255, 201, 74, 0.35); pointer-events: none; animation: pulse 0.9s ease-in-out infinite; }
 .scene-text .vi-help { position: static; transform: none; width: auto; margin-top: 6px; }
 @media (prefers-reduced-motion: reduce) { .miss-dot, .find-ring { animation: none; } }
+/* Kho ảnh */
+.scene-thumb.small { width: 96px; flex: none; border-radius: 10px; }
+.picture-row input[type='checkbox'] { width: 24px; height: 24px; flex: none; }
+.picture-row.sentence-item strong { font-weight: 700; font-style: italic; }
