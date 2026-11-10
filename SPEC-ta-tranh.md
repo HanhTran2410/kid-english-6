@@ -332,7 +332,7 @@ Làm sau khi "Đọc câu" (0.4) xong, vì dùng chung phần karaoke và thanh 
 | 0.4.1 *(xong 2026-11-10)* | Nghe xem: mũi tên, karaoke, tiếng Việt, điều khiển âm thanh (mục 3–6), 1 tranh có sẵn ("In the park"), kho `scenes` |
 | 0.4.2 *(xong 2026-11-10)* | Soạn tranh tay: câu, mũi tên, ảnh, xem trước (mục 8.1–8.2) |
 | 0.4.3 *(xong 2026-11-10, cùng bản 0.4.2)* | Prompt AI, dán JSON, kiểm tra dữ liệu (mục 7.4, 8.3); đủ 3–5 tranh có sẵn |
-| 0.4.4 | Tìm trong tranh, sao, tiến độ (mục 9, 11) |
+| 0.4.4 *(xong 2026-11-10, app bản 0.4.3)* | Tìm trong tranh, sao, tiến độ (mục 9, 11) |
 | sau 0.4 | Bé đọc, Bé tả |
 
 ## 14. Đã chốt (2026-11-06)

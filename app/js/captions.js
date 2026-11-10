@@ -13,6 +13,7 @@ export const QUESTIONS = {
   whatsMissing: (word) => `What is missing in ${word}?`,
   readSentence: () => 'Your turn! Read the sentence!',
   whichPicture: () => 'Which picture shows it?',
+  findInPicture: () => 'Where is it? Tap the picture!',
 };
 
 /**
@@ -30,6 +31,7 @@ export function translateQuestion(en, meaning = '') {
     [/^Tap the letters\. Then tap Blend!$/, () => 'Bé chạm từng ô để nghe âm, rồi bấm nút Ghép.'],
     [/^Your turn! Read it!$/, () => 'Đến lượt bé! Bé đọc to từ này nhé.'],
     [/^Your turn! Read the sentence!$/, () => 'Đến lượt bé! Bé đọc to cả câu nhé.'],
+    [/^Where is it\? Tap the picture!$/, () => `Câu này tả chỗ nào trong tranh${m}? Bé chạm vào đúng chỗ đó.`],
     [/^Which picture shows it\?$/, () => `Hình nào đúng với câu này${m}? Bé chạm vào hình đúng.`],
     [/^Which one is (.+)\?$/, (x) => `Hình nào là "${x}"${m}? Bé chạm vào hình đúng.`],
     [/^Find the word: (.+)!$/, (x) => `Tìm chữ "${x}"${m}! Bé chạm vào thẻ đúng.`],

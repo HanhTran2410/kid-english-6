@@ -1,14 +1,16 @@
 // 🖼️ Tả tranh — chế độ Nghe xem (SPEC-ta-tranh mục 3–6): tranh 4:3 + mũi tên chỉ chỗ câu đang tả + thanh chữ karaoke dưới tranh
 // + dòng tiếng Việt bật / tắt. Mỗi lúc chỉ MỘT luồng chạy (đọc câu / đọc từ / nghỉ / chờ): thao tác mới hủy luồng cũ (5.1).
 
-import { h } from '../ui.js';
+import { h, toast } from '../ui.js';
 import { play } from '../speech/sfx.js';
-import { isAbort, scaled } from '../timing.js';
+import { isAbort, scaled, abortError } from '../timing.js';
 import { tokenize } from '../text.js';
 import { displayWords } from '../karaoke.js';
-import { arrowGeometry, pickSentence } from '../scene.js';
+import { arrowGeometry, pickSentence, hitRadius } from '../scene.js';
 import { SCENE_BY_ID } from '../data/builtin-scenes.js';
-import { recordLessonDone } from '../progress.js';
+import { recordLessonDone, recordItem, starsFor, RESULT } from '../progress.js';
+import { QUESTIONS } from '../captions.js';
+import { needsVietnameseHelp } from '../settings.js';
 import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
 import { Teacher } from '../read/teacher.js';
 
@@ -188,11 +190,140 @@ function buildScene(app, params, scene, fillArt) {
     play('tada');
     const again = h('button.big-btn.primary', { type: 'button', 'aria-label': 'Nghe lại từ đầu', text: '🔁 Nghe lại', onclick: () => playFrom(0) });
     const home = h('button.big-btn', { type: 'button', 'aria-label': 'Về', text: '📖', onclick: back });
-    const panel = h('div.scene-done', {}, h('p.done-title', { text: 'Great listening!' }), h('div.done-actions', {}, again, home));
+    const find = findable ? h('button.big-btn', { type: 'button', 'aria-label': 'Tìm trong tranh', text: '🔍 Tìm', onclick: () => app.go('scene', { sceneId: scene.id, mode: 'find' }) }) : null;
+    const panel = h('div.scene-done', {}, h('p.done-title', { text: 'Great listening!' }), h('div.done-actions', {}, again, find, home));
     sentenceBox.replaceChildren(panel);
     viLine.textContent = '';
     arrow.classList.add('gone');
     newRun().say('Great listening!').catch(() => {});
+  }
+
+  // ---------- 🔍 Tìm trong tranh (SPEC-ta-tranh mục 9, 11) ----------
+  const findable = sentences.some((s) => s.point);
+  const findBtn = h(`button.scene-btn.find-btn${findable ? '' : '.dim'}`, {
+    type: 'button', 'aria-label': 'Tìm trong tranh', text: '🔍',
+    onclick: () => {
+      play('tap');
+      if (!findable) {
+        toast('Bố mẹ cần đặt mũi tên cho tranh này (Góc bố mẹ → Bài học → Tả tranh).', 4000);
+        return;
+      }
+      app.go('scene', { sceneId: scene.id, mode: 'find' });
+    },
+  });
+  if (params.mode === 'find' && findable) return startFind();
+  viBtn.after(findBtn);
+
+  function startFind() {
+    const items = sentences.map((s, i) => [s, i]).filter(([s]) => s.point);
+    for (const b of [pauseBtn, prevBtn, againBtn, nextBtn]) b.hidden = true;
+    const replayBtn = h('button.scene-btn.big', { type: 'button', 'aria-label': 'Nghe lại', title: 'Nghe lại câu hỏi', text: '🔊', hidden: true });
+    againBtn.after(replayBtn);
+    app.root.querySelector('.scene-title').textContent = `🔍 ${scene.title}`;
+    const t = new Teacher(app, { signal: activity, stage: textBar, replayBtn });
+    const ring = h('div.find-ring', { 'aria-hidden': 'true', hidden: true });
+    frame.append(ring);
+    const results = [];
+
+    /** Chờ bé chạm vào tranh (bỏ qua khi Olly đang nói) → toạ độ px trong khung. */
+    const waitFrameTap = () => new Promise((resolve, reject) => {
+      const onTap = (e) => {
+        if (app.speaker.speaking) return;
+        const r = frame.getBoundingClientRect();
+        cleanup();
+        resolve({ x: e.clientX - r.left, y: e.clientY - r.top });
+      };
+      const onAbort = () => { cleanup(); reject(abortError()); };
+      const cleanup = () => {
+        frame.removeEventListener('click', onTap);
+        activity.removeEventListener('abort', onAbort);
+      };
+      frame.addEventListener('click', onTap);
+      activity.addEventListener('abort', onAbort, { once: true });
+    });
+    const missAt = ({ x, y }) => {
+      const dot = h('span.miss-dot', { 'aria-hidden': 'true', style: { left: `${x}px`, top: `${y}px` } });
+      frame.append(dot);
+      setTimeout(() => dot.remove(), 900);
+    };
+    const showRing = (s) => {
+      const b = box();
+      const r = hitRadius(s, b);
+      Object.assign(ring.style, { left: `${s.point.x * b.w - r}px`, top: `${s.point.y * b.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+      ring.hidden = false;
+    };
+
+    (async () => {
+      await new Promise((r) => requestAnimationFrame(r));
+      reserveTextHeight();
+      for (const [k, [s, i]] of items.entries()) {
+        show(i, false);
+        arrow.classList.add('gone');
+        ring.hidden = true;
+        counter.textContent = `${k + 1}/${items.length}`;
+        const speak = async () => {
+          await t.karaoke(s.en, wordEls);
+          await t.say(QUESTIONS.findInPicture());
+        };
+        await t.ask(QUESTIONS.findInPicture(), { meaning: s.vi, speak });
+        let wrong = 0;
+        let result;
+        for (;;) {
+          const tap = await waitFrameTap();
+          const b = box();
+          const hit = Math.hypot(tap.x - s.point.x * b.w, tap.y - s.point.y * b.h) <= hitRadius(s, b);
+          if (hit) {
+            play('ding');
+            placeArrow(i, false);
+            arrow.classList.add('arrived');
+            ring.hidden = true;
+            t.celebrate();
+            result = wrong === 0 ? RESULT.INDEPENDENT : wrong === 1 ? RESULT.HELPED : RESULT.MISSED;
+            if (wrong < 2) await t.say(wrong === 0 ? 'Yes! Well done!' : 'Yes! Good job!');
+            break;
+          }
+          wrong++;
+          play('boing');
+          missAt(tap);
+          if (wrong === 1) {
+            await t.say('Oops! Listen again.');
+            for (const kw of s.keywords ?? []) await t.say(kw, { rate: app.settings.rate * 0.8 });
+            await t.karaoke(s.en, wordEls);
+          } else if (wrong === 2) {
+            if (s.vi && needsVietnameseHelp(app.settings, wrong)) await t.explainVi(`Câu "${s.en}" nghĩa là: ${s.vi}. Bé chạm vào chỗ mũi tên chỉ nhé.`);
+            placeArrow(i, false);
+            showRing(s);
+            await t.say('Look! It is here. Tap it!');
+          }
+        }
+        t.endQuestion();
+        recordItem(app.db, { lessonId: scene.id, activity: 'find', itemId: s.sid }, result).catch(() => {});
+        results.push(result);
+        await t.pause(700);
+      }
+      const stars = starsFor(results);
+      await recordLessonDone(app.db, scene.id, stars, Date.now(), 'find');
+      play('tada');
+      arrow.classList.add('gone');
+      viLine.textContent = '';
+      sentenceBox.replaceChildren(h('div.scene-done', {},
+        h('p.done-title', { text: 'Great finding!' }),
+        stars != null ? h('p.done-stars', { 'aria-label': `${stars} sao`, text: '⭐'.repeat(stars) + '☆'.repeat(3 - stars) }) : null,
+        h('div.done-actions', {},
+          h('button.big-btn.primary', { type: 'button', 'aria-label': 'Chơi lại', text: '🔁', onclick: () => app.go('scene', { sceneId: scene.id, mode: 'find' }) }),
+          h('button.big-btn', { type: 'button', 'aria-label': 'Nghe tranh', text: '👂', onclick: () => app.go('scene', { sceneId: scene.id }) }),
+          h('button.big-btn', { type: 'button', 'aria-label': 'Về', text: '📖', onclick: back }))));
+      t.celebrate();
+      await t.say(stars === 3 ? 'Wow! Three stars!' : 'Great finding! You did it!');
+    })().catch((err) => {
+      if (!isAbort(err)) console.error(err);
+    });
+    const onResizeFind = () => {
+      if (!arrow.classList.contains('gone')) placeArrow(index, false);
+      reserveTextHeight();
+    };
+    window.addEventListener('resize', onResizeFind);
+    return () => window.removeEventListener('resize', onResizeFind);
   }
 
   // ---------- Thao tác (bảng 5.2) ----------

@@ -16,13 +16,24 @@ const counter = (page) => page.locator('.scene-counter');
 const arrow = (page) => page.locator('.scene-arrow');
 
 test('Tả tranh: tự đọc hết 7 câu theo thứ tự, mũi tên đúng câu, câu đầu không mũi tên; hết bài → ghi đã nghe, nghe lại', async ({ page }) => {
+  // Ghi lại (câu đang hiện | mũi tên chỉ câu nào | hiện / ẩn) suốt bài — chế độ ?fast chạy rất nhanh, không đọc tức thời được.
+  await page.addInitScript(() => {
+    window.__log = new Set();
+    new MutationObserver(() => {
+      const c = document.querySelector('.scene-counter')?.textContent;
+      const a = document.querySelector('.scene-arrow');
+      const vi = document.querySelector('.scene-vi')?.textContent;
+      if (c && a) window.__log.add(`${c}|${a.dataset.sentence ?? ''}|${a.classList.contains('gone') || a.hidden ? 'off' : 'on'}`);
+      if (c === '1/7' && vi) window.__log.add(`vi:${vi}`);
+    }).observe(document, { subtree: true, childList: true, attributes: true, characterData: true });
+  });
   await openPark(page);
-  await expect(counter(page)).toHaveText('1/7');
-  await expect(page.locator('.scene-sentence')).toHaveText(/It\s*is\s*a\s*sunny\s*day/);
-  await expect(page.locator('.scene-vi')).toHaveText('Hôm nay trời nắng đẹp ở công viên.');
-  // Câu 1 (tả chung): không có mũi tên nào hiện.
-  await expect(arrow(page)).toHaveAttribute('data-sentence', '');
   await expect(page.locator('.scene-done')).toBeVisible({ timeout: 60_000 });
+  const log = await page.evaluate(() => [...window.__log]);
+  expect(log).toContain('vi:Hôm nay trời nắng đẹp ở công viên.');
+  // Câu 1 (tả chung): không có mũi tên; các câu sau: mũi tên chỉ đúng câu đó.
+  expect(log.filter((x) => x.startsWith('1/7|') && x.endsWith('|on'))).toEqual([]);
+  for (const [n, sid] of [[2, 'p2'], [4, 'p4'], [7, 'p7']]) expect(log).toContain(`${n}/7|${sid}|on`);
   const said = await spoken(page);
   const order = ['It is a sunny day in the park.', 'A boy is flying a kite.', 'The kite is in the sky.', 'A girl is riding a bike.', 'A dog is on the grass.', 'Two ducks are in the pond.', 'The sun is hot.'];
   expect(said.filter((s) => order.includes(s))).toEqual(order);
@@ -76,4 +87,47 @@ test('Tả tranh: ⏸ dừng giữ câu, ▶ đọc lại; ⏭ ⏮; VI tắt kh�
   // Chạm một từ → Olly đọc riêng từ đó.
   await page.locator('.scene-sentence .sword', { hasText: 'grass' }).click();
   await expect.poll(() => spoken(page)).toContain('grass');
+});
+
+test('🔍 Tìm trong tranh: không có mũi tên; sai → rung + đọc lại; sai 2 lần → tiếng Việt + chỉ chỗ; đúng → mũi tên hiện; sao', async ({ page }) => {
+  test.setTimeout(180_000);
+  await openPark(page);
+  await page.getByRole('button', { name: 'Tìm trong tranh' }).click();
+  await expect(page.locator('.scene-title')).toHaveText('🔍 In the park');
+  const scene = await page.evaluate(async () => (await import('./js/data/builtin-scenes.js')).SCENE_BY_ID.get('scene-park'));
+  const items = scene.sentences.filter((s) => s.point);
+  await expect(counter(page)).toHaveText(`1/${items.length}`);
+  await expect(arrow(page)).toHaveClass(/gone/);
+  const frame = page.locator('.scene-frame');
+  const fb = await frame.boundingBox();
+  const tapAt = (x, y) => page.mouse.click(fb.x + x * fb.width, fb.y + y * fb.height);
+  const said = () => spoken(page);
+
+  // Câu 1 (bạn trai): chạm sai 2 lần (góc trời), rồi chạm đúng.
+  await expect.poll(said).toContain('Where is it? Tap the picture!');
+  // Olly đang nói thì chạm không tính → chạm lại tới khi Olly phản hồi đúng câu của từng lượt sai.
+  for (const reply of ['Oops! Listen again.', 'Look! It is here. Tap it!']) {
+    await expect(async () => {
+      await tapAt(0.03, 0.05);
+      expect(await said()).toContain(reply);
+    }).toPass({ timeout: 15_000 });
+  }
+  await expect(page.locator('.vi-help')).toContainText('Một bạn trai đang thả diều');
+  await expect(page.locator('.find-ring')).toBeVisible();
+  await expect(arrow(page)).toHaveAttribute('data-sentence', items[0].sid);
+
+  // Chạm đúng từng câu (đầu mũi tên) cho tới hết.
+  for (let k = 0; k < items.length; k++) {
+    const s = items[k];
+    await expect(async () => {
+      await tapAt(s.point.x, s.point.y);
+      await expect(page.locator('.scene-done').or(counter(page).filter({ hasText: `${k + 2}/` }))).toBeVisible({ timeout: 800 });
+    }).toPass({ timeout: 20_000 });
+  }
+  await expect(page.locator('.scene-done .done-stars')).toHaveText(/⭐/);
+  const p = await page.evaluate(() => window.kidEnglish6.db.get('progress', 'lesson:scene-park/find'));
+  expect(p.plays).toBe(1);
+  expect(p.bestStars).toBeGreaterThanOrEqual(2); // 1 câu phải chỉ đáp án / 6 câu
+  const missed = await page.evaluate(() => window.kidEnglish6.db.getAll('progress').then((all) => all.filter((x) => x.activity === 'find' && x.missed).length));
+  expect(missed).toBe(1);
 });

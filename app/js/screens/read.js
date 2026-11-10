@@ -166,6 +166,7 @@ async function sceneCards(app, list) {
   const own = (await app.db.getAll('scenes')).filter((s) => s.sentences?.length).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
   const scenes = [...BUILTIN_SCENES, ...own];
   const progress = await Promise.all(scenes.map((s) => getLessonProgress(app.db, s.id)));
+  const found = await Promise.all(scenes.map((s) => getLessonProgress(app.db, s.id, 'find')));
   const thumbs = await Promise.all(scenes.map(async (s) => {
     if (s.svg) return h('div.scene-thumb', { html: s.svg });
     const img = (await lessonImages(app.db, s.id)).get(SCENE_IMAGE);
@@ -182,6 +183,6 @@ async function sceneCards(app, list) {
     thumbs[i],
     h('span.lesson-title', { text: s.title }),
     h('span.lesson-vi', { text: `${s.titleVi} · ${s.sentences.length} câu` }),
-    progress[i].plays ? h('span.lesson-stars', { text: `👂 ${progress[i].plays}` }) : null));
+    progress[i].plays || found[i].plays ? h('span.lesson-stars', { text: [progress[i].plays ? `👂 ${progress[i].plays}` : '', found[i].plays ? `🔍 ${'⭐'.repeat(found[i].bestStars)}${'☆'.repeat(3 - found[i].bestStars)}` : ''].filter(Boolean).join('  ') }) : null));
   });
 }

@@ -354,7 +354,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.4.0 *(xong)* | Đọc câu (3.1.5): karaoke dùng chung (`karaoke.js`, SPEC-ta-tranh 5.4), bé chạm từ nghe riêng, bé đọc cả câu (từ nghe được xanh / chưa nghe được xám, Olly đọc lại), câu hỏi hiểu chọn hình; 3 câu đọc được cho mỗi nhóm 1–7; cài đặt Hiện tiếng Việt dưới câu / Đọc tiếng Việt thành tiếng |
 | 0.4.1 *(xong)* | Tả tranh — Nghe xem (SPEC-ta-tranh 3–6): tab 🖼️ Tả tranh trong khu Read, tranh có sẵn "In the park" (SVG + emoji, 7 câu cấp 2), mũi tên trượt + nhún, karaoke, 🇻🇳 VI bật / tắt, ⏸ ▶ ⏮ 🔁 ⏭, chạm từ / chạm tranh, kho `scenes` (IndexedDB bước 3) |
 | 0.4.2 *(xong)* | Tả tranh: Góc bố mẹ → Bài học → 🖼️ Tả tranh → Soạn tranh (ảnh, câu, chạm đặt mũi tên, hướng, vùng chạm, xem thử, xóa) + nhờ AI viết câu (prompt kèm ảnh, dán JSON, kiểm tra bảng 7.4, phải xác nhận mũi tên) — SPEC-ta-tranh 0.4.2 + 0.4.3 |
-| 0.4.4 | Tả tranh: Tìm trong tranh |
+| 0.4.3 *(xong)* | Tả tranh: 🔍 Tìm trong tranh (SPEC-ta-tranh 11): Olly đọc câu không có mũi tên, bé chạm đúng chỗ; sai → rung + đọc lại từ khóa; sai 2 lần → giải thích tiếng Việt + chỉ chỗ; sao riêng (lesson:<id>/find) |
 | sau | Truyện ngắn (3.1.6) |
 | 0.5 | Talk |
 | 0.6 | Spell: tập viết chữ + viết từ |
