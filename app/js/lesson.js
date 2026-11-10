@@ -15,6 +15,7 @@ export const ACTIVITY_TYPES = {
   fill: 'words',
   write: 'words',
   sentence: 'sentences',
+  talk: 'dialogues',
 };
 
 const ID_RE = /^[a-z0-9][a-z0-9-]*$/;
@@ -74,7 +75,14 @@ export function validateLesson(data, { builtIn = false } = {}) {
   const words = checkItems(data.words, 'words', 'Từ', errors, (w, where) => checkWord(w, where, errors));
   const sentences = checkItems(data.sentences, 'sentences', 'Câu', errors, (s, where) => checkSentence(s, where, errors));
 
-  const pools = { words: new Set(words.map((w) => w.id)), sentences: new Set(sentences.map((s) => s.id)) };
+  const dialogues = checkItems(data.dialogues, 'dialogues', 'Hội thoại', errors, (d, where) => checkDialogue(d, where, errors));
+
+  const pools = {
+    words: new Set(words.map((w) => w.id)),
+    sentences: new Set(sentences.map((s) => s.id)),
+    dialogues: new Set(dialogues.map((d) => d.id)),
+  };
+  const ITEM_NAME = { words: 'từ', sentences: 'câu', dialogues: 'hội thoại' };
   for (const s of sentences) if (pools.words.has(s.id)) errors.push(`Câu "${s.en}": "id" "${s.id}" trùng với id của một từ.`);
   const activities = [];
   if (!Array.isArray(data.activities) || !data.activities.length) {
@@ -97,7 +105,7 @@ export function validateLesson(data, { builtIn = false } = {}) {
       const items = Array.isArray(a.items) ? a.items.map(str) : [];
       if (!items.length) errors.push(`${where} (${a.type}): cần danh sách "items".`);
       for (const it of items) {
-        if (!pools[kind].has(it)) errors.push(`${where} (${a.type}): không có ${kind === 'words' ? 'từ' : 'câu'} mang id "${it}".`);
+        if (!pools[kind].has(it)) errors.push(`${where} (${a.type}): không có ${ITEM_NAME[kind]} mang id "${it}".`);
       }
       if (['blend', 'spell', 'fill'].includes(a.type)) {
         for (const it of items) {
@@ -134,6 +142,7 @@ export function validateLesson(data, { builtIn = false } = {}) {
     newSounds: [...newSounds],
     words,
     sentences,
+    ...(dialogues.length && { dialogues }),
     activities,
     builtIn,
     createdAt: Number.isFinite(data.createdAt) ? data.createdAt : null,
@@ -209,13 +218,65 @@ function checkSentence(s, where, errors) {
   return { en, vi: str(s.vi), chunks, emoji: str(s.emoji) || null, imageId: str(s.imageId) || null };
 }
 
+const MAX_TURNS = 10;
+const MAX_TALK_WORDS = 15;
+const words15 = (t) => t.split(/\s+/).filter(Boolean).length;
+
+/** Hội thoại của khu Talk (SPEC 3.3.1). */
+function checkDialogue(d, where, errors) {
+  const title = str(d.title);
+  if (!title) errors.push(`${where}: thiếu tên hội thoại ("title").`);
+  const partner = {
+    name: str(d.partner?.name) || 'Mimi',
+    emoji: str(d.partner?.emoji) || '🐱',
+  };
+  const list = d.turns;
+  if (!Array.isArray(list) || !list.length || list.length > MAX_TURNS) {
+    errors.push(`${where}: "turns" phải là danh sách 1–${MAX_TURNS} lượt.`);
+  }
+  const seen = new Set();
+  const turns = [];
+  (Array.isArray(list) ? list : []).forEach((t, i) => {
+    const at = `${where}, lượt ${i + 1}`;
+    if (!t || typeof t !== 'object') {
+      errors.push(`${at}: phải là một object.`);
+      return;
+    }
+    const id = str(t.id) || `t${i + 1}`;
+    if (seen.has(id)) errors.push(`${at}: "id" "${id}" bị trùng.`);
+    seen.add(id);
+    const ask = str(t.ask);
+    const answer = str(t.answer);
+    if (!ask) errors.push(`${at}: thiếu câu hỏi ("ask").`);
+    if (!answer) errors.push(`${at}: thiếu câu mẫu ("answer").`);
+    for (const [k, v] of [['ask', ask], ['answer', answer]]) {
+      if (v && words15(v) > MAX_TALK_WORDS) errors.push(`${at}: "${k}" dài quá ${MAX_TALK_WORDS} từ.`);
+    }
+    let keywords = [];
+    if (t.keywords != null) {
+      if (!Array.isArray(t.keywords) || !t.keywords.every((k) => typeof k === 'string')) errors.push(`${at}: "keywords" phải là danh sách chữ.`);
+      else keywords = t.keywords.map(str).filter(Boolean);
+    }
+    turns.push({
+      id, ask, askVi: str(t.askVi), answer, answerVi: str(t.answerVi), starter: str(t.starter), keywords,
+      emoji: str(t.emoji) || null, reply: str(t.reply),
+    });
+  });
+  return { title, titleVi: str(d.titleVi), partner, turns };
+}
+
 /**
  * Khi thay bài cũ bằng bản mới: id các mục phải xóa tiến độ (mục bị xóa, hoặc giữ id nhưng đổi chữ `en`).
  * @returns {string[]}
  */
 export function itemsToReset(oldLesson, newLesson) {
   const next = new Map([...newLesson.words, ...newLesson.sentences].map((it) => [it.id, it.en]));
-  return [...(oldLesson?.words ?? []), ...(oldLesson?.sentences ?? [])]
+  const reset = [...(oldLesson?.words ?? []), ...(oldLesson?.sentences ?? [])]
     .filter((it) => !next.has(it.id) || next.get(it.id) !== it.en)
     .map((it) => it.id);
+  // Lượt hội thoại: tiến độ theo "<hội thoại>-<lượt>"; lượt bị xóa hoặc đổi câu mẫu → xóa tiến độ.
+  const turnsOf = (l) => new Map((l?.dialogues ?? []).flatMap((d) => d.turns.map((t) => [`${d.id}-${t.id}`, t.answer])));
+  const nextTurns = turnsOf(newLesson);
+  for (const [key, answer] of turnsOf(oldLesson)) if (nextTurns.get(key) !== answer) reset.push(key);
+  return reset;
 }

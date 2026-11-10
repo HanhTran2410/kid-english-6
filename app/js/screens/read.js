@@ -8,12 +8,14 @@ import { isAbort } from '../timing.js';
 import { mascotElement } from '../mascot.js';
 import { ZONE_BY_ID } from '../zones.js';
 import { homeButton } from './child.js';
-import { BUILTIN_LESSONS, BUILTIN_BY_ID } from '../data/builtin-lessons.js';
+import { BUILTIN_LESSONS, BUILTIN_BY_ID, BUILTIN_TALKS } from '../data/builtin-lessons.js';
 import { getLessonProgress, recordLessonDone, starsFor } from '../progress.js';
 import { activityLayout, Teacher } from '../read/teacher.js';
 import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
 import { spellWords, fillWords } from '../read/spell-stages.js';
 import { readSentences } from '../read/sentence-stages.js';
+import { talkDialogue, talkSteps } from '../read/talk-stages.js';
+import { TALK_LEVELS, suggestedLevel } from '../talk.js';
 import { adaptForPlay } from '../lesson-prompts.js';
 import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
 import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
@@ -27,7 +29,7 @@ const partOf = (zone) => (zone === 'read' ? '' : zone);
 /** Mọi bài khu `zone` chơi được: bài có sẵn (theo nhóm) rồi bài bố mẹ nhập (cũ trước). */
 export async function zoneLessons(db, zone = 'read') {
   const imported = (await db.getAll('lessons')).filter((l) => !BUILTIN_BY_ID.has(l.id)).sort((a, b) => (a.createdAt ?? 0) - (b.createdAt ?? 0));
-  return [...BUILTIN_LESSONS, ...imported].map(adaptForPlay).filter((l) => isPlayable(l, zone));
+  return [...BUILTIN_LESSONS, ...BUILTIN_TALKS, ...imported].map(adaptForPlay).filter((l) => isPlayable(l, zone));
 }
 
 /** Bài để học: từ có âm chưa có file → học như tricky word (adaptForPlay). */
@@ -36,18 +38,21 @@ async function getLesson(app, id) {
   return lesson ? adaptForPlay(lesson) : null;
 }
 
-const lessonEmoji = (l) => l.words.find((w) => w.emoji)?.emoji ?? (l.track === 'book' ? '📘' : '🔤');
+const lessonEmoji = (l, zone) => (zone === 'talk' ? l.emoji ?? l.dialogues?.[0]?.partner.emoji : null)
+  ?? l.words.find((w) => w.emoji)?.emoji ?? (l.track === 'book' ? '📘' : '🔤');
 
 // ---------- Danh sách bài ----------
 
 export const readScreen = (app, params = {}) => zoneListScreen(app, { ...params, zone: 'read' });
 export const spellScreen = (app, params = {}) => zoneListScreen(app, { ...params, zone: 'spell' });
+export const talkScreen = (app, params = {}) => zoneListScreen(app, { ...params, zone: 'talk' });
 
 function zoneListScreen(app, { zone, tab = 'phonics' }) {
   const info = ZONE_BY_ID.get(zone);
   app.root.className = `child-screen read-list zone-list-${zone}`;
   const list = h('div.lesson-cards');
-  const tabList = [['phonics', '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : [])];
+  // Khu Talk: tab đầu là các bài hội thoại hằng ngày có sẵn (mạch "phonics" trong dữ liệu).
+  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : [])];
   const tabs = tabList.map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
     type: 'button', text: label, 'aria-pressed': String(id === tab),
     onclick: () => {
@@ -81,7 +86,7 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
           app.go('lesson', { lessonId: l.id, zone });
         },
       },
-      h('span.lesson-emoji', { text: lessonEmoji(l) }),
+      h('span.lesson-emoji', { text: lessonEmoji(l, zone) }),
       h('span.lesson-title', { text: l.title }),
       l.titleVi ? h('span.lesson-vi', { text: l.titleVi }) : null,
       h('span.lesson-stars', { text: starText(progress[i].bestStars) }),
@@ -122,7 +127,12 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     const sentenceSet = new Set(lesson.sentences);
     app.root.dataset.lesson = lesson.id;
     app.root.dataset.zone = zone;
-    const total = Math.max(1, countSteps(lesson, zone));
+    // Talk (SPEC 3.3.3): bé chọn mức hỗ trợ trước; sao = mức đã làm xong.
+    const level = zone === 'talk' ? await chooseLevel(app, t, layout.stage, lesson) : null;
+    const dialogues = new Map((lesson.dialogues ?? []).map((d) => [d.id, d]));
+    const total = Math.max(1, zone === 'talk'
+      ? lesson.activities.filter((a) => a.type === 'talk').flatMap((a) => a.items).reduce((n, id) => n + (dialogues.has(id) ? talkSteps(dialogues.get(id), app.settings.childName) : 0), 0)
+      : countSteps(lesson, zone));
     let done = 0;
     const results = [];
     const ctx = {
@@ -142,8 +152,9 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
       else if (a.type === 'spell') await spellWords(ctx, withGraphemes(a));
       else if (a.type === 'fill') await fillWords(ctx, withGraphemes(a));
       else if (a.type === 'sentence') await readSentences(ctx, items(a));
+      else if (a.type === 'talk') for (const id of a.items) if (dialogues.has(id)) await talkDialogue(ctx, dialogues.get(id), level);
     }
-    const stars = starsFor(results);
+    const stars = zone === 'talk' ? level : starsFor(results);
     await recordLessonDone(app.db, lesson.id, stars, Date.now(), partOf(zone));
     showDone(app, t, layout, lesson, stars, zone);
   })().catch((err) => {
@@ -163,9 +174,33 @@ function showDone(app, t, layout, lesson, stars, zone) {
     stars != null ? h('p.done-stars', { 'aria-label': `${stars} sao`, text: starText(stars) }) : null,
     h('div.done-actions', {},
       h('button.big-btn', { type: 'button', 'aria-label': 'Học lại', text: '🔁', onclick: () => app.go('lesson', { lessonId: lesson.id, zone }) }),
-      h('button.big-btn.primary', { type: 'button', 'aria-label': 'Bài khác', text: zone === 'spell' ? '✏️' : '📖', onclick: leave }))));
+      h('button.big-btn.primary', { type: 'button', 'aria-label': 'Bài khác', text: ZONE_BY_ID.get(zone)?.emoji ?? '📖', onclick: leave }))));
   t.celebrate();
   t.say(stars === 3 ? 'Wow! Three stars! Great job!' : 'Great job! You did it!').catch(() => {});
+}
+
+// ---------- Talk: chọn mức hỗ trợ (SPEC 3.3.3) ----------
+
+async function chooseLevel(app, t, stage, lesson) {
+  const { bestStars } = await getLessonProgress(app.db, lesson.id, 'talk');
+  const suggest = suggestedLevel(bestStars);
+  const buttons = TALK_LEVELS.map((L) => h(`button.level-btn${L.level === suggest ? '.suggested' : ''}`, {
+    type: 'button', 'aria-label': `Mức ${L.level}: ${L.vi}`, dataset: { level: String(L.level) },
+  },
+  h('span.level-emoji', { text: L.emoji }),
+  h('span.level-en', { text: L.en }),
+  h('span.level-vi', { text: L.vi }),
+  h('span.level-stars', { text: '⭐'.repeat(L.level) })));
+  const partner = lesson.dialogues?.[0]?.partner;
+  stage.replaceChildren(h('div.level-panel', {},
+    h('p.level-title', {}, partner ? h('span.talk-avatar', { text: partner.emoji, 'aria-hidden': 'true' }) : null, h('span', { text: lesson.title })),
+    lesson.titleVi ? h('p.level-sub', { text: lesson.titleVi }) : null,
+    h('div.level-list', {}, ...buttons)));
+  t.say('How do you want to talk?').catch(() => {});
+  const picked = await t.waitTap(buttons);
+  play('pop');
+  app.speaker.cancel();
+  return Number(picked.dataset.level);
 }
 
 // ---------- Tả tranh: danh sách tranh (SPEC-ta-tranh mục 2.1) ----------

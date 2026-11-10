@@ -14,7 +14,7 @@ Không có bản "gốc" cố định: bên nào sửa lỗi trước thì là n
 | `app/js/speech/microphone.js` | 8833a4b | b07f2f34f0fa | Giống kid-english |
 | `app/js/speech/recognition.js` | 8833a4b | a6c3a0918f5b | Giống kid-english |
 | `app/js/speech/recorder.js` | 8833a4b | b1fbd1798e64 | Giống kid-english |
-| `app/js/speech/listen.js` | 8833a4b | 6901cea11a92 | Sửa riêng cho Olly (0.1.2): thêm `OUTCOME`, `readingOutcome`, tham số `target` / `homophones` của `listen()` để chấm đọc (SPEC 4.2). Phần cũ không đổi |
+| `app/js/speech/listen.js` | 8833a4b | 430ba160ebba | Sửa riêng cho Olly (0.1.2): thêm `OUTCOME`, `readingOutcome`, tham số `target` / `homophones` của `listen()` để chấm đọc (SPEC 4.2); (0.5.0) tham số `silenceMs` — bé chưa nói gì sau chừng này thì dừng nghe sớm (Talk). Phần cũ không đổi |
 | `app/js/speech/sfx.js` | 8833a4b | 44d9f9952f4d | Giống kid-english |
 | `app/js/timing.js` | 8833a4b | 317aff19cb18 | Giống kid-english |
 | `app/js/text.js` | 8833a4b | 453490a1a7ee | Giống kid-english |

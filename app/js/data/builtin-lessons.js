@@ -5,6 +5,7 @@
 
 import { GROUPS, TRICKY_BY_GROUP, learnedGraphemes, toGraphemes, soundOfGrapheme } from '../phonics.js';
 import { validateLesson } from '../lesson.js';
+import { BUILTIN_TALKS } from './builtin-talks.js';
 
 /** [từ, emoji (null = không có hình rõ), nghĩa tiếng Việt, mã âm riêng (khi khác mặc định: moon → oo-l)] */
 const WORDS = {
@@ -106,4 +107,6 @@ export const BUILTIN_LESSONS = [1, 2, 3, 4, 5, 6, 7].map((group) => {
   return r.lesson;
 });
 
-export const BUILTIN_BY_ID = new Map(BUILTIN_LESSONS.map((l) => [l.id, l]));
+/** Mọi bài có sẵn theo id: bài Phonics nhóm 1–7 + bài Talk hằng ngày (SPEC 3.3.1). */
+export const BUILTIN_BY_ID = new Map([...BUILTIN_LESSONS, ...BUILTIN_TALKS].map((l) => [l.id, l]));
+export { BUILTIN_TALKS };

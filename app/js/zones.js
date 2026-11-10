@@ -4,7 +4,7 @@
 export const ZONES = [
   { id: 'read', emoji: '📖', en: 'Read', vi: 'Tập đọc', color: 'sky', intro: "Let's read together!", ready: true },
   { id: 'spell', emoji: '✏️', en: 'Spell', vi: 'Đánh vần và viết', color: 'mint', intro: "Let's spell some words!", ready: true },
-  { id: 'talk', emoji: '💬', en: 'Talk', vi: 'Nói chuyện', color: 'coral', intro: "Let's have a chat!", ready: false },
+  { id: 'talk', emoji: '💬', en: 'Talk', vi: 'Nói chuyện', color: 'coral', intro: "Let's have a chat!", ready: true },
   { id: 'quest', emoji: '🧩', en: 'Quest', vi: 'Thử thách', color: 'lilac', intro: 'Are you ready for a quest?', ready: false },
 ];
 

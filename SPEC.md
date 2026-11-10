@@ -138,17 +138,55 @@ Một bức tranh, Olly đọc lần lượt các câu tả tranh; mũi tên ch�
 - **Viết từ**: mở khi bé xếp ô đúng **2 lần liên tiếp** cho từ đó (sai một lần thì đếm lại). Mỗi chữ một ô, có chữ mẫu mờ, xóa từng ô viết lại được; xong thì hiện từ in đúng cạnh chữ bé viết để bé tự so. Không chấm điểm hình chữ, chỉ ghi "đã viết" (khóa riêng `write`).
 
 ### 3.3. 💬 Talk / Nói chuyện (0.5)
-- Hội thoại ngắn theo chủ đề / mẫu câu Unit. Nhân vật phụ dùng **giọng thứ hai** (đã có trong lõi). Ghi âm câu bé nói để bố mẹ nghe lại.
-- Ba mức hỗ trợ (mỗi câu trong dữ liệu có đủ: câu hỏi, câu mẫu, phần đầu câu, từ khóa):
+- Hội thoại ngắn theo chủ đề / mẫu câu Unit. **Bạn hỏi** là nhân vật phụ (Mimi 🐱, Bobo 🐻…) dùng **giọng thứ hai** (`role: 'alt'`; máy chỉ có một giọng thì nói cao giọng hơn). **Olly** làm mẫu, nhắc và khen bằng giọng chính. Ghi âm câu bé nói để bố mẹ nghe lại (6.2).
+- Ba mức hỗ trợ (mỗi lượt trong dữ liệu có đủ: câu hỏi, câu mẫu, phần đầu câu, từ khóa):
 
-  | Mức | Cách làm |
-  |---|---|
-  | 1. Nghe – nhắc lại | Olly nói câu mẫu, bé nói lại |
-  | 2. Nói tiếp | Olly: *"I am…"* → bé: *"six years old"* |
-  | 3. Tự trả lời | Bé tự nói cả câu |
+  | Mức | Cách làm | Màn hình |
+  |---|---|---|
+  | 1. 👂 Nghe – nhắc lại | Bạn hỏi → Olly nói câu mẫu (karaoke) → bé nói lại | hiện cả câu mẫu |
+  | 2. 🧩 Nói tiếp | Bạn hỏi → Olly: *"I am…"* → bé nói cả câu | hiện *"I am ___"* |
+  | 3. 💬 Tự trả lời | Bạn hỏi → bé tự nói cả câu | chỉ có câu hỏi |
 
-- Bé im lặng: chờ 5 giây → Olly hỏi lại → hiện từ khóa → 5 giây nữa → Olly nói câu mẫu, bé nhắc lại → sang câu sau.
-- Nút: nghe lại câu hỏi, nói lại, bỏ qua. Máy không nghe ra ≠ bé sai (4.2).
+#### 3.3.1. Dữ liệu (trong gói bài 5.4)
+```json
+"dialogues": [
+  { "id": "d1", "title": "Hello!", "titleVi": "Xin chào", "partner": { "name": "Mimi", "emoji": "🐱" },
+    "turns": [
+      { "id": "t1", "ask": "Hi! I'm Mimi. What's your name?", "askVi": "Chào bạn! Mình là Mimi. Bạn tên là gì?",
+        "answer": "My name is {name}.", "answerVi": "Mình tên là {name}.", "starter": "My name is",
+        "keywords": ["{name}", "name"], "emoji": null, "reply": "Nice to meet you!" }
+    ] }
+],
+"activities": [{ "type": "talk", "items": ["d1"] }]
+```
+- `ask`, `answer` bắt buộc. 1–10 lượt / hội thoại, mỗi câu ≤ 15 từ.
+- `starter` không có thì app tự lấy: các từ đứng trước từ khóa đầu tiên của câu mẫu (không tìm được thì nửa đầu câu).
+- `keywords` không có thì lấy các từ chính của câu mẫu (bỏ *I, is, a, the…*). Có nhiều cách trả lời đúng thì ghi hết, ví dụ *"Do you like pizza?"* → `["yes", "no"]`.
+- `{name}` là tên bé (Cài đặt). Chưa nhập tên bé → bỏ qua lượt có `{name}`.
+- `emoji`: hình hiện cạnh câu hỏi (*"What color is it?"* + 🍎). `reply`: bạn đáp lại sau khi bé nói (không bắt buộc).
+- Bài có sẵn: 6 bài chủ đề hằng ngày (chào hỏi, màu sắc, đồ chơi, con vật, gia đình, đồ ăn), tab **💬 Hằng ngày** của khu Talk. Bài theo sách: prompt AI (5.7) viết thêm 1 hội thoại theo mẫu câu của Unit.
+
+#### 3.3.2. Một lượt
+1. Bạn hỏi (bong bóng chữ, dòng tiếng Việt dưới nếu bật `showVi`). Mức 1: Olly nói câu mẫu có karaoke; mức 2: Olly nói phần đầu câu.
+2. Olly: *"Your turn!"* → nghe tối đa 8 giây (vòng mic sáng), có ghi âm.
+3. Kết quả (máy không nghe ra ≠ bé sai, 4.2):
+
+   | Nghe được | Olly làm | Ghi tiến độ |
+   |---|---|---|
+   | có từ khóa | khen, bạn đáp `reply` | `independent` |
+   | nghe ra chữ nhưng không có từ khóa | *"Good try! Listen: …"* nói câu mẫu, đi tiếp (không chê) | `practiced` |
+   | có tiếng nhưng máy không ra chữ (`unheard`) | *"I didn't catch that. Say it again!"* — 1 lần, lần 2 vẫn vậy thì khen và đi tiếp | `practiced` |
+   | có tiếng, máy không có nhận dạng | khen, đi tiếp | `practiced` |
+   | im lặng | các bước im lặng dưới đây | |
+   | không có mic | nút **✅ Con nói xong** | `practiced` |
+
+4. **Bé im lặng** (OL-17): bạn hỏi lại → nghe → im lặng → hiện **từ khóa** (thẻ chữ) + Olly đọc từ khóa → nghe → im lặng → Olly nói câu mẫu, *"Say it with me!"* → nghe một lần → sang lượt sau. Bé nói được ở bước nào thì xử lý như bảng trên; đã phải xem từ khóa / câu mẫu thì ghi `helped`.
+- Nút trên màn: 🔊 nghe lại câu hỏi (+ phụ đề tiếng Việt, 4.5), **🎤 Nói lại** (nghe lại lượt này), **⏭ Bỏ qua** (sang lượt sau, không ghi tiến độ).
+
+#### 3.3.3. Chọn mức và sao
+- Vào bài: 3 nút mức. Nút sáng = mức kế tiếp chưa làm (đã làm mức 3 thì sáng mức 3). Mọi mức đều mở, bé chọn mức nào cũng được.
+- Xong cả bài ở mức N → **N sao** (`lesson:<id>/talk`, giữ sao cao nhất). Sao Talk theo mức hỗ trợ, không theo máy nghe (4.2).
+- Tiến độ lượt: `<lessonId>/talk/<dialogueId>-<turnId>`.
 
 ### 3.4. 🧩 Quest / Thử thách (0.7, chia nhỏ)
 | Bước | Trò | Ghi chú |
@@ -324,8 +362,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 
 ### 6.2. Ghi âm và dữ liệu riêng tư
 - Mọi dữ liệu (tên bé, tiến độ, ghi âm, bài) **chỉ lưu trên máy**. App không gửi gì lên mạng.
-- Ghi âm: tối đa 10 giây / bản, 1 bản / mục / ngày (đã có). Tổng ghi âm vượt 150 MB → xóa bản cũ nhất (giữ bản đầu tiên của mỗi mục để so tiến bộ), báo trong Góc bố mẹ. Đầy bộ nhớ máy (`QuotaExceededError`) → ngừng ghi âm cho buổi đó, bé chơi tiếp bình thường.
-- Nghe lại theo ngày và theo bài; xóa từng bản / **xóa toàn bộ ghi âm** / **xóa toàn bộ dữ liệu học** (hỏi lại 2 bước).
+- Ghi âm: tối đa 10 giây / bản, 1 bản / mục / ngày (đã có). Tổng ghi âm vượt 150 MB → xóa bản cũ nhất (giữ bản đầu tiên của mỗi mục để so tiến bộ), báo trong Góc bố mẹ. Đầy bộ nhớ máy (`QuotaExceededError`) → ngừng ghi âm cho buổi đó, bé chơi tiếp bình thường. Cài đặt "ghi âm" tắt → không ghi.
+- **🎙️ Ghi âm** (Góc bố mẹ, từ 0.5): nghe lại theo ngày (mới trước), mỗi bản ghi câu bé cần nói + tên bài; xóa từng bản / **xóa toàn bộ ghi âm** (hỏi lại); dòng tổng dung lượng / 150 MB. **Xóa toàn bộ dữ liệu học** (hỏi lại 2 bước) làm cùng trang Sao lưu.
 - Sao lưu / khôi phục do bố mẹ bấm (file zip, chép `backup.js` từ kid-english). Khôi phục: hỏi lại trước khi ghi đè. Google Drive / GitHub (sau cùng) cũng chỉ là **sao lưu tùy chọn bố mẹ bấm**, không đồng bộ tự động.
 - Nhắc sao lưu sau 7 ngày (`BACKUP_REMIND_DAYS`).
 
@@ -357,7 +395,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.4.3 *(xong)* | Tả tranh: 🔍 Tìm trong tranh (SPEC-ta-tranh 11): Olly đọc câu không có mũi tên, bé chạm đúng chỗ; sai → rung + đọc lại từ khóa; sai 2 lần → giải thích tiếng Việt + chỉ chỗ; sao riêng (lesson:<id>/find) |
 | 0.4.4 *(xong)* | 🖼️ Kho ảnh (5.6, giống kid-english): ảnh dùng chung theo TỪ / CÂU cho mọi bài (đặt ảnh "cat" một lần, mọi bài có "cat" dùng); Góc bố mẹ → Kho ảnh: mọi từ + câu của các bài, tìm / lọc chưa có ảnh, chọn ≤ 16 mục → 1 prompt ảnh lưới → cắt → lưu, ảnh lẻ, xóa; thay tranh có sẵn của Tả tranh (bản sao giữ câu + prompt vẽ tranh theo các câu, đặt lại mũi tên, tranh gốc ẩn / hiện lại); ảnh theo bài của 0.3.3 tự chuyển vào kho |
 | sau | Truyện ngắn (3.1.6) |
-| 0.5 | Talk |
+| 0.5.0 | Talk (3.3): khu 💬 mở, 6 bài hội thoại hằng ngày có sẵn, 3 mức hỗ trợ, bạn hỏi giọng thứ hai, các bước khi bé im lặng, ghi âm + Góc bố mẹ → 🎙️ Ghi âm (6.2), prompt AI bài theo sách có hội thoại |
 | 0.6 | Spell: tập viết chữ + viết từ |
 | 0.7 | Quest 1 → 4 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |

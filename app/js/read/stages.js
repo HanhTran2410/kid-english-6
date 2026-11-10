@@ -185,6 +185,7 @@ export async function trickyWords(ctx, words) {
 export const ZONE_TYPES = {
   read: new Set(['sounds', 'blend', 'tricky', 'sentence']),
   spell: new Set(['spell', 'fill']),
+  talk: new Set(['talk']),
 };
 
 /** Bài có hoạt động nào khu `zone` chơi được không. */
@@ -201,6 +202,7 @@ export function countSteps(lesson, zone = 'read') {
     if (a.type === 'tricky') n += 2 * a.items.length;
     if (a.type === 'sentence') n += a.items.length;
     if (['blend', 'spell', 'fill'].includes(a.type)) n += a.items.filter((id) => byId.get(id)?.graphemes).length;
+    if (a.type === 'talk') n += a.items.reduce((k, id) => k + (lesson.dialogues?.find((d) => d.id === id)?.turns.length ?? 0), 0);
   }
   return n;
 }

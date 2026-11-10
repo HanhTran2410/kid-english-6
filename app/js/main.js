@@ -4,7 +4,7 @@ import { App } from './app.js';
 import { openDatabase } from './db.js';
 import { loadSettings } from './settings.js';
 import { startScreen, homeScreen, sleepScreen } from './screens/child.js';
-import { readScreen, spellScreen, lessonScreen } from './screens/read.js';
+import { readScreen, spellScreen, talkScreen, lessonScreen } from './screens/read.js';
 import { sceneScreen } from './screens/scene.js';
 import { parentScreen } from './screens/parent/index.js';
 import { startNotices } from './notices.js';
@@ -62,6 +62,7 @@ async function boot() {
   app.register('home', homeScreen);
   app.register('read', readScreen);
   app.register('spell', spellScreen);
+  app.register('talk', talkScreen);
   app.register('lesson', lessonScreen);
   app.register('scene', sceneScreen);
   app.register('sleep', sleepScreen);

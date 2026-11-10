@@ -25,7 +25,45 @@ export async function fakeSpeech(page, { recognition = false, mic = true } = {})
       removeEventListener() {},
     };
     Object.defineProperty(window, 'speechSynthesis', { value: synth, configurable: true });
-    if (!recognition) {
+    if (recognition === 'fake') {
+      // Nhận dạng + mic giả theo kịch bản: mỗi lần app nghe lấy một mục trong window.__heardQueue
+      // ({ text: 'chữ máy nghe ra' } | { voice: true } = có tiếng, không ra chữ); hết hàng đợi = bé im lặng.
+      window.__heardQueue = [];
+      window.__micLevel = 0;
+      AnalyserNode.prototype.getFloatTimeDomainData = function fill(buf) {
+        buf.fill(window.__micLevel);
+      };
+      // Ở ?fast mỗi lần nghe chỉ vài chục ms → MediaRecorder thật trả bản rỗng: dùng bản ghi giả 2 KB.
+      window.MediaRecorder = class FakeMediaRecorder {
+        static isTypeSupported(t) { return t === 'audio/mp4'; }
+        constructor() { this.state = 'inactive'; this.mimeType = 'audio/mp4'; }
+        start() { this.state = 'recording'; }
+        stop() {
+          this.state = 'inactive';
+          this.ondataavailable?.({ data: new Blob([new Uint8Array(2048)], { type: 'audio/mp4' }) });
+          setTimeout(() => this.onstop?.(), 1);
+        }
+      };
+      class FakeRecognition {
+        start() {
+          setTimeout(() => this.onstart?.(), 5);
+          if (!this.onresult) return; // tự kiểm tra đầu buổi
+          // Mục có `turn`: chỉ dùng khi màn Talk đang ở đúng lượt đó (không thì coi như im lặng, giữ lại mục).
+          const head = window.__heardQueue[0];
+          const turn = document.querySelector('.talk')?.dataset.turn;
+          const e = head && (!head.turn || head.turn === turn) ? window.__heardQueue.shift() : {};
+          if (e.text || e.voice) {
+            window.__micLevel = 0.3;
+            setTimeout(() => { window.__micLevel = 0; }, 60);
+          }
+          if (e.text) setTimeout(() => this.onresult?.({ resultIndex: 0, results: [[{ transcript: e.text }]] }), 15);
+        }
+        stop() { setTimeout(() => this.onend?.(), 5); }
+        abort() { this.stop(); }
+      }
+      window.SpeechRecognition = FakeRecognition;
+      delete window.webkitSpeechRecognition;
+    } else if (!recognition) {
       delete window.SpeechRecognition;
       delete window.webkitSpeechRecognition;
     }

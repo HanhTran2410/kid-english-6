@@ -58,11 +58,12 @@ export function readingOutcome({ micReady, recognizing, heard }, target, homopho
  *           onLevel?: (ratio: number) => void }} options
  *   `matcher` (tùy chọn): thay cách so khớp mặc định theo `keywords`; `stopWhen`: nghe ra gì thì dừng sớm
  *   (mặc định = khớp). Mẫu câu (SPEC-patterns mục 4.4) chỉ dừng sớm khi bé nói đủ câu.
+ *   `silenceMs`: bé chưa nói gì sau chừng này mili giây thì dừng sớm (Olly English, Talk).
  * @returns {Promise<{ result: string, recording: null | { blob: Blob, mimeType: string, durationMs: number }, heard: string[], outcome?: string }>}
  *   outcome: chỉ có khi truyền `target` (từ / cụm bé cần đọc) — xem `readingOutcome`
  *   heard: các phương án nhận dạng nghe được (rỗng khi không có nhận dạng)
  */
-export async function listen({ mic, recognizer, keywords, record = false, maxMs = 5500, signal, onLevel, matcher = null, stopWhen = null, target = null, homophones = [] }) {
+export async function listen({ mic, recognizer, keywords, record = false, maxMs = 5500, signal, onLevel, matcher = null, stopWhen = null, target = null, homophones = [], silenceMs = null }) {
   if (!mic?.ready) {
     // Chế độ chỉ nghe: chờ 3 giây cho bé nói theo, không đánh giá.
     await sleep(3000, signal);
@@ -120,6 +121,8 @@ export async function listen({ mic, recognizer, keywords, record = false, maxMs 
       if (stopEarly && !matchedAt) matchedAt = now;
       if (now - started >= scaled(maxMs)) break;
       if (voiced && now - lastVoiceAt > scaled(END_SILENCE_MS)) break;
+      // `silenceMs` (Talk, SPEC 3.3.2): chưa có tiếng nào sau chừng này thì thôi nghe (bé im lặng), không chờ hết `maxMs`.
+      if (silenceMs != null && !lastVoiceAt && !stopEarly && now - started >= scaled(silenceMs)) break;
       if (matchedAt && now - matchedAt > scaled(400)) break;
     }
   } catch (err) {

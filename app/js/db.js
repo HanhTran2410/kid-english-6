@@ -106,11 +106,57 @@ export function isQuotaError(err) {
 
 // ---------- Ghi âm (bé đọc / nói) ----------
 
-export async function addRecording(db, { lessonId, word, blob, mimeType, durationMs }, now = Date.now()) {
+/** Tổng dung lượng ghi âm tối đa (SPEC 6.2). */
+export const RECORDINGS_MAX_BYTES = 150 * 1024 * 1024;
+/** Mỗi bản ghi âm tối đa 10 giây (SPEC 6.2). */
+export const RECORDING_MAX_MS = 10_000;
+
+/**
+ * Lưu một bản ghi âm. `word`: khóa của mục (1 bản / mục / ngày, xem hasRecordingToday); `text`: câu bé cần nói, `kind`:
+ * loại hoạt động (Talk: 'talk') — để Góc bố mẹ → 🎙️ Ghi âm hiển thị.
+ */
+export async function addRecording(db, { lessonId, word, blob, mimeType, durationMs, text = '', kind = '' }, now = Date.now()) {
   const data = await blob.arrayBuffer();
-  const record = { id: crypto.randomUUID(), lessonId, word: normalizeWord(word), date: now, data, mimeType: mimeType || blob.type, durationMs };
+  const record = {
+    id: crypto.randomUUID(), lessonId, word: normalizeWord(word), date: now, data, mimeType: mimeType || blob.type, durationMs,
+    size: data.byteLength, text, kind,
+  };
   await db.put('recordings', record);
   return record;
+}
+
+/**
+ * Tổng ghi âm vượt `maxBytes` → xóa bản cũ nhất, nhưng giữ bản ĐẦU TIÊN của mỗi mục (để bố mẹ so tiến bộ) (SPEC 6.2).
+ * Hàm thuần: nhận danh sách { id, word, date, size } → id cần xóa.
+ */
+export function recordingsToPrune(list, maxBytes = RECORDINGS_MAX_BYTES) {
+  let total = list.reduce((n, r) => n + (r.size ?? 0), 0);
+  if (total <= maxBytes) return [];
+  const byDate = [...list].sort((x, y) => x.date - y.date);
+  const first = new Set();
+  const keep = new Set();
+  for (const r of byDate) {
+    if (!first.has(r.word)) {
+      first.add(r.word);
+      keep.add(r.id);
+    }
+  }
+  const drop = [];
+  for (const r of byDate) {
+    if (total <= maxBytes) break;
+    if (keep.has(r.id)) continue;
+    drop.push(r.id);
+    total -= r.size ?? 0;
+  }
+  return drop;
+}
+
+/** Xóa bớt ghi âm cũ khi vượt 150 MB. Trả về số bản đã xóa. */
+export async function pruneRecordings(db, maxBytes = RECORDINGS_MAX_BYTES) {
+  const all = (await db.getAll('recordings')).map((r) => ({ id: r.id, word: r.word, date: r.date, size: r.size ?? mediaSize(r) }));
+  const drop = recordingsToPrune(all, maxBytes);
+  if (drop.length) await db.write(['recordings'], (tx) => drop.forEach((id) => tx.objectStore('recordings').delete(id)));
+  return drop.length;
 }
 
 /** Hôm nay đã có bản ghi cho mục này chưa (mỗi mục mỗi ngày tối đa 1 bản ghi). */
