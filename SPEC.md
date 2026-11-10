@@ -398,6 +398,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.5.0 | Talk (3.3): khu 💬 mở, 6 bài hội thoại hằng ngày có sẵn, 3 mức hỗ trợ, bạn hỏi giọng thứ hai, các bước khi bé im lặng, ghi âm + Góc bố mẹ → 🎙️ Ghi âm (6.2), prompt AI bài theo sách có hội thoại |
 | 0.6 | Spell: tập viết chữ + viết từ |
 | 0.7 | Quest 1 → 4 |
+| 0.8 | 🔢 Math (SPEC-math.md, sau Quest — chốt 2026-11-10): Math-a = khu thứ 5 + T1 Số nào lớn hơn, T2 Nhóm nào nhiều hơn, T3 Cá sấu > < =, T6 Chục và đơn vị (tới 100) · Math-b = T4 Xếp số, T5 Tia số · Math-c = T7 Đọc và so sánh |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 
 ## 8. Kiểm tra
