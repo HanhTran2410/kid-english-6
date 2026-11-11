@@ -57,6 +57,13 @@ export function validateScene(data) {
       if (![x, y].every((v) => typeof v === 'number' && v >= 0 && v <= 1)) errors.push(`${where}: vị trí mũi tên phải từ 0 đến 1.`);
       else point = { x, y };
     }
+    // Tâm đối tượng (không bắt buộc): vùng chạm / vòng sáng bao quanh đối tượng khi mũi tên đặt cạnh đối tượng.
+    let at = null;
+    if (point && s.at != null) {
+      const { x, y } = s.at;
+      if (![x, y].every((v) => typeof v === 'number' && v >= 0 && v <= 1)) errors.push(`${where}: vị trí đối tượng ("at") phải từ 0 đến 1.`);
+      else at = { x, y };
+    }
     const from = s.from ?? 'auto';
     if (!FROM_VALUES.includes(from)) errors.push(`${where}: hướng mũi tên "${from}" không hợp lệ.`);
     let hit = s.hit ?? HIT_DEFAULT;
@@ -79,7 +86,7 @@ export function validateScene(data) {
     let sid = str(s.sid);
     if (!sid || usedSid.has(sid)) sid = newSid();
     usedSid.add(sid);
-    sentences.push({ sid, en, vi, point, from, hit: point ? hit : HIT_DEFAULT, keywords });
+    sentences.push({ sid, en, vi, point, ...(at ? { at } : {}), from, hit: point ? hit : HIT_DEFAULT, keywords });
   });
   if (sentences.length && !sentences.some((s) => s.point)) warnings.push('Chưa câu nào có mũi tên — chế độ Tìm trong tranh sẽ không chơi được.');
   if (errors.length) return { ok: false, scene: null, errors, warnings };

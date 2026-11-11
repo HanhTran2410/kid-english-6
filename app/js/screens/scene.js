@@ -6,7 +6,7 @@ import { play } from '../speech/sfx.js';
 import { isAbort, scaled, abortError } from '../timing.js';
 import { tokenize } from '../text.js';
 import { displayWords } from '../karaoke.js';
-import { arrowGeometry, pickSentence, hitRadius } from '../scene.js';
+import { arrowGeometry, pickSentence, hitRadius, hitCenter } from '../scene.js';
 import { SCENE_BY_ID } from '../data/builtin-scenes.js';
 import { recordLessonDone, recordItem, starsFor, RESULT } from '../progress.js';
 import { QUESTIONS } from '../captions.js';
@@ -249,7 +249,8 @@ function buildScene(app, params, scene, fillArt) {
     const showRing = (s) => {
       const b = box();
       const r = hitRadius(s, b);
-      Object.assign(ring.style, { left: `${s.point.x * b.w - r}px`, top: `${s.point.y * b.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+      const c = hitCenter(s); // vòng bao quanh đối tượng, không phải quanh đầu mũi tên
+      Object.assign(ring.style, { left: `${c.x * b.w - r}px`, top: `${c.y * b.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
       ring.hidden = false;
     };
 
@@ -271,7 +272,8 @@ function buildScene(app, params, scene, fillArt) {
         for (;;) {
           const tap = await waitFrameTap();
           const b = box();
-          const hit = Math.hypot(tap.x - s.point.x * b.w, tap.y - s.point.y * b.h) <= hitRadius(s, b);
+          const c = hitCenter(s);
+          const hit = Math.hypot(tap.x - c.x * b.w, tap.y - c.y * b.h) <= hitRadius(s, b);
           if (hit) {
             play('ding');
             placeArrow(i, false);
@@ -290,7 +292,8 @@ function buildScene(app, params, scene, fillArt) {
             for (const kw of s.keywords ?? []) await t.say(kw, { rate: app.settings.rate * 0.8 });
             await t.karaoke(s.en, wordEls);
           } else if (wrong === 2) {
-            if (s.vi && needsVietnameseHelp(app.settings, wrong)) await t.explainVi(`Câu "${s.en}" nghĩa là: ${s.vi}. Bé chạm vào chỗ mũi tên chỉ nhé.`);
+            // Câu tiếng Việt đã có dấu câu cuối: bỏ đi rồi mới thêm "." (tránh "bầu trời..").
+            if (s.vi && needsVietnameseHelp(app.settings, wrong)) await t.explainVi(`Câu "${s.en}" nghĩa là: ${s.vi.replace(/[.!?。]+$/, '')}. Bé chạm vào chỗ mũi tên chỉ nhé.`);
             placeArrow(i, false);
             showRing(s);
             await t.say('Look! It is here. Tap it!');

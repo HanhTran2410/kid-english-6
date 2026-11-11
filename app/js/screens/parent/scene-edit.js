@@ -5,7 +5,7 @@
 import { h, toast, copyText, confirmDialog } from '../../ui.js';
 import { resizeCover } from '../../image.js';
 import { setWordImage, lessonImages, mediaBlob, saveScene, deleteScene, SCENE_IMAGE } from '../../db.js';
-import { arrowGeometry, hitRadius, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
+import { arrowGeometry, hitRadius, hitCenter, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
 import { validateScene, parseSceneText, scenePrompt, scenePicturePrompt, newSid, newSceneId } from '../../scene-data.js';
 import { SCENE_BY_ID } from '../../data/builtin-scenes.js';
 import { parentLayout, goParent, section, field, notice } from './common.js';
@@ -116,8 +116,9 @@ function editor(app, body, old, oldImg, urls, base = null) {
     Object.assign(arrow.style, { left: `${g.tail.x}px`, top: `${g.tail.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
     arrow.dataset.from = g.from;
     const r = hitRadius(s, box);
+    const c = hitCenter(s);
     ring.hidden = false;
-    Object.assign(ring.style, { left: `${g.tip.x - r}px`, top: `${g.tip.y - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+    Object.assign(ring.style, { left: `${c.x * box.w - r}px`, top: `${c.y * box.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
   }
   frame.addEventListener('click', (e) => {
     const s = draft.sentences[active];
@@ -125,6 +126,7 @@ function editor(app, body, old, oldImg, urls, base = null) {
     const r = frame.getBoundingClientRect();
     const round = (v) => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000;
     s.point = { x: round((e.clientX - r.left) / r.width), y: round((e.clientY - r.top) / r.height) };
+    delete s.at; // bố mẹ chạm thẳng vào đối tượng: vùng chạm theo chỗ vừa chạm
     renderStage();
     renderList();
   });

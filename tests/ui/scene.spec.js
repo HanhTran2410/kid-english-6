@@ -118,11 +118,11 @@ test('🔍 Tìm trong tranh: không có mũi tên; sai → rung + đọc lại; 
   await expect(page.locator('.find-ring')).toBeVisible();
   await expect(arrow(page)).toHaveAttribute('data-sentence', items[0].sid);
 
-  // Chạm đúng từng câu (đầu mũi tên) cho tới hết.
+  // Chạm đúng từng câu (vào giữa đối tượng — vùng chạm bao quanh đối tượng, không quanh đầu mũi tên) cho tới hết.
   for (let k = 0; k < items.length; k++) {
     const s = items[k];
     await expect(async () => {
-      await tapAt(s.point.x, s.point.y);
+      await tapAt((s.at ?? s.point).x, (s.at ?? s.point).y);
       await expect(page.locator('.scene-done').or(counter(page).filter({ hasText: `${k + 2}/` }))).toBeVisible({ timeout: 800 });
     }).toPass({ timeout: 20_000 });
   }

@@ -114,3 +114,37 @@ test('kiểm tra tranh (bảng 7.4): lỗi chỉ rõ câu; thiếu thì điền 
   const example = JSON.parse(p.slice(p.indexOf('{', p.indexOf('VÍ DỤ CẤU TRÚC'))));
   assert.equal(validateScene(example).ok, true);
 });
+
+test('tranh có sẵn: vùng chạm / vòng sáng bao quanh ĐỐI TƯỢNG (`at` = tâm emoji), không quanh đầu mũi tên đặt cạnh hình', async () => {
+  const { hitCenter } = await import('../../app/js/scene.js');
+  for (const scene of BUILTIN_SCENES) {
+    // Tâm các emoji trong SVG (text-anchor middle + dominant-baseline central → x, y là tâm hình).
+    const emojis = [...scene.svg.matchAll(/<text x="(\d+)" y="(\d+)"/g)].map(([, x, y]) => ({ x: Number(x) / 800, y: Number(y) / 600 }));
+    const pointed = scene.sentences.filter((s) => s.point);
+    for (const s of pointed) {
+      assert.ok(s.at, `${s.en}: có tâm đối tượng`);
+      assert.deepEqual(hitCenter(s), s.at);
+      const near = Math.min(...emojis.map((e) => Math.hypot(e.x - s.at.x, e.y - s.at.y)));
+      // Hai con vịt: tâm ở giữa hai con; mặt trời và cậu bé không phải emoji (vẽ SVG) — bỏ qua.
+      if (!/ducks|sun|boy/.test(s.en)) assert.ok(near < 0.01, `${s.en}: at trùng tâm một emoji (lệch ${near.toFixed(3)})`);
+      // Chạm vào giữa đối tượng → đúng câu đó (trước đây vùng chạm lệch sang phía đuôi mũi tên).
+      assert.equal(pickSentence(scene.sentences, { x: s.at.x * box.w, y: s.at.y * box.h }, box), scene.sentences.indexOf(s), s.en);
+    }
+    const kite = scene.sentences.find((s) => /kite is in the sky/.test(s.en));
+    if (kite) {
+      // Mép trái con diều (cách tâm 35px) vẫn trúng; trước đây tâm vùng chạm nằm ở đầu mũi tên bên phải.
+      assert.equal(pickSentence(scene.sentences, { x: kite.at.x * 800 - 35, y: kite.at.y * 600 }, box), scene.sentences.indexOf(kite));
+    }
+  }
+  // Tranh bố mẹ soạn (không có `at`): vùng chạm ở chính chỗ bố mẹ chạm.
+  assert.deepEqual(hitCenter({ point: { x: 0.3, y: 0.4 } }), { x: 0.3, y: 0.4 });
+});
+
+test('kiểm tra tranh giữ `at` (bản sao tranh có sẵn), `at` ngoài 0–1 báo lỗi', async () => {
+  const { validateScene } = await import('../../app/js/scene-data.js');
+  const ok = validateScene({ title: 'X', sentences: [{ en: 'A kite.', vi: 'Diều.', point: { x: 0.6, y: 0.2 }, at: { x: 0.55, y: 0.2 } }] });
+  assert.ok(ok.ok);
+  assert.deepEqual(ok.scene.sentences[0].at, { x: 0.55, y: 0.2 });
+  const bad = validateScene({ title: 'X', sentences: [{ en: 'A kite.', point: { x: 0.6, y: 0.2 }, at: { x: 1.4, y: 0.2 } }] });
+  assert.match(bad.errors.join('\n'), /vị trí đối tượng \("at"\) phải từ 0 đến 1/);
+});

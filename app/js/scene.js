@@ -68,6 +68,12 @@ export function arrowGeometry(point, from, box) {
   return { tip, tail, length: len, angle, from: dir };
 }
 
+/**
+ * Tâm vùng chạm của câu (tỉ lệ 0–1): `at` = tâm đối tượng nếu có (tranh có sẵn: mũi tên đặt CẠNH đối tượng nên đầu mũi tên
+ * lệch khỏi hình); không có thì chính đầu mũi tên `point` (tranh bố mẹ soạn: bố mẹ chạm thẳng vào đối tượng).
+ */
+export const hitCenter = (sentence) => sentence.at ?? sentence.point;
+
 /** Bán kính vùng chạm (px) của câu: `hit` (kẹp 0,04–0,2) × cạnh ngắn, tối thiểu 24px. */
 export function hitRadius(sentence, box) {
   const hit = Math.min(HIT_MAX, Math.max(HIT_MIN, Number.isFinite(sentence.hit) ? sentence.hit : HIT_DEFAULT));
@@ -83,7 +89,8 @@ export function pickSentence(sentences, tap, box, current = -1) {
   sentences.forEach((s, i) => {
     if (!s.point) return;
     const r = hitRadius(s, box);
-    const d = Math.hypot(tap.x - s.point.x * box.w, tap.y - s.point.y * box.h);
+    const c = hitCenter(s);
+    const d = Math.hypot(tap.x - c.x * box.w, tap.y - c.y * box.h);
     if (d <= r) hits.push({ i, score: d / r });
   });
   if (!hits.length) return -1;
