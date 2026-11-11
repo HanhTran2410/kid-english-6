@@ -1,7 +1,7 @@
 # SPEC — ✍️ Tập viết (khu Spell, bản 0.7) — Olly English
 
 > Phiên bản spec: **draft2** · Ngày: 2026-11-11 · Dựa trên app 0.5.1 (làm sau Math-a — app 0.6.0 — nên đổi số bản thành 0.7.x) (SPEC.md draft2, mục 3.2)
-> Trạng thái: **chờ bố mẹ duyệt lần 2**. Còn 1 câu hỏi ở mục 15.
+> Trạng thái: **đã chốt 2026-11-11**; câu hỏi mục 15 đã chốt (đổi font chữ đọc sang Andika ở 0.7.0). **Đợt W-a0 (prototype 8 chữ) đã làm ở 0.7.0** — ghi chú ở mục 14.1.
 >
 > Viết chi tiết phần "Tập viết chữ" và "Viết từ" mà SPEC.md mục 3.2 mới chốt hướng. Các quyết định giữ từ trước:
 > - chấm từng nét theo **điểm bắt đầu**, **hướng**, **độ phủ đường**, **thứ tự nét**, **đủ nét**;
@@ -306,12 +306,12 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 
 ### 6.5 Thống nhất hình chữ ở Read / Spell / Write
 - Font hiện tại của app là **Nunito**: chữ *a* **hai tầng**, *g* một tầng. Viết tay dạy *a* một tầng thì bé sẽ thấy hai kiểu *a*.
-- Đề xuất: ô chữ, từ để đọc và đánh vần (Read, Spell, Viết từ) dùng **Andika**.
+- **Đã chốt (2026-11-11):** ô chữ, từ để đọc và đánh vần (Read, Spell, câu karaoke, Viết từ) dùng **Andika**, làm ngay ở **0.7.0**.
   - Andika là font SIL làm riêng cho người mới học đọc, a / g một tầng.
-  - Phát hành dưới giấy phép OFL như Nunito; lưu file trong `app/fonts/` để chạy offline.
+  - Phát hành dưới giấy phép OFL như Nunito; lưu file trong `app/fonts/` để chạy offline (`andika-latin-700`, `andika-latin-ext-700`, giấy phép `andika-OFL.txt`).
 - Chữ giao diện (nút, tiêu đề, tiếng Việt) giữ Nunito.
 - Trong Write, chữ mẫu luôn **vẽ từ dữ liệu nét** (mục 6.4), không dùng font.
-- Xem câu hỏi 15.1.
+- Biến CSS `--read-font`; chỗ dùng: âm / chữ (sound-letters), lựa chọn chữ / từ, thẻ từ, ô chữ, chỗ trống Spell, từ trong câu karaoke (kể cả câu Toán, Tả tranh).
 
 ## 7. Câu hướng dẫn — viết riêng từng chữ
 - Mỗi chữ có:
@@ -492,7 +492,7 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 |---|---|
 | đúng nét mẫu | đúng |
 | đảo ngược | `reverse` (WR-14), kể cả o (khép kín) |
-| lệch đều 8 đơn vị | đúng ở Dễ, sai ở Khó |
+| lệch đều 12 đơn vị (vuông góc với nét) | đúng ở Dễ, sai ở Khó — *bản đầu ghi 8, nhưng 8 < `nearR` mức Khó (10) nên vẫn đúng ở Khó; test có thêm: lệch 8 → đúng ở Dễ* |
 | bắt đầu lệch 30, phần còn lại đúng | `start` |
 | dừng giữa nét (lặp một điểm 50 lần) | đúng (WR-15) |
 | rê qua lại ±3 đơn vị ở một đoạn ngắn | đúng (WR-16) |
@@ -561,9 +561,9 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 
 | Đợt | Phạm vi | Bản |
 |---|---|---|
-| **W-a0 — prototype** | dữ liệu + bộ chấm + màn một chữ (A, B1, B2, C, phản hồi, tô có dẫn) cho **8 chữ c a d l t m g z** · tab Tập viết hiện 8 chữ này · ghi nét thử · cài đặt độ dễ + ưu tiên bút · sao, tiến độ chữ | 0.7.0 |
+| **W-a0 — prototype** | dữ liệu + bộ chấm + màn một chữ (A, B1, B2, C, phản hồi, tô có dẫn) cho **8 chữ c a d l t m g z** · tab Tập viết hiện 8 chữ này · ghi nét thử · cài đặt độ dễ + ưu tiên bút · sao, tiến độ chữ · đổi font chữ đọc sang Andika (mục 6.5) | 0.7.0 |
 | — | bé thử thật, chỉnh ngưỡng `WRITE_LEVELS` từ nét đã ghi | — |
-| **W-a — đủ 26 chữ** | thêm 18 chữ còn lại + câu EN / VI · WR-20 ảnh lưới chữ · đổi font chữ đọc (mục 6.5) | 0.7.1 |
+| **W-a — đủ 26 chữ** | thêm 18 chữ còn lại + câu EN / VI · WR-20 ảnh lưới chữ | 0.7.1 |
 | **W-b** | Viết từ cuối bài Spell · Góc bố mẹ → Tiến độ chữ · mức sau của chữ đã 3 sao | 0.7.2 |
 
 - 8 chữ prototype phủ đủ kiểu nét: cong (c), bụng + thẳng (a, d), thẳng (l), hai nét chéo nhau (t), xuống – lên lại – vòng (m), đuôi móc (g), nét ngang + xiên (z).
@@ -579,5 +579,18 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 - DTW trên ~50–150 điểm mỗi bên: dưới 1 ms, chạy ngay khi nhấc tay.
 - Không đổi file lõi (`CORE.md`). Thêm file mới vào `sw.js` (test service worker kiểm tra).
 
+### 14.1 Ghi chú khi làm W-a0 (0.7.0)
+- Code: `js/write/letters.js` (8 chữ c a d g l t m z, nhóm, câu EN / VI, `WRITE_LINES`), `js/write/stroke.js` (hàm thuần), `js/write/pad.js` (khung SVG), `js/screens/write.js` (lưới chữ + màn một chữ), `js/screens/parent/write.js`. Nét giả lập: `tests/write-fake.js` (dùng chung unit + Playwright).
+- **Chấm nét — chỉnh so với mục 5.3** (để bảng test 12.1 đúng với mọi nét):
+  - "Đi hết đường" thêm: **điểm cuối nét bé rơi vào đoạn cuối nét mẫu** (t ≥ 0,85) và cách điểm cuối mẫu ≤ `farR`. Nét ngắn như gạch ngang t (dài 28) thì nửa nét vẫn phủ đủ trong bán kính `nearR` = 15, nên chỉ đo phủ là không bắt được "lỡ nhấc tay"; nét gộp hai nét của t dừng xa cuối nét dọc → `stray`.
+  - "Lỡ nhấc tay" (*Keep going without lifting!*) = `stray` mà điểm cuối nét bé nằm ngay trên nét mẫu (≤ 0,8 × `nearR`) nhưng chưa tới đoạn cuối.
+  - Lý do `reverse` đầu tiên (mục 5.3, lý do 1) thêm điều kiện **nét bé kết thúc gần đầu nét mẫu** (≤ `farR`). Không có điều kiện này thì viết nét 3 của z thay cho nét 2 (bắt đầu đúng chỗ cuối nét 2) bị báo "đi ngược" thay vì `start`.
+- Khung viết rộng `max(width + 70, 130)` đơn vị (rộng hơn tối thiểu mục 3.1 để bé có chỗ đặt tay).
+- Hộp chữ tiếng Việt (sai 2 lần, nút ❓) ở màn viết **tự ẩn sau 5 giây** vì nằm đè lên nút ↩️ 🧽; giọng đọc vẫn đọc hết.
+- Nét thử (12.3) lưu trong cài đặt `writeTrials` (tối đa 300 nét gần nhất), không thêm kho mới vào IndexedDB (giữ file lõi). Unit test chạy bộ chấm trên file mẫu đã đánh dấu: làm khi có file thật.
+- Lượt đang làm: `app.current.params.ws = { letter, turn, results }`; mở lại bằng ▶ sau khi ra nền → đúng chữ, đúng lượt, nét của lượt dở mất (9.2). Thoát / tải lại → bắt đầu từ bước A.
+- Cài đặt mới: `writeLevel` (easy / medium / hard), `penFirst` (bật sẵn), `writeRecord` (tắt sẵn).
+- Chưa làm ở 0.7.0: WR-05 (i), WR-10 / 21 / 22 / 23 (Viết từ), WR-11 (giảm chuyển động — có code, chưa có test riêng), WR-19 (đổi cỡ khung giữa lượt — có test cỡ khung WR-12), WR-20 (ảnh lưới 26 chữ).
+
 ## 15. Câu hỏi còn lại cho bố mẹ
-1. **Font chữ đọc:** đổi ô chữ / từ ở Read, Spell, Viết từ sang **Andika** (a, g một tầng, giống chữ bé tập viết), giữ Nunito cho nút và tiếng Việt? Hay giữ Nunito (*a* hai tầng) và chấp nhận chữ in khác chữ viết tay? (Đề xuất: đổi sang Andika ở 0.7.1.)
+1. ~~**Font chữ đọc:** Andika hay giữ Nunito?~~ **Đã chốt 2026-11-11:** đổi chữ đọc sang **Andika** ở **0.7.0**; nút, tiêu đề, tiếng Việt giữ Nunito (mục 6.5).

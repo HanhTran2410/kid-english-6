@@ -1,6 +1,20 @@
 // Phụ đề khi bé / bố mẹ chạm 🔊 nghe lại (SPEC mục 4.5, giống kid-english): câu tiếng Anh + câu tiếng Việt.
 // Câu hỏi của Olly chỉ dùng các mẫu trong QUESTIONS → mỗi mẫu có bản dịch (test kiểm tra đủ).
 
+import { LETTERS, WRITE_LINES } from './write/letters.js';
+
+/** ✍️ Tập viết (SPEC-write 5.5, 4): câu Olly nói khi chấm nét / chuyển lượt. */
+const WRITE_VI = {
+  [WRITE_LINES.start]: 'Bé bắt đầu ở chấm xanh nhé!',
+  [WRITE_LINES.reverse]: 'Bé đi theo mũi tên nhé!',
+  [WRITE_LINES.stray]: 'Bé thử lại, đi theo đường chữ mẫu nhé.',
+  [WRITE_LINES.lifted]: 'Bé viết liền một mạch, đừng nhấc tay giữa chừng nhé!',
+  [WRITE_LINES.dot]: 'Bé chỉ cần chạm vào chấm thôi!',
+  [WRITE_LINES.again]: 'Giỏi lắm! Tô lại lần nữa nhé!',
+  [WRITE_LINES.yourTurn]: 'Giờ bé tự viết nhé!',
+  [WRITE_LINES.theDot]: 'Giờ bé chấm lên trên nhé!',
+};
+
 /** Mẫu câu hỏi của Olly. Hàm nhận từ / chữ cần hỏi. */
 export const QUESTIONS = {
   whichLetter: () => 'Which letter says this sound?',
@@ -32,6 +46,9 @@ export const QUESTIONS = {
 export function translateQuestion(en, meaning = '') {
   const s = String(en ?? '').trim();
   const m = meaning ? ` (${meaning})` : '';
+  const letter = Object.values(LETTERS).find((l) => l.say === s);
+  if (letter) return letter.vi;
+  if (WRITE_VI[s]) return WRITE_VI[s];
   const rules = [
     [/^Which letter says this sound\?$/, () => 'Âm này là của chữ nào? Bé nghe rồi chạm vào chữ đúng.'],
     [/^Your turn! Say the sound!$/, () => 'Đến lượt bé! Bé nói theo âm này nhé.'],

@@ -12,6 +12,8 @@ import { sceneEditView } from './scene-edit.js';
 import { libraryView } from './library.js';
 import { recordingsView } from './recordings.js';
 import { mathView } from './math.js';
+import { writeView } from './write.js';
+import { WRITE_LEVELS, LEVEL_VI } from '../../write/stroke.js';
 
 const VIEWS = {
   menu: menuView,
@@ -22,6 +24,7 @@ const VIEWS = {
   library: libraryView,
   recordings: recordingsView,
   math: mathView,
+  write: writeView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -39,6 +42,7 @@ function menuView(app) {
       item('🖼️', 'Kho ảnh', () => goParent(app, 'library')),
       item('🎙️', 'Ghi âm', () => goParent(app, 'recordings')),
       item('🔢', 'Toán (tiến độ)', () => goParent(app, 'math')),
+      item('✍️', 'Tập viết (tiến độ, ghi nét thử)', () => goParent(app, 'write')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );
@@ -103,6 +107,8 @@ function settingsView(app) {
   const showVi = check('showVi', 'Hiện dòng tiếng Việt dưới câu (đọc câu, truyện, tả tranh)');
   const readVi = h('input', { type: 'checkbox', checked: Boolean(s.readVietnamese) });
   readVi.addEventListener('change', () => app.setSetting('readVietnamese', readVi.checked));
+  const writeLevel = h('select', { 'aria-label': 'Độ dễ chấm nét' }, ...Object.keys(WRITE_LEVELS).map((k) => h('option', { value: k, text: LEVEL_VI[k], selected: k === (s.writeLevel ?? 'easy') })));
+  writeLevel.addEventListener('change', () => app.setSetting('writeLevel', writeLevel.value));
   const viNote = app.speaker.hasVietnamese ? null : h('p.field-hint', { text: 'Máy chưa có giọng tiếng Việt: Olly sẽ hiện lời giải thích bằng chữ.' });
 
   body.append(
@@ -116,6 +122,9 @@ function settingsView(app) {
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test,
       field('Giọng thứ hai (bạn nói chuyện với bé ở khu Nói chuyện)', voiceSel2, 'Máy chỉ có một giọng tiếng Anh thì bạn ấy nói cao giọng hơn.'), test2),
     section('🔢 Toán', check('mathAllLevels', 'Mở mọi mức của khu Toán (bé chọn được cả mức chưa mở)')),
+    section('✍️ Tập viết',
+      field('Độ dễ chấm nét', writeLevel, 'Dễ: chấm dễ dãi (bé mới tập). Vừa / Khó: phải viết sát đường mẫu hơn.'),
+      check('penFirst', 'Ưu tiên bút: khi bé viết bằng bút (Apple Pencil…) thì bỏ qua ngón tay / bàn tay tì lên màn')),
     section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),
     section('🎤 Nhận dạng giọng nói', h('label.check', {}, recog, h('span', { text: ' Dùng nhận dạng giọng nói khi bé đọc / nói' })),
       check('recordVoice', 'Ghi âm câu bé nói ở khu Nói chuyện (bố mẹ nghe lại ở 🎙️ Ghi âm; chỉ lưu trên máy này)')),

@@ -99,9 +99,14 @@ test('T1 mức 1: làm mẫu → ▶ → 8 mục đúng hết → 3⭐, mở M�
   await expect(page.locator('.level-btn')).toHaveCount(2);
   await expect(page.locator('.level-btn.suggested')).toHaveAttribute('data-level', '2');
   await page.locator('.level-btn[data-level="1"]').click();
-  // Đã có sao → làm mẫu rút gọn, có ⏭.
-  await page.getByRole('button', { name: 'Bỏ qua phần làm mẫu' }).click();
-  await expect.poll(async () => (await round(page))?.phase).toBe('item');
+  // Đã có sao → làm mẫu rút gọn, có ⏭. Ở ?fast phần mẫu rút gọn có thể xong trước khi kịp bấm ⏭ (máy chậm) → khi đó
+  // bấm ▶ "Đến lượt con".
+  const skip = page.getByRole('button', { name: 'Bỏ qua phần làm mẫu' });
+  const go = page.getByRole('button', { name: 'Đến lượt con' });
+  await expect.poll(async () => {
+    for (const b of [skip, go]) await b.click({ timeout: 200 }).catch(() => {});
+    return (await round(page))?.phase;
+  }).toBe('item');
   expect((await round(page)).level).toBe(1);
 });
 
@@ -123,8 +128,11 @@ test('T1: sai 1 lần → hình kiểm chứng, đúng → helped; sai 2 lần �
     return (await round(page)).results[0];
   }).toBe('helped');
 
-  // Mục 2: sai hai lần.
-  await expect.poll(async () => (await round(page)).index).toBe(1);
+  // Mục 2: sai hai lần. (Phần đọc câu có thể rơi ngay sau mục 1 — readPlan ngẫu nhiên — thì bỏ qua.)
+  await expect.poll(async () => {
+    await page.getByRole('button', { name: 'Bỏ qua phần đọc' }).click({ timeout: 300 }).catch(() => {});
+    return (await round(page)).index;
+  }).toBe(1);
   r = await round(page);
   await expect.poll(async () => {
     const cur = await round(page);

@@ -20,6 +20,7 @@ import { adaptForPlay } from '../lesson-prompts.js';
 import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
 import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
 import { libraryImages, wordKey, sentenceKey } from '../picture-library.js';
+import { writeCards } from './write.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -52,7 +53,7 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   app.root.className = `child-screen read-list zone-list-${zone}`;
   const list = h('div.lesson-cards');
   // Khu Talk: tab đầu là các bài hội thoại hằng ngày có sẵn (mạch "phonics" trong dữ liệu).
-  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : [])];
+  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : []), ...(zone === 'spell' ? [['write', '✍️ Tập viết']] : [])];
   const tabs = tabList.map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
     type: 'button', text: label, 'aria-pressed': String(id === tab),
     onclick: () => {
@@ -68,6 +69,10 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   say(app, info.intro);
   if (tab === 'scene') {
     sceneCards(app, list).catch((err) => console.error(err));
+    return;
+  }
+  if (tab === 'write') {
+    writeCards(app, list).catch((err) => console.error(err));
     return;
   }
   (async () => {

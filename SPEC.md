@@ -397,7 +397,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | sau | Truyện ngắn (3.1.6) |
 | 0.5.0 | Talk (3.3): khu 💬 mở, 6 bài hội thoại hằng ngày có sẵn, 3 mức hỗ trợ, bạn hỏi giọng thứ hai, các bước khi bé im lặng, ghi âm + Góc bố mẹ → 🎙️ Ghi âm (6.2), prompt AI bài theo sách có hội thoại |
 | 0.6.0 *(xong)* | 🔢 Math-a ([SPEC-math.md](SPEC-math.md); bố mẹ đổi thứ tự 2026-11-11: làm trước Tập viết và Quest): khu thứ 5 (màn chính 3 + 2), T1 Số nào lớn hơn, T2 Nhóm nào nhiều hơn, T3 Cá sấu > < =, T6 Chục và đơn vị (tới 100); làm mẫu → 8 mục → bé đọc câu → sao, 3 mức (mở khi ≥ 2⭐), ra nền quay lại đúng mục; Góc bố mẹ → 🔢 Toán (tiến độ, kiểu hay sai), Cài đặt → mở mọi mức |
-| 0.7 | Spell: tập viết chữ + viết từ ([SPEC-write.md](SPEC-write.md)) |
+| 0.7.0 *(xong)* | ✍️ Tập viết prototype ([SPEC-write.md](SPEC-write.md) đợt W-a0): tab ✍️ Tập viết trong khu Spell, 8 chữ c a d g l t m z — xem mẫu → tô 2 lượt → tự viết, chấm từng nét (bắt đầu, hướng, đi hết đường, thứ tự), sai 2 lần → tiếng Việt + tô có dẫn, sao; Góc bố mẹ → ✍️ Tập viết (tiến độ, ghi nét thử, xuất JSON), Cài đặt → độ dễ chấm nét + ưu tiên bút; chữ đọc đổi sang font Andika (a, g một tầng) |
+| 0.7.1 – 0.7.2 | ✍️ đủ 26 chữ; Viết từ cuối bài Spell, mức sau của chữ đã 3 sao |
 | 0.8 | Quest 1 → 4 |
 | 0.9 | 🔢 Math-b = T4 Xếp số, T5 Tia số · Math-c = T7 Đọc và so sánh |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |

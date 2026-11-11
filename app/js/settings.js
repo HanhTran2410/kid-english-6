@@ -11,6 +11,10 @@ export const DEFAULT_SETTINGS = {
   sceneAutoNext: true, // Tả tranh tự chạy sang câu sau (SPEC-ta-tranh mục 14)
   showVi: true,
   mathAllLevels: false, // Góc bố mẹ mở mọi mức của khu Toán (SPEC-math 6.2) // hiện dòng tiếng Việt dưới câu: đọc câu, truyện, tả tranh (SPEC 6.1)
+  writeLevel: 'easy', // ✍️ Tập viết: độ dễ chấm nét easy / medium / hard (SPEC-write 5.4)
+  penFirst: true, // ✍️ Ưu tiên bút: đã thấy bút thì bỏ qua ngón tay (SPEC-write 10.2)
+  writeRecord: false, // ✍️ Ghi nét thử (SPEC-write 12.3)
+  writeTrials: [], // nét thử đã ghi (tối đa 300 nét gần nhất)
   // Bé sai nhiều lần (VI_HELP_AFTER lần liên tiếp cùng một mục) thì Olly giải thích bằng tiếng Việt (SPEC mục 4.1).
   explainVietnamese: true,
   recordVoice: true,

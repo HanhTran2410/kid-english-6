@@ -3,7 +3,7 @@
 // Thêm/bớt file trong app/ thì cập nhật ASSETS (test tests/unit/sw.test.js sẽ báo nếu thiếu).
 // Thư viện bài app/shared/ (file .json + index.json) KHÔNG lưu offline: tải từ mạng khi bố mẹ mở Thư viện bài / chuông kiểm tra.
 
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 const CACHE = `kid-english-6-${VERSION}`;
 
 const ASSETS = [
@@ -12,6 +12,8 @@ const ASSETS = [
   'icons/apple-touch-icon.png',
   'icons/icon-192.png',
   'icons/icon-512.png',
+  'fonts/andika-latin-700-normal.woff2',
+  'fonts/andika-latin-ext-700-normal.woff2',
   'fonts/nunito-latin-700-normal.woff2',
   'fonts/nunito-latin-800-normal.woff2',
   'fonts/nunito-latin-ext-700-normal.woff2',
@@ -36,6 +38,11 @@ const ASSETS = [
   'js/screens/parent/math.js',
   'js/math/math.js',
   'js/math/views.js',
+  'js/write/letters.js',
+  'js/write/stroke.js',
+  'js/write/pad.js',
+  'js/screens/write.js',
+  'js/screens/parent/write.js',
   'js/speech/phoneme.js',
   'js/db.js',
   'js/image.js',
