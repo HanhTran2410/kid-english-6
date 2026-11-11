@@ -1,7 +1,7 @@
 # SPEC — ✍️ Tập viết (khu Spell, bản 0.7) — Olly English
 
 > Phiên bản spec: **draft2** · Ngày: 2026-11-11 · Dựa trên app 0.5.1 (làm sau Math-a — app 0.6.0 — nên đổi số bản thành 0.7.x) (SPEC.md draft2, mục 3.2)
-> Trạng thái: **đã chốt 2026-11-11**; câu hỏi mục 15 đã chốt (đổi font chữ đọc sang Andika ở 0.7.0). **Đợt W-a0 (prototype 8 chữ) đã làm ở 0.7.0, W-a (đủ 26 chữ) ở 0.7.1** — ghi chú ở mục 14.1, 14.2.
+> Trạng thái: **đã chốt 2026-11-11**; câu hỏi mục 15 đã chốt (đổi font chữ đọc sang Andika ở 0.7.0). **Đợt W-a0 (prototype 8 chữ) đã làm ở 0.7.0, W-a (đủ 26 chữ) ở 0.7.1, W-b (Viết từ, Tiến độ chữ, mức sau) ở 0.7.2** — ghi chú ở mục 14.1–14.3. Còn lại: chỉnh ngưỡng `WRITE_LEVELS` từ nét bé viết thật.
 >
 > Viết chi tiết phần "Tập viết chữ" và "Viết từ" mà SPEC.md mục 3.2 mới chốt hướng. Các quyết định giữ từ trước:
 > - chấm từng nét theo **điểm bắt đầu**, **hướng**, **độ phủ đường**, **thứ tự nét**, **đủ nét**;
@@ -564,7 +564,7 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 | **W-a0 — prototype** *(xong)* | dữ liệu + bộ chấm + màn một chữ (A, B1, B2, C, phản hồi, tô có dẫn) cho **8 chữ c a d l t m g z** · tab Tập viết hiện 8 chữ này · ghi nét thử · cài đặt độ dễ + ưu tiên bút · sao, tiến độ chữ · đổi font chữ đọc sang Andika (mục 6.5) | 0.7.0 |
 | — | bé thử thật, chỉnh ngưỡng `WRITE_LEVELS` từ nét đã ghi | — |
 | **W-a — đủ 26 chữ** *(xong)* | thêm 18 chữ còn lại + câu EN / VI · WR-20 ảnh lưới chữ | 0.7.1 |
-| **W-b** | Viết từ cuối bài Spell · Góc bố mẹ → Tiến độ chữ · mức sau của chữ đã 3 sao | 0.7.2 |
+| **W-b** *(xong)* | Viết từ cuối bài Spell · Góc bố mẹ → Tiến độ chữ · mức sau của chữ đã 3 sao | 0.7.2 |
 
 - 8 chữ prototype phủ đủ kiểu nét: cong (c), bụng + thẳng (a, d), thẳng (l), hai nét chéo nhau (t), xuống – lên lại – vòng (m), đuôi móc (g), nét ngang + xiên (z).
 - Chữ hoa (nếu cần) để sau W-b.
@@ -599,6 +599,13 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 - **WR-05 (i):** chạm vào chỗ chấm khi đang cần nét thẳng = **chạm → bỏ qua** (theo mục 5.3, không tính sai), không phải `start` như bảng 12.4 ghi. Kéo một nét ở chỗ chấm trước nét thẳng thì mới là `start`. Nét chấm làm đúng → hiện chấm mẫu màu xanh lá (chạm không vẽ ra nét).
 - **WR-20:** `tests/ui/write-sheet.spec.js` vẽ bảng 26 chữ (mỗi nét một màu, số + mũi tên ở điểm bắt đầu) → `test-results/…/bang-26-chu.png`, đính kèm báo cáo Playwright.
 - Bảng test chấm nét 12.1 chạy với mọi nét kéo của 26 chữ; nét chấm (i, j) có test riêng.
+
+### 14.3 Ghi chú khi làm W-b (0.7.2)
+- Code: `js/write/words.js` (hàm thuần `pickWriteWords`, `wordCells`, `letterTip`), `js/read/write-stages.js` (bước Viết từ), mức sau trong `js/screens/write.js` (`TURNS_NEXT`).
+- **Viết từ** chạy **sau khi đã ghi sao** của bài Spell (thoát giữa bước Viết từ không mất sao của bài). Câu Olly: *"Write cat. c – a – t."* (`QUESTIONS.writeWord`, có phụ đề). Ô chữ dùng khung hẹp (`letterBox(…, { compact: true })`) để các ô đứng sát nhau thành từ; trên iPhone dọc tối đa 4 ô một hàng (thực tế 3–4 tùy chữ).
+- Bản ghi viết từ: `<lessonId>/write/<id từ>` với kết quả `practiced` (seen + 1, practiced + 1, lastAt). Cài đặt `writeWords` (mặc định bật).
+- **Tiến độ chữ** nằm ở Góc bố mẹ → ✍️ Tập viết (cùng trang Ghi nét thử): lưới 26 chữ (sao, số lượt) + "Chữ hay sai" — chữ sai ≥ 2 lần, tối đa 6 chữ, câu gợi ý theo lý do sai nhiều nhất + câu `vi` của chữ (lý do `dot`: "chỉ chạm một cái vào chấm").
+- **Mức sau:** quyết định lúc mở chữ (bestStars = 3), giữ khi ra nền rồi quay lại (`ws.advanced`). C2: chấm bắt đầu ẩn tới khi nét đó sai lần đầu, rồi hiện (gợi ý như 5.5). Olly trước C2: *"Now without the dot!"*.
 
 ## 15. Câu hỏi còn lại cho bố mẹ
 1. ~~**Font chữ đọc:** Andika hay giữ Nunito?~~ **Đã chốt 2026-11-11:** đổi chữ đọc sang **Andika** ở **0.7.0**; nút, tiêu đề, tiếng Việt giữ Nunito (mục 6.5).

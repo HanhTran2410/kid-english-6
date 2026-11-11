@@ -1,4 +1,5 @@
-// Góc bố mẹ → ✍️ Tập viết (SPEC-write.md 9.3, 12.3): sao + số lượt từng chữ, lý do hay sai; "Ghi nét thử" — mỗi nét bé
+// Góc bố mẹ → ✍️ Tập viết (SPEC-write.md 9.3, 9.4, 12.3): lưới 26 chữ (sao, số lượt), chữ hay sai kèm câu gợi ý
+// cách nhắc bé; "Ghi nét thử" — mỗi nét bé
 // viết lưu kèm kết quả máy chấm, bố mẹ đánh dấu "máy chấm sai" rồi xuất JSON để chỉnh ngưỡng WRITE_LEVELS.
 
 import { h, toast, confirmDialog, formatDateTime } from '../../ui.js';
@@ -8,6 +9,10 @@ import { LETTER_ORDER } from '../../write/letters.js';
 import { pathD } from '../../write/stroke.js';
 import { letterBox } from '../../write/pad.js';
 import { letterRef, letterLessonId } from '../write.js';
+import { letterTip } from '../../write/words.js';
+
+const TIPS_MAX = 6;
+const TIP_MIN = 2; // sai ít nhất 2 lần mới gợi ý
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
 const REASON_VI = { start: 'bắt đầu sai chỗ', reverse: 'đi ngược chiều', stray: 'đi lệch / chưa hết nét', dot: 'kéo nét thay vì chấm', tap: 'chạm (bỏ qua)' };
@@ -34,17 +39,24 @@ function trialSvg(trial) {
 export function writeView(app) {
   const body = parentLayout(app, { title: '✍️ Tập viết', back: () => goParent(app) });
   body.append(h('p.muted', { text: 'Bé tập viết ở khu ✏️ Spell → tab ✍️ Tập viết. Độ dễ chấm nét và Ưu tiên bút: Cài đặt → ✍️ Tập viết.' }));
-  const progress = h('ul.wr-parent-letters');
-  body.append(section('Tiến độ chữ', progress));
+  const grid = h('div.wr-parent-grid');
+  const tips = h('ul.wr-parent-tips');
+  body.append(section('Tiến độ chữ', grid), section('Chữ hay sai', tips));
   (async () => {
+    const found = [];
     for (const l of LETTER_ORDER) {
       const [rec, lesson] = await Promise.all([getItem(app.db, letterRef(l)), getLessonProgress(app.db, letterLessonId(l))]);
-      const top = Object.entries(rec.reasons ?? {}).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1])[0];
-      progress.append(h('li', { dataset: { letter: l } },
-        h('b', { text: l }),
-        ` ${starText(lesson.bestStars)} · ${rec.seen} lượt (${rec.independent} tự viết đúng)`,
-        top ? ` · hay ${REASON_VI[top[0]]} (${top[1]} lần)` : ''));
+      grid.append(h(`div.wr-parent-cell${rec.seen ? '' : '.unseen'}`, { dataset: { letter: l }, title: `${rec.independent}/${rec.seen} lượt tự viết đúng` },
+        h('b.wr-parent-letter', { text: l }),
+        h('span', { text: starText(lesson.bestStars) }),
+        h('span.muted', { text: `${rec.seen} lượt` })));
+      const tip = letterTip(l, rec.reasons);
+      if (tip && tip.count >= TIP_MIN) found.push({ l, ...tip });
     }
+    found.sort((a, b) => b.count - a.count);
+    tips.replaceChildren(...(found.length
+      ? found.slice(0, TIPS_MAX).map((x) => h('li', { dataset: { letter: x.l } }, h('b', { text: `${x.l} ` }), x.text, h('span.muted', { text: ` (${REASON_VI[x.reason]} ${x.count} lần)` })))
+      : [h('p.muted', { text: 'Chưa có chữ nào bé hay sai.' })]));
   })().catch((err) => console.error(err));
 
   const rec = h('input', { type: 'checkbox', checked: Boolean(app.settings.writeRecord) });

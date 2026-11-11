@@ -3,7 +3,7 @@
 // Thêm/bớt file trong app/ thì cập nhật ASSETS (test tests/unit/sw.test.js sẽ báo nếu thiếu).
 // Thư viện bài app/shared/ (file .json + index.json) KHÔNG lưu offline: tải từ mạng khi bố mẹ mở Thư viện bài / chuông kiểm tra.
 
-const VERSION = '0.7.1';
+const VERSION = '0.7.2';
 const CACHE = `kid-english-6-${VERSION}`;
 
 const ASSETS = [
@@ -41,6 +41,8 @@ const ASSETS = [
   'js/write/letters.js',
   'js/write/stroke.js',
   'js/write/pad.js',
+  'js/write/words.js',
+  'js/read/write-stages.js',
   'js/screens/write.js',
   'js/screens/parent/write.js',
   'js/speech/phoneme.js',

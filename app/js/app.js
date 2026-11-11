@@ -10,7 +10,7 @@ import { resumeSession, addTime, extend, isTimeUp } from './session.js';
 import { h } from './ui.js';
 import { mascotElement } from './mascot.js';
 
-export const APP_VERSION = '0.7.1';
+export const APP_VERSION = '0.7.2';
 
 const SESSION_SAVE_EVERY_MS = 15000;
 

@@ -15,10 +15,13 @@ const s = (tag, attrs = {}) => {
 
 export const reducedMotion = () => globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-/** Khung nhìn của một chữ: rộng ≥ 0,9 × chiều cao chữ (3.1), chữ căn giữa; dòng trên -14 → dưới dòng dưới. */
-export function letterBox(letter) {
+/**
+ * Khung nhìn của một chữ: rộng ≥ 0,9 × chiều cao chữ (3.1), chữ căn giữa; dòng trên -14 → dưới dòng dưới.
+ * `compact`: ô của Viết từ (8.2) — hẹp hơn để các ô đứng sát nhau thành từ.
+ */
+export function letterBox(letter, { compact = false } = {}) {
   const { width } = LETTERS[letter];
-  const w = Math.max(width + 70, 130);
+  const w = compact ? Math.max(width + 26, 64) : Math.max(width + 70, 130);
   return { x: (width - w) / 2, y: -14, w, h: 178 };
 }
 
@@ -50,12 +53,12 @@ export function letterSvg(letter, { lines = true, className = '' } = {}) {
 
 /**
  * Khung viết.
- * @param {{ letter: string, input: { sawPen: boolean }, penFirst: boolean, signal: AbortSignal }} o
+ * @param {{ letter: string, input: { sawPen: boolean }, penFirst: boolean, signal: AbortSignal, compact?: boolean }} o
  *   `input` dùng chung trong cả màn (đã thấy bút → bỏ qua ngón tay tới khi rời màn).
  */
-export function createPad({ letter, input, penFirst, signal }) {
+export function createPad({ letter, input, penFirst, signal, compact = false }) {
   const info = LETTERS[letter];
-  const box = letterBox(letter);
+  const box = letterBox(letter, { compact });
   const svg = s('svg', { viewBox: `${box.x} ${box.y} ${box.w} ${box.h}`, class: 'wr-pad', role: 'img', 'aria-label': `Khung viết chữ ${letter}` });
   const model = s('g', { class: 'wr-model' });
   const done = s('g', { class: 'wr-done' });

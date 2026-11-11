@@ -13,6 +13,7 @@ const WRITE_VI = {
   [WRITE_LINES.again]: 'Giỏi lắm! Tô lại lần nữa nhé!',
   [WRITE_LINES.yourTurn]: 'Giờ bé tự viết nhé!',
   [WRITE_LINES.theDot]: 'Giờ bé chấm lên trên nhé!',
+  [WRITE_LINES.noDot]: 'Lần này không có chấm xanh — bé tự nhớ chỗ bắt đầu nhé!',
 };
 
 /** Mẫu câu hỏi của Olly. Hàm nhận từ / chữ cần hỏi. */
@@ -35,6 +36,8 @@ export const QUESTIONS = {
   whichFewer: () => 'Which group has fewer?',
   whichSign: () => 'Which sign goes in the middle?',
   makeNumber: (n) => `Make ${n}!`,
+  // ✍️ Viết từ cuối bài Spell (SPEC-write 8.2)
+  writeWord: (word) => `Write ${word}. ${[...word].join(' – ')}.`,
 };
 
 /**
@@ -66,6 +69,7 @@ export function translateQuestion(en, meaning = '') {
     [/^Which group has more\?$/, () => 'Nhóm nào nhiều hơn? Bé đếm từng con rồi chạm nút dưới nhóm đó (bằng nhau thì chạm "= The same").'],
     [/^Which group has fewer\?$/, () => 'Nhóm nào ít hơn? Bé đếm từng con rồi chạm nút dưới nhóm đó (bằng nhau thì chạm "= The same").'],
     [/^Which sign goes in the middle\?$/, () => 'Dấu nào điền vào ô giữa: lớn hơn (>), bé hơn (<) hay bằng (=)? Bé chạm dấu trong khay.'],
+    [/^Write ([a-z]+)\. /, (x) => `Bé chép từ "${x}"${m} vào các ô: mỗi ô một chữ, viết theo chữ mờ. Viết xong bấm ✅.`],
     [/^Make (.+)!$/, (x) => `Bé xếp số ${x}: thêm thanh chục và khối lẻ, rồi bấm ✅.`],
   ];
   for (const [re, fn] of rules) {

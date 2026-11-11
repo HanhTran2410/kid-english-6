@@ -236,4 +236,5 @@ export const WRITE_LINES = {
   again: 'Good! Again!',
   yourTurn: 'Now you try!',
   theDot: 'Now the dot!',
+  noDot: 'Now without the dot!',
 };

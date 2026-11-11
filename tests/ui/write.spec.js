@@ -230,3 +230,140 @@ test('WR-12: cỡ khung — iPad ngang ≥ 260 px, iPhone dọc ≥ 200 px; nút
     expect((await page.locator('.wr-pad').boundingBox()).height).toBeGreaterThanOrEqual(min);
   }
 });
+
+/** Vẽ một nét vào ô chữ thứ `index` của Viết từ. */
+async function drawCell(page, index, points) {
+  await page.evaluate(({ index, pts }) => {
+    const svg = document.querySelector(`.wr-cell[data-index="${index}"] .wr-pad`);
+    const m = svg.getScreenCTM();
+    const px = pts.map((p) => new DOMPoint(p.x, p.y).matrixTransform(m));
+    const fire = (name, p) => svg.dispatchEvent(new PointerEvent(name, { pointerId: 1, pointerType: 'touch', clientX: p.x, clientY: p.y, bubbles: true }));
+    fire('pointerdown', px[0]);
+    for (const p of px.slice(1)) fire('pointermove', p);
+    fire('pointerup', px.at(-1));
+  }, { index, pts: points });
+}
+
+/** Chơi bài Spell phonics-g1, xếp ô / điền ô đúng hết, tới khi tới bước Viết từ hoặc xong bài. */
+async function playSpellLesson(page) {
+  const lesson = await page.evaluate(async () => (await import('./js/data/builtin-lessons.js')).BUILTIN_BY_ID.get('phonics-g1'));
+  const word = (en) => lesson.words.find((w) => w.en === en);
+  const tap = (loc) => loc.click({ timeout: 1000 }).catch(() => {});
+  for (let i = 0; i < 2000; i++) {
+    if (await page.locator('.wr-cells, .done-panel').first().isVisible()) return;
+    const asks = (await spoken(page)).filter((s) => s.startsWith('Spell: '));
+    if (asks.length && await page.locator('.tray .tile').first().isVisible() && await page.locator('.slot-row .slot:empty').count()) {
+      const w = word(asks.at(-1).match(/^Spell: (.+)!$/)[1]);
+      const idx = await page.locator('.slot-row .slot').evaluateAll((els) => els.findIndex((e) => !e.firstChild));
+      await tap(page.locator(`.tray .tile[data-grapheme="${w.graphemes[idx]}"]`).first());
+    } else if (await page.locator('.fill-choice').first().isVisible()) {
+      const en = (await spoken(page)).filter((s) => s.startsWith('What is missing in ')).at(-1)?.match(/in (.+)\?$/)?.[1];
+      if (en) {
+        const gap = await page.locator('.slot-row .slot').evaluateAll((els) => els.findIndex((e) => e.classList.contains('gap')));
+        await tap(page.locator(`.fill-choice[data-choice="${word(en).graphemes[gap]}"]`));
+      }
+    }
+    await page.waitForTimeout(60);
+  }
+  throw new Error('Không xong bài Spell');
+}
+
+/** Bản ghi "đã xếp đúng 2 lần liên tiếp" của một từ trong bài phonics-g1. */
+const spellStreak2 = (page, id) => page.evaluate((x) => window.kidEnglish6.db.put('progress', {
+  key: `phonics-g1/spell/${x}`, lessonId: 'phonics-g1', activity: 'spell', itemId: x, seen: 2, independent: 2, helped: 0, missed: 0, practiced: 0, streak: 2, lastAt: 1,
+}), id);
+
+test('WR-10 + WR-22 + WR-23: Viết từ cuối bài Spell — chỉ từ streak 2; ✅ sáng khi mọi ô có nét kéo; 🧽 một ô; hiện từ in đúng; Viết lại → practiced + 1 nữa', async ({ page }) => {
+  test.setTimeout(180_000);
+  await fakeSpeech(page);
+  await startApp(page);
+  await spellStreak2(page, 'ant');
+  await spellStreak2(page, 'pin');
+  await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
+  await page.locator('.lesson-card[data-lesson="phonics-g1"]').click();
+  await playSpellLesson(page);
+  // Sao của bài Spell đã ghi trước bước Viết từ, không đổi vì Viết từ.
+  expect((await progress(page, 'lesson:phonics-g1/spell')).plays).toBe(1);
+
+  await expect(page.locator('#app')).toHaveAttribute('data-write-word', 'ant');
+  await expect.poll(() => spoken(page)).toContain('Write ant. a – n – t.');
+  await expect(page.locator('.wr-cell')).toHaveCount(3);
+  await expect(page.locator('.wr-word-model')).toHaveText('ant');
+  const done = page.getByRole('button', { name: 'Xong' });
+  const [a, n, t] = ['a', 'n', 't'].map((l) => LETTERS[l].strokes[0]);
+  // Viết ô nào trước cũng được; chạm (tap) không tính.
+  await drawCell(page, 2, fakeStroke(t));
+  await drawCell(page, 0, fakeStroke(a));
+  await expect(page.locator('.wr-cell[data-index="1"]')).toHaveClass(/next/);
+  await drawCell(page, 1, [{ x: 20, y: 70 }]);
+  await expect(done).toBeDisabled();
+  await drawCell(page, 1, fakeStroke(n, { normal: 25 })); // không chấm hình chữ
+  await expect(done).toBeEnabled();
+  // 🧽 chỉ xóa ô 2.
+  await page.getByRole('button', { name: 'Xóa ô 2' }).click();
+  await expect(page.locator('.wr-cell[data-index="1"] .wr-ink path')).toHaveCount(0);
+  await expect(page.locator('.wr-cell[data-index="0"] .wr-ink path')).toHaveCount(1);
+  await expect(done).toBeDisabled();
+  await drawCell(page, 1, fakeStroke(n));
+  await done.click();
+  await expect(page.locator('.wr-word-check')).toBeVisible();
+  await expect(page.locator('.wr-word-check')).toHaveText('ant');
+  await expect.poll(async () => (await progress(page, 'phonics-g1/write/ant'))?.practiced).toBe(1);
+  // ✍️ Viết lại → xóa hết ô; ✅ lần 2 → practiced 2.
+  await page.getByRole('button', { name: 'Viết lại' }).click();
+  await expect(page.locator('.wr-ink path')).toHaveCount(0);
+  await expect(page.locator('.wr-word-check')).toBeHidden();
+  for (const [i, s] of [a, n, t].entries()) await drawCell(page, i, fakeStroke(s));
+  await done.click();
+  await expect.poll(async () => (await progress(page, 'phonics-g1/write/ant'))?.practiced).toBe(2);
+  await page.getByRole('button', { name: 'Tiếp tục' }).click();
+
+  await expect(page.locator('#app')).toHaveAttribute('data-write-word', 'pin');
+  for (const [i, l] of ['p', 'i', 'n'].entries()) await drawCell(page, i, fakeStroke(LETTERS[l].strokes[0]));
+  await done.click();
+  await page.getByRole('button', { name: 'Tiếp tục' }).click();
+  await expect(page.locator('.done-panel')).toBeVisible();
+  expect((await progress(page, 'phonics-g1/write/pin')).practiced).toBe(1);
+  expect(await progress(page, 'phonics-g1/write/pan')).toBeUndefined();
+  expect((await progress(page, 'lesson:phonics-g1/spell')).plays).toBe(1);
+});
+
+test('Viết từ tắt ở Cài đặt → không có bước Viết từ', async ({ page }) => {
+  test.setTimeout(180_000);
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.evaluate(() => window.kidEnglish6.setSetting('writeWords', false));
+  await spellStreak2(page, 'ant');
+  await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
+  await page.locator('.lesson-card[data-lesson="phonics-g1"]').click();
+  await playSpellLesson(page);
+  await expect(page.locator('.done-panel')).toBeVisible();
+  await expect(page.locator('.wr-cells')).toHaveCount(0);
+});
+
+test('Mức sau (4.1): chữ đã ⭐⭐⭐ → B1 → C1 → C2; C2 không có chấm bắt đầu, sai thì hiện chấm', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.evaluate(() => window.kidEnglish6.db.put('progress', {
+    key: 'lesson:write-l', lessonId: 'write-l', part: '', plays: 1, completedAt: 1, bestStars: 3, lastStars: 3, lastAt: 1,
+  }));
+  await openLetter(page, 'l');
+  await page.getByRole('button', { name: 'Tiếp tục' }).click();
+  await expect(page.locator('#app')).toHaveAttribute('data-level', 'next');
+  await waitTurn(page, 'B1');
+  await writeLetter(page, 'l');
+  await waitTurn(page, 'C1');
+  await expect(page.locator('.wr-sample svg')).toBeVisible();
+  await expect(page.locator('.wr-start')).toHaveCount(1);
+  await writeLetter(page, 'l');
+  await waitTurn(page, 'C2');
+  await expect.poll(() => spoken(page)).toContain('Now without the dot!');
+  await expect(page.locator('.wr-start')).toHaveCount(0);
+  const [s] = LETTERS.l.strokes;
+  await draw(page, fakeStroke(s, { startShift: 40 }));
+  await expect(page.locator('.wr-start')).toHaveCount(1);
+  await draw(page, fakeStroke(s));
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '2 sao');
+  const rec = await progress(page, 'write/letter/l');
+  expect([rec.independent, rec.helped]).toEqual([2, 1]);
+});

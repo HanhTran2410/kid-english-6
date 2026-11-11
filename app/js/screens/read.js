@@ -21,6 +21,8 @@ import { BUILTIN_SCENES } from '../data/builtin-scenes.js';
 import { lessonImages, mediaBlob, SCENE_IMAGE } from '../db.js';
 import { libraryImages, wordKey, sentenceKey } from '../picture-library.js';
 import { writeCards } from './write.js';
+import { writeWords } from '../read/write-stages.js';
+import { pickWriteWords } from '../write/words.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -161,6 +163,11 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     }
     const stars = zone === 'talk' ? level : starsFor(results);
     await recordLessonDone(app.db, lesson.id, stars, Date.now(), partOf(zone));
+    // ✍️ Viết từ cuối bài Spell (SPEC-write 8): từ đã xếp đúng 2 lần liên tiếp; không đổi sao của bài.
+    if (zone === 'spell' && app.settings.writeWords !== false) {
+      const words = pickWriteWords(lesson, await app.db.getAllByIndex('progress', 'lessonId', lesson.id));
+      if (words.length) await writeWords(ctx, words);
+    }
     showDone(app, t, layout, lesson, stars, zone);
   })().catch((err) => {
     if (isAbort(err)) return;

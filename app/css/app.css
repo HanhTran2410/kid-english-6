@@ -703,7 +703,6 @@ circle.wr-ok { fill: #2f9e44; }
 .wr-actions .big-btn { font-size: 24px; }
 .wr-actions .big-btn:disabled { opacity: 0.35; }
 .wr-done-letter .wr-static { height: 150px; width: auto; }
-.wr-parent-letters { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .wr-trials { display: grid; gap: 8px; margin-top: 10px; }
 .wr-trial { display: flex; gap: 12px; align-items: center; padding: 6px 0; border-top: 1px solid #eef0f6; }
 .wr-trial-svg { width: 56px; height: 100px; flex: none; background: #f7f8fc; border-radius: 10px; }
@@ -719,3 +718,24 @@ circle.wr-ok { fill: #2f9e44; }
   .wr-card { width: 96px; }
 }
 @media (prefers-reduced-motion: reduce) { .wr-start.bounce, .wr-model-stroke.wr-flash { animation: none; } .wr-fade { transition: none; } }
+
+/* ---------- ✍️ Viết từ (read/write-stages.js, SPEC-write 8.2) + Góc bố mẹ → Tiến độ chữ (9.4) ---------- */
+.wr-word-model { margin: 0; font-size: clamp(40px, 7vmin, 64px); letter-spacing: 0.08em; }
+.wr-cells { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; max-width: min(100%, 1100px); }
+.wr-cell { display: grid; justify-items: center; gap: 6px; padding: 4px; border-radius: 22px; border: 4px solid transparent; }
+.wr-cell.next { border-color: var(--yellow); }
+.wr-cell .wr-pad { height: clamp(150px, 34vh, 260px); border-radius: 18px; }
+.wr-cell-clear { width: 52px; height: 52px; border-radius: 50%; background: var(--card); box-shadow: var(--shadow); font-family: var(--emoji); font-size: 24px; }
+.wr-word-check { margin: 0; padding: 8px 32px; font-size: clamp(36px, 6vmin, 56px); letter-spacing: 0.08em; }
+.wr-word-done:disabled { opacity: 0.35; }
+.wr-parent-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+.wr-parent-cell { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 12px; background: #f7f8fc; font-size: 13px; }
+.wr-parent-cell.unseen { opacity: 0.55; }
+.wr-parent-letter { font-family: var(--read-font); font-size: 30px; line-height: 1.1; }
+.wr-parent-tips { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+@media (max-width: 600px) {
+  /* iPhone dọc: tối đa 4 ô một hàng (8.2) */
+  .wr-cells { max-width: 360px; gap: 6px; }
+  .wr-cell .wr-pad { height: clamp(120px, 22vh, 170px); }
+  .wr-cell-clear { width: 44px; height: 44px; font-size: 20px; }
+}

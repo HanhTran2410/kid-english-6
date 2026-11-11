@@ -192,3 +192,27 @@ test('kết quả lượt, sao, streak (5.6, 5.7, 9.1)', () => {
   for (const r of [I, I, H, I]) p = applyLetterTurn(p, r, r === H ? { start: 1 } : {}, 5);
   assert.deepEqual([p.seen, p.independent, p.helped, p.streak, p.reasons.start, p.lastAt], [4, 3, 1, 1, 1, 5]);
 });
+
+test('Viết từ (8.1, 8.2): chọn từ có streak ≥ 2, chỉ chữ thường, tối đa 2, ít viết trước; apple → 5 ô; phụ đề', async () => {
+  const { pickWriteWords, wordCells, letterTip } = await import('../../app/js/write/words.js');
+  const { QUESTIONS } = await import('../../app/js/captions.js');
+  const lesson = {
+    id: 'L',
+    activities: [{ type: 'spell', items: ['cat', 'dog', 'sun', 'Tom', 'pin'] }, { type: 'blend', items: ['hat'] }],
+    words: ['cat', 'dog', 'sun', 'Tom', 'pin', 'hat'].map((en) => ({ id: en, en })),
+  };
+  const spell = (id, streak) => ({ key: `L/spell/${id}`, streak });
+  const write = (id, practiced, lastAt) => ({ key: `L/write/${id}`, practiced, lastAt });
+  const records = [spell('cat', 2), spell('dog', 3), spell('sun', 2), spell('Tom', 5), spell('pin', 1), spell('hat', 4), write('cat', 2, 5), write('dog', 1, 9), write('sun', 1, 3)];
+  // hat không trong hoạt động spell; Tom có chữ hoa; pin streak 1 → loại. sun (1 lần, cũ hơn) → dog (1 lần) → cat (2 lần).
+  assert.deepEqual(pickWriteWords(lesson, records).map((w) => w.en), ['sun', 'dog']);
+  assert.deepEqual(pickWriteWords(lesson, []), []);
+  assert.deepEqual(wordCells('apple'), ['a', 'p', 'p', 'l', 'e']);
+  assert.equal(translateQuestion(QUESTIONS.writeWord('cat')).includes('"cat"'), true);
+  assert.equal(QUESTIONS.writeWord('cat'), 'Write cat. c – a – t.');
+  assert.equal(letterTip('a', {}), null);
+  const tip = letterTip('a', { start: 3, stray: 1 });
+  assert.equal(tip.reason, 'start');
+  assert.equal(tip.text, 'Bé hay bắt đầu chữ a sai chỗ. Nhắc bé: viết chữ c trước, rồi viết nét thẳng bên phải từ trên xuống.');
+  assert.match(letterTip('i', { dot: 2 }).text, /chỉ chạm một cái/);
+});

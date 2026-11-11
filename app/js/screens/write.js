@@ -31,11 +31,22 @@ async function explainBriefly(t, text) {
 export const letterRef = (l) => ({ lessonId: 'write', activity: 'letter', itemId: l });
 /** Sao của chữ: "lesson:write-<chữ>" (9.1). */
 export const letterLessonId = (l) => `write-${l}`;
+/**
+ * Các lượt có chấm (mục 4): `model` độ đậm chữ mẫu, `arrow` mũi tên, `sample` ô mẫu nhỏ bên cạnh, `startDot: false`
+ * = ẩn chấm xanh (bé tự nhớ chỗ bắt đầu; sai rồi mới hiện), `line` câu Olly nói trước lượt.
+ */
 const TURNS = [
   { name: 'B1', model: 0.35, arrow: true },
-  { name: 'B2', model: 0.15, arrow: true },
-  { name: 'C', model: 0, arrow: false },
+  { name: 'B2', model: 0.15, arrow: true, line: WRITE_LINES.again },
+  { name: 'C', model: 0, sample: true, line: WRITE_LINES.yourTurn },
 ];
+/** Mức sau (4.1): chữ đã ⭐⭐⭐ → B1 → C1 → C2 (C2 không có chấm bắt đầu). */
+const TURNS_NEXT = [
+  { name: 'B1', model: 0.35, arrow: true },
+  { name: 'C1', model: 0, sample: true, line: WRITE_LINES.yourTurn },
+  { name: 'C2', model: 0, sample: true, startDot: false, line: WRITE_LINES.noDot },
+];
+const turnsOf = (ws) => (ws.advanced ? TURNS_NEXT : TURNS);
 export const MAX_TRIALS = 300;
 
 // ---------- Lưới chữ (tab ✍️ Tập viết) ----------
@@ -100,20 +111,23 @@ export function writeScreen(app, params = {}) {
 async function run(ctx, params) {
   const { app, letter, layout } = ctx;
   const resume = params.continueDirectly && params.ws?.letter === letter ? params.ws : null;
-  const ws = resume ?? { letter, turn: 0, results: [] };
+  // Chữ đã 3 sao → mức sau (4.1); quyết định lúc mở chữ, giữ khi ra nền rồi quay lại.
+  const ws = resume ?? { letter, turn: 0, results: [], advanced: (await getLessonProgress(app.db, letterLessonId(letter))).bestStars >= 3 };
   if (app.current?.name === 'write') app.current.params.ws = ws;
   ctx.ws = ws;
+  const turns = turnsOf(ws);
+  app.root.dataset.level = ws.advanced ? 'next' : 'base';
   if (!resume) {
     app.root.dataset.step = 'A';
     await stepA(ctx);
   }
-  while (ws.turn < TURNS.length) {
-    layout.setProgress(ws.turn / TURNS.length);
-    const { result, reasons } = await runTurn(ctx, ws.turn);
+  while (ws.turn < turns.length) {
+    layout.setProgress(ws.turn / turns.length);
+    const { result, reasons } = await runTurn(ctx, turns[ws.turn], ws.turn);
     ws.results.push(result);
     await recordTurn(app.db, letter, result, reasons);
     ws.turn++;
-    if (ws.turn < TURNS.length) await ctx.t.say(ws.turn === 1 ? WRITE_LINES.again : WRITE_LINES.yourTurn);
+    if (ws.turn < turns.length) await ctx.t.say(turns[ws.turn].line);
   }
   await finish(ctx);
 }
@@ -163,12 +177,11 @@ async function stepA(ctx) {
 }
 
 /**
- * Một lượt có chấm (B1, B2 hoặc C). Trả về { result, reasons }.
+ * Một lượt có chấm (B1, B2, C — mức sau: B1, C1, C2). Trả về { result, reasons }.
  * Đếm sai theo nét trong lượt; ↩️ / 🧽 không xóa số lần sai (5.5, T08).
  */
-function runTurn(ctx, turnIndex) {
+function runTurn(ctx, turn, turnIndex) {
   const { app, t, layout, letter, info, signal } = ctx;
-  const turn = TURNS[turnIndex];
   app.root.dataset.step = turn.name;
   ctx.turnLabel.textContent = `${turnIndex + 1}/3`;
   const cfg = WRITE_LEVELS[app.settings.writeLevel] ?? WRITE_LEVELS.easy;
@@ -176,7 +189,7 @@ function runTurn(ctx, turnIndex) {
   pad.setModel(turn.model);
   const undoBtn = h('button.big-btn.wr-undo', { type: 'button', 'aria-label': 'Xóa nét', text: '↩️ Xóa nét' });
   const clearBtn = h('button.big-btn.wr-clear', { type: 'button', 'aria-label': 'Viết lại', text: '🧽 Viết lại' });
-  const board = turn.name === 'C'
+  const board = turn.sample
     ? h('div.wr-board.wr-c', {}, h('div.wr-sample', {}, letterSvg(letter)), pad.el)
     : h('div.wr-board', {}, pad.el);
   layout.stage.replaceChildren(board, h('div.wr-actions', {}, undoBtn, clearBtn));
@@ -200,7 +213,9 @@ function runTurn(ctx, turnIndex) {
       app.root.dataset.stroke = String(current);
     };
     const showCurrent = () => {
-      pad.showStart(current, { arrow: turn.arrow });
+      // C2: chấm bắt đầu chỉ hiện khi nét đó đã sai (gợi ý như 5.5).
+      const hidden = turn.startDot === false && !strokes[current]?.wrong;
+      pad.showStart(hidden ? null : current, { arrow: Boolean(turn.arrow) });
       if (strokes[current]?.wrong >= 2 && !strokes[current].auto) pad.guide(current);
       else pad.unguide();
       refresh();
@@ -267,6 +282,7 @@ function runTurn(ctx, turnIndex) {
         return;
       }
       play('boing');
+      if (turn.startDot === false) pad.showStart(i, { arrow: false });
       const line = verdict.reason === 'stray' && verdict.lifted ? WRITE_LINES.lifted : WRITE_LINES[verdict.reason];
       if (verdict.reason === 'start' || verdict.reason === 'dot') pad.bounceStart();
       else if (verdict.reason === 'reverse') pad.runDot(i, 900);
