@@ -16,8 +16,11 @@ import { RESULT, getItem, applyResult, recordItem, getLessonProgress, recordLess
 import {
   BUILTIN_MATH, MATH_BY_ID, MATH_ITEMS, MAX_LEVEL, makeItems, sentenceOf, itemRef, readPlan, unlockedLevel, weakKind, kindsAt,
   explainVi, numberWord, pairLineT2, blocksLine, tensLine, signsAt, tensOf, onesOf, cap,
+  orderedT4, SLOT_LABELS, puzzleText, T7_THINGS, T7_BY_ID, t7Item, T5_LINE,
 } from '../math/math.js';
-import { numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl } from '../math/views.js';
+import {
+  numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl, orderBoard, numberLine, personCard,
+} from '../math/views.js';
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
@@ -28,7 +31,19 @@ const LEVEL_VI = {
   t2: ['Tới 6 con', 'Tới 10 con', 'Tới 10 con, sát nhau'],
   t3: ['🐊 > và <', '🐊 thêm =', 'Chỉ dấu > < ='],
   t6: ['Xếp số', 'So hàng chục', 'So hàng đơn vị'],
+  t4: ['Số tới 10', 'Số tới 20', 'Lớn → nhỏ'],
+  t5: ['Trước – sau', 'Thêm ở giữa', 'Hơn một – kém một'],
+  t7: ['Có hình đồ vật', 'Đọc rồi chọn', 'Số tới 20'],
 };
+
+/** Tia số: 11 số; iPhone dọc chỉ đủ chỗ cho 7 ô ≥ 48 px (SPEC-math 8.2). */
+const lineLen = () => (window.innerWidth < 600 ? 7 : T5_LINE);
+
+/** T7 mức 3 có câu đố số tới 20 khi bé đã có ⭐⭐ ở T5 (4.7). */
+async function allow20(db) {
+  const t5 = await levelProgress(db, 'math-t5');
+  return Object.values(t5).some((p) => p.bestStars >= 2);
+}
 
 /** Tiến độ từng mức của bài: { 1: {...}, 2: {...}, 3: {...} } (khóa "lesson:<id>/L<n>", SPEC-math 6.2). */
 async function levelProgress(db, lessonId) {
@@ -135,8 +150,9 @@ async function runLesson(ctx, params) {
     const records = await app.db.getAllByIndex('progress', 'lessonId', lesson.id);
     const weak = weakKind(records, kindsAt(lesson.key, level));
     const maxGroup = window.innerWidth < 600 ? 8 : 10;
+    const opts = { weak, maxGroup, lineLen: lineLen(), allow20: lesson.key === 't7' && await allow20(app.db) };
     round = {
-      lessonId: lesson.id, level, items: makeItems(lesson.key, level, Math.random, { weak, maxGroup }), readAt: readPlan(),
+      lessonId: lesson.id, level, items: makeItems(lesson.key, level, Math.random, opts), readAt: readPlan(),
       index: 0, results: [], wrong: 0, phase: 'demo', firstAtLevel: !levels[level].plays,
     };
   }
@@ -244,7 +260,7 @@ async function chooseLoop(ctx, view) {
   for (;;) {
     if (round.wrong >= 2) correct.classList.add('hint');
     const picked = await waitPick(ctx, round.wrong >= 2 ? [correct] : options);
-    onPick?.(picked);
+    await onPick?.(picked);
     if (picked === correct) {
       play('ding');
       correct.classList.remove('hint');
@@ -274,7 +290,139 @@ function buildView(ctx, item) {
   if (key === 't2') return buildGroups(ctx, item);
   if (key === 't3') return buildSign(ctx, item);
   if (key === 't6' && item.make != null) return buildMake(ctx, item);
+  if (key === 't4') return buildOrder(ctx, item);
+  if (key === 't5') return buildLine(ctx, item);
+  if (key === 't7') return buildPuzzle(ctx, item);
   return buildCompare(ctx, item, key === 't6' ? 'tens' : 'blocks');
+}
+
+/** T4: hàng 4 chỗ (first / next / next / last) + khay thẻ số. */
+function buildOrder(ctx, item) {
+  const board = orderBoard(item.numbers, SLOT_LABELS);
+  ctx.stage.replaceChildren(board.el);
+  const question = item.order === 'desc' ? QUESTIONS.biggestFirst() : QUESTIONS.smallestFirst();
+  const target = orderedT4(item);
+  const cardOf = (n) => board.cards.find((c) => Number(c.dataset.n) === n);
+  return {
+    order: board,
+    target,
+    cardOf,
+    question,
+    speak: () => ctx.t.say(question),
+    solve: () => target.forEach((n, i) => board.place(cardOf(n), i)),
+  };
+}
+
+/**
+ * T4 (4.4): chạm lần lượt 4 thẻ, mỗi thẻ đúng bay vào chỗ kế tiếp. Chạm sai → rung, "Find the smallest number left.";
+ * sai lần 2 ở cùng chỗ → tiếng Việt (một lần) + số đúng sáng. Cả hàng một kết quả: không sai → independent; có sai
+ * nhưng chưa phải xem đáp án → helped; có chỗ phải xem đáp án → missed.
+ */
+async function runOrder(ctx, item, view) {
+  const { app, t, round } = ctx;
+  const { order: board, target, cardOf } = view;
+  await t.ask(view.question, { speak: view.speak });
+  let missed = false;
+  let viSaid = false;
+  for (let i = 0; i < target.length;) {
+    const remaining = board.cards.filter((c) => !c.classList.contains('placed'));
+    const correct = cardOf(target[i]);
+    const shown = correct.classList.contains('hint');
+    const picked = await waitPick(ctx, shown ? [correct] : remaining);
+    if (picked === correct) {
+      play('pop');
+      correct.classList.remove('hint');
+      board.place(correct, i);
+      await t.say(`${cap(SLOT_LABELS[i])}, ${numberWord(target[i])}.`);
+      i++;
+      round.slotWrong = 0;
+      continue;
+    }
+    round.wrong++;
+    round.slotWrong = (round.slotWrong ?? 0) + 1;
+    play('boing');
+    shake(picked);
+    if (round.slotWrong >= 2) {
+      missed = true;
+      if (!viSaid && needsVietnameseHelp(app.settings, 2)) {
+        viSaid = true;
+        await t.explainVi(explainVi('t4', item));
+      }
+      correct.classList.add('hint');
+      await t.say('This one!');
+    } else {
+      await t.say(item.order === 'desc' ? 'Find the biggest number left.' : 'Find the smallest number left.');
+    }
+  }
+  round.slotWrong = 0;
+  play('ding');
+  t.celebrate(board.el);
+  t.endQuestion();
+  const result = round.wrong === 0 ? RESULT.INDEPENDENT : missed ? RESULT.MISSED : RESULT.HELPED;
+  return { result, line: await praiseAndRead(ctx, item, result) };
+}
+
+/** T5: tia số, ếch đứng ở số được hỏi; bé chạm số → ếch nhảy từng bước, Olly đếm bước (4.5). */
+function buildLine(ctx, item) {
+  const { t, stage } = ctx;
+  const line = numberLine(item.line, item.n);
+  stage.replaceChildren(line.el);
+  line.set(item.n);
+  const tickOf = (n) => line.ticks[n - item.line[0]];
+  for (const x of [item.n, item.m]) if (x != null) tickOf(x).classList.add('given');
+  const question = {
+    after: QUESTIONS.comesAfter(item.n), before: QUESTIONS.comesBefore(item.n), between: QUESTIONS.between(item.n, item.m),
+    more: QUESTIONS.oneMore(item.n), less: QUESTIONS.oneLess(item.n),
+  }[item.ask];
+  const hint = item.ask === 'between'
+    ? `It is between ${numberWord(item.n)} and ${numberWord(item.m)}.`
+    : { after: 'One jump forward!', more: 'One more means one jump forward.', before: 'One jump back!', less: 'One less means one jump back.' }[item.ask];
+  const jumpTo = (n) => line.jump(n, (k) => t.say(`${cap(numberWord(k))} ${k === 1 ? 'jump' : 'jumps'}!`));
+  return {
+    options: line.ticks,
+    correct: tickOf(item.answer),
+    question,
+    speak: () => t.say(question),
+    explain: explainVi('t5', item),
+    line,
+    onPick: async (picked) => {
+      await jumpTo(Number(picked.dataset.n));
+    },
+    // Sai → ếch nhảy về chỗ cũ: "One jump only!" (4.5).
+    onWrong: async () => {
+      await t.say('One jump only!');
+      line.set(item.n);
+    },
+    onWrong1: () => t.say(hint),
+    afterCorrect: async () => line.set(item.answer),
+  };
+}
+
+/** T7: câu đố (Olly đọc karaoke) + hai thẻ nhân vật; mức 1 đồ vật luôn hiện, mức 2–3 hiện khi sai / sau khi đúng. */
+function buildPuzzle(ctx, item) {
+  const { t, stage, round, app } = ctx;
+  const q = puzzleText(item);
+  const text = sentenceLine(q, showVi(app));
+  text.el.classList.replace('mt-sentence', 'mt-puzzle'); // câu so sánh đọc sau không xóa câu đố
+  const emoji = T7_THINGS[item.thing].emoji;
+  const cards = item.people.map((p, i) => personCard(p, emoji, i ? 'right' : 'left'));
+  stage.replaceChildren(text.el, h('div.mt-row.mt-people', {}, ...cards));
+  const showAll = () => cards.forEach((c) => c.showThings());
+  if (round.level === 1) showAll();
+  const count = async () => {
+    showAll();
+    await t.say(`Let's count! ${item.people.map((p) => `${p.name} has ${numberWord(p.n)} ${item.thing}.`).join(' ')}`);
+  };
+  return {
+    options: cards,
+    correct: cards[item.side === 'left' ? 0 : 1],
+    question: q.en,
+    speak: () => t.karaoke(q.en, text.words),
+    explain: explainVi('t7', item),
+    onWrong1: count,
+    demoCheck: count,
+    afterCorrect: async () => showAll(),
+  };
 }
 
 /** T1 / T6 (mức 2–3): hai thẻ số + cột khối / que chục. */
@@ -421,6 +569,7 @@ function buildMake(ctx, item) {
 async function runItem(ctx, item) {
   const view = buildView(ctx, item);
   if (view.board) return runMake(ctx, item, view);
+  if (view.order) return runOrder(ctx, item, view);
   const result = await chooseLoop(ctx, view);
   await view.afterCorrect?.();
   return { result, line: await praiseAndRead(ctx, item, result) };
@@ -469,6 +618,8 @@ function showSolved(ctx, item) {
   if (view.board) {
     view.board.set(item.make);
     view.board.lock(true);
+  } else if (view.order) {
+    view.solve();
   } else {
     view.correct.classList.add('right');
     if (ctx.lesson.key === 't3') view.place(item.sign);
@@ -630,6 +781,57 @@ async function demoMake(dctx, n) {
   await t.pause(900);
 }
 
+/** T4: Olly chạm lần lượt first / next / next / last. */
+async function demoOrder(dctx, item) {
+  const { t } = dctx;
+  const view = buildOrder(dctx, item);
+  await t.ask(view.question, { speak: view.speak });
+  for (const [i, n] of view.target.entries()) {
+    const card = view.cardOf(n);
+    card.classList.add('olly-tap');
+    play('pop');
+    view.order.place(card, i);
+    await t.say(`${cap(SLOT_LABELS[i])}, ${numberWord(n)}.`);
+  }
+  t.endQuestion();
+  await praiseAndRead(dctx, item, null);
+  await t.pause(900);
+}
+
+/** Một mục T5 cho phần làm mẫu: tia số quanh đáp án, không vượt phạm vi mức. */
+function t5Demo(ask, n, level) {
+  const max = level === 1 ? 10 : 20;
+  const len = lineLen();
+  const answer = n + (ask === 'before' || ask === 'less' ? -1 : 1);
+  const start = Math.max(0, Math.min(max - len + 1, answer - Math.floor(len / 2)));
+  return { ask, n, m: ask === 'between' ? n + 2 : null, answer, line: [start, start + len - 1] };
+}
+
+async function demoLine(dctx, item) {
+  const { t } = dctx;
+  const view = buildLine(dctx, item);
+  await t.ask(view.question, { speak: view.speak });
+  if (item.ask === 'more') await t.say('One more means one jump forward.');
+  if (item.ask === 'less') await t.say('One less means one jump back.');
+  await t.pause(300);
+  await view.onPick(view.correct);
+  await ollyTap(t, view.correct);
+  t.endQuestion();
+  await praiseAndRead(dctx, item, null);
+  await t.pause(900);
+}
+
+async function demoPuzzle(dctx, item) {
+  const { t } = dctx;
+  const view = buildPuzzle(dctx, item);
+  await t.ask(view.question, { speak: view.speak });
+  await view.demoCheck();
+  await ollyTap(t, view.correct);
+  t.endQuestion();
+  await praiseAndRead(dctx, item, null);
+  await t.pause(900);
+}
+
 /** Các lượt làm mẫu theo bài (3.1, mục 4); `short` (đã có sao): 1 lượt. */
 async function demoSteps(dctx, { short }) {
   const { lesson, round } = dctx;
@@ -646,6 +848,18 @@ async function demoSteps(dctx, { short }) {
     steps.push(() => demoSign(dctx, { a: 7, b: 4, sign: '>', croc }));
     if (!short) steps.push(() => demoSign(dctx, { a: 4, b: 7, sign: '<', croc }));
     if (round.level >= 2 && round.firstAtLevel) steps.push(() => demoSign(dctx, { a: 7, b: 7, sign: '=', croc }));
+  } else if (lesson.key === 't4') {
+    // Mức 3 xếp lớn → nhỏ: lượt mẫu riêng "Put the biggest number first." (4.4).
+    if (round.level === 3) steps.push(() => demoOrder(dctx, { numbers: [5, 9, 3, 7], order: 'desc' }));
+    else steps.push(() => demoOrder(dctx, { numbers: [7, 3, 9, 5], order: 'asc' }));
+  } else if (lesson.key === 't5') {
+    const L = round.level;
+    // Kiểu mới của mức đứng trước để bản rút gọn vẫn có.
+    const plan = L === 1 ? [['after', 7], ['before', 4]] : L === 2 ? [['between', 12], ['after', 15]] : [['more', 9], ['less', 12]];
+    for (const [ask, n] of plan) steps.push(() => demoLine(dctx, t5Demo(ask, n, L)));
+  } else if (lesson.key === 't7') {
+    steps.push(() => demoPuzzle(dctx, t7Item(T7_BY_ID.get('p1'), 'more')));
+    steps.push(() => demoPuzzle(dctx, t7Item(T7_BY_ID.get('p2'), 'fewer')));
   } else if (round.level === 1) {
     steps.push(() => demoMake(dctx, 34));
   } else {

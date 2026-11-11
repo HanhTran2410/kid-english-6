@@ -1,7 +1,7 @@
 # SPEC — Khu mới "🔢 Math / Toán" cho Olly English (bé 6 tuổi)
 
 > Phiên bản spec: **draft3** · Ngày: 2026-11-10 · Dựa trên app 0.5.0 (SPEC.md draft2)
-> Trạng thái: **đã chốt 2026-11-10** (mục 11). **Math-a đã làm ở 0.6.0 (2026-11-11)** — bố mẹ đổi thứ tự: làm trước Tập viết và Quest. Math-b, Math-c: 0.9.
+> Trạng thái: **đã chốt 2026-11-10** (mục 11). **Math-a đã làm ở 0.6.0, Math-b + Math-c ở 0.9.0 (2026-11-11)** — bố mẹ đổi thứ tự: làm trước Quest. Ghi chú khi làm: 8.1, 8.2.
 >
 > Spec riêng cho bé **6 tuổi** (lớp 1). Phần so sánh bằng hình cho bé 3–5 tuổi nằm ở app kid-english (`C:\kid-english\SPEC-math.md`). Hai app **không dùng chung** bài toán.
 
@@ -335,8 +335,8 @@ T2 theo cùng phạm vi số lượng: mức 1 tối đa 6 đồ / nhóm, mức 
 | Đợt | Phạm vi | Mục tiêu |
 |---|---|---|
 | **Math-a** *(xong, 0.6.0)* | Khu 🔢 (5 thẻ ở màn chính, 2.1) · danh sách bài · khung bài chung (làm mẫu → 8 mục → đọc câu → sao, mức) · **T1 · T2 · T3 · T6** | Trọn một vòng học so sánh: số, số lượng, ký hiệu, và số tới 100 (chục – đơn vị) |
-| **Math-b** | **T4 · T5** | Thứ tự số và tia số (có *one more / one less*) |
-| **Math-c** | **T7** | Đọc hiểu câu đố |
+| **Math-b** *(xong, 0.9.0)* | **T4 · T5** | Thứ tự số và tia số (có *one more / one less*) |
+| **Math-c** *(xong, 0.9.0)* | **T7** | Đọc hiểu câu đố |
 | Sau | *How many more?*, cộng / trừ trong phạm vi 10 | 11.3 |
 
 - Math-a phải xong **cả khung**: làm mẫu, 8 mục, đọc câu, sao, mức, chơi lại, thoát giữa chừng, hết giờ buổi học. Không chỉ giao diện.
@@ -350,6 +350,13 @@ T2 theo cùng phạm vi số lượng: mức 1 tối đa 6 đồ / nhóm, mức 
 - T6 mức 1: nút +10 / +1, chạm thanh / khối đã đặt để bỏ (tối đa 9 thanh, 9 khối), bấm ✅ để chấm; sai lần 1: "You made …" + câu cấu tạo số.
 - Hình kiểm chứng của T6 (que chục) luôn hiện ở mức 2–3 (spec không nói rõ); T1 mức 3 có nút 🔍.
 - `Teacher.waitTap` thêm tùy chọn `onIdle` (gọi một lần) cho 3.5; các khu khác không đổi.
+
+### 8.2. Ghi chú khi làm Math-b / Math-c (0.9.0)
+- Danh sách bài: T1 → T7 (T6 giữ chỗ giữa T5 và T7 theo 6.1).
+- **T4:** 4 thẻ số trong khay, hàng 4 chỗ có nhãn *first / next / next / last*; chạm đúng → thẻ vào chỗ kế tiếp, Olly nói *"First, three."*… Mức 1: 1–10, khoảng cách ≥ 2; mức 2: 1–20; mức 3: 1–20 xếp lớn → nhỏ (cả lượt; làm mẫu *"Put the biggest number first."*). Không bao giờ cho sẵn đúng thứ tự. Sai 2 lần ở cùng chỗ → tiếng Việt (một lần mỗi mục) + số đúng sáng → cả hàng `missed`. Bản ghi: `math-t4/order-asc/3-5-7-9`.
+- **T5:** tia số 11 số (iPhone dọc: **7 số**, để ô số ≥ 48 px — spec ghi 11 số và 64 px, hai điều này không cùng vừa 375 px; ô vẫn cao 64 px); xoay máy giữa lượt thì ô số co lại cho vừa. Ếch đứng ở số được hỏi, bé chạm số nào ếch nhảy từng bước tới đó, Olly đếm *"One jump! Two jumps!"*; sai → *"One jump only!"*, ếch về chỗ cũ, lần 1 thêm gợi ý hướng (*"One jump forward!"* / *"One more means one jump forward."* / *"It is between …"*). Mức 1: after 4 / before 4; mức 2: after 3 / before 3 / between 2; mức 3: after 1 / before 1 / between 2 / one more 2 / one less 2. `side` để cân bằng: after / more = phải, before / less = trái, between = không có bên.
+- **T7:** 26 câu đố viết sẵn (16 câu số ≤ 10, 10 câu số tới 20), 6 nhân vật (Tom, Anna, Dad, Mum, Grandpa, Grandma) và 10 loại đồ đều có emoji; số ≥ 2 (không có "1 apples"). Câu hỏi *more / fewer* chọn khi sinh lượt (một câu đố dùng được cả hai chiều), 4 / 4. Mức 1: số ≤ 10, chênh ≥ 2, đồ vật hiện sẵn; mức 2: số ≤ 10, đồ vật hiện khi sai / sau khi đúng; mức 3: thêm câu đố số tới 20 (≥ 3 câu) **khi bé đã có ⭐⭐ ở T5**, chưa có thì vẫn ≤ 10. Câu đố hiện chữ (Andika) + dòng tiếng Việt, Olly đọc karaoke (🔊 đọc lại karaoke). Sai lần 1: *"Let's count! Tom has five apples. Anna has three apples."* + hiện đồ vật. Câu bé đọc: *"Tom has more apples."*. Bản ghi: `math-t7/more/p1`.
+- Câu hỏi mới có phụ đề: `smallestFirst`, `biggestFirst`, `comesAfter`, `comesBefore`, `between`, `oneMore`, `oneLess`, câu đố T7 (dịch theo tên / đồ vật).
 
 ## 9. Ghi chú tương thích
 - Khu Math không ảnh hưởng 4 khu cũ: bài Math không nằm trong kho `lessons`, không hiện ở Bài học / Kho ảnh / Thư viện bài.

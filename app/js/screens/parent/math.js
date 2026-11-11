@@ -19,6 +19,15 @@ const KIND_VI = {
   't6:diff-tens': 'so số khác chục',
   't6:same-tens': 'so số cùng chục',
   't6:swap-digits': 'so số đổi chỗ chữ số (23 / 32)',
+  't4:asc': 'xếp số nhỏ → lớn',
+  't4:desc': 'xếp số lớn → nhỏ',
+  't5:after': 'số đứng ngay sau',
+  't5:before': 'số đứng ngay trước',
+  't5:between': 'số nằm giữa',
+  't5:more': 'hơn một',
+  't5:less': 'kém một',
+  't7:more': 'câu đố "ai nhiều hơn"',
+  't7:fewer': 'câu đố "ai ít hơn"',
 };
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);

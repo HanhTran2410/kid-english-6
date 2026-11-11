@@ -2,6 +2,7 @@
 // Câu hỏi của Olly chỉ dùng các mẫu trong QUESTIONS → mỗi mẫu có bản dịch (test kiểm tra đủ).
 
 import { LETTERS, WRITE_LINES } from './write/letters.js';
+import { T7_PEOPLE, T7_THINGS } from './math/math.js';
 
 /** ✍️ Tập viết (SPEC-write 5.5, 4): câu Olly nói khi chấm nét / chuyển lượt. */
 const WRITE_VI = {
@@ -36,6 +37,13 @@ export const QUESTIONS = {
   whichFewer: () => 'Which group has fewer?',
   whichSign: () => 'Which sign goes in the middle?',
   makeNumber: (n) => `Make ${n}!`,
+  smallestFirst: () => 'Put the smallest number first.',
+  biggestFirst: () => 'Put the biggest number first.',
+  comesAfter: (n) => `What number comes after ${n}?`,
+  comesBefore: (n) => `What number comes before ${n}?`,
+  between: (n, m) => `What number is between ${n} and ${m}?`,
+  oneMore: (n) => `What is one more than ${n}?`,
+  oneLess: (n) => `What is one less than ${n}?`,
   // ✍️ Viết từ cuối bài Spell (SPEC-write 8.2)
   writeWord: (word) => `Write ${word}. ${[...word].join(' – ')}.`,
 };
@@ -70,11 +78,23 @@ export function translateQuestion(en, meaning = '') {
     [/^Which group has fewer\?$/, () => 'Nhóm nào ít hơn? Bé đếm từng con rồi chạm nút dưới nhóm đó (bằng nhau thì chạm "= The same").'],
     [/^Which sign goes in the middle\?$/, () => 'Dấu nào điền vào ô giữa: lớn hơn (>), bé hơn (<) hay bằng (=)? Bé chạm dấu trong khay.'],
     [/^Write ([a-z]+)\. /, (x) => `Bé chép từ "${x}"${m} vào các ô: mỗi ô một chữ, viết theo chữ mờ. Viết xong bấm ✅.`],
+    [/^Put the smallest number first\.$/, () => 'Bé chạm số nhỏ nhất trước, rồi lần lượt các số lớn dần, xếp vào hàng (first → next → last).'],
+    [/^Put the biggest number first\.$/, () => 'Bé chạm số lớn nhất trước, rồi lần lượt các số nhỏ dần, xếp vào hàng (first → next → last).'],
+    [/^What number comes after (.+)\?$/, (x) => `Số nào đứng ngay sau số ${x}? Bé chạm số đó trên tia số (ếch nhảy 1 bước sang phải).`],
+    [/^What number comes before (.+)\?$/, (x) => `Số nào đứng ngay trước số ${x}? Bé chạm số đó trên tia số (ếch nhảy 1 bước sang trái).`],
+    [/^What number is between (.+) and (.+)\?$/, (x, y) => `Số nào nằm giữa ${x} và ${y}? Bé chạm số đó trên tia số.`],
+    [/^What is one more than (.+)\?$/, (x) => `Số nào hơn ${x} một? Hơn một = nhảy 1 bước tới trước (sang phải).`],
+    [/^What is one less than (.+)\?$/, (x) => `Số nào kém ${x} một? Kém một = nhảy 1 bước lùi lại (sang trái).`],
+    [/^(\w+) has (\d+) (\w+)\. (\w+) has (\d+) \w+\. Who has (more|fewer)\?$/, (a, x, thing, b, y, ask) => {
+      const vi = (name) => T7_PEOPLE[name]?.vi ?? name;
+      const t = T7_THINGS[thing]?.vi ?? thing;
+      return `${vi(a)} có ${x} ${t}. ${vi(b)} có ${y} ${t}. Ai có ${ask === 'more' ? 'nhiều' : 'ít'} hơn? Bé chạm vào người đúng.`;
+    }],
     [/^Make (.+)!$/, (x) => `Bé xếp số ${x}: thêm thanh chục và khối lẻ, rồi bấm ✅.`],
   ];
   for (const [re, fn] of rules) {
     const hit = s.match(re);
-    if (hit) return fn(hit[1]);
+    if (hit) return fn(...hit.slice(1));
   }
   return meaning ? `Nghĩa: ${meaning}` : '';
 }

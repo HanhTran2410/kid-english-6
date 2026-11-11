@@ -401,7 +401,7 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.7.1 *(xong)* | ✍️ đủ 26 chữ a–z (thêm o q e s f i j u y r n h b p k v w x): nét theo bảng SPEC-write 6.4, câu hướng dẫn Anh / Việt từng chữ và từng nét, chữ i / j có nét chấm (nét cuối, chỉ cần chạm); bảng 26 chữ để bố mẹ duyệt hình (WR-20) |
 | 0.7.2 *(xong)* | ✍️ Viết từ cuối bài Spell (từ đã xếp đúng 2 lần liên tiếp, tối đa 2 từ; mỗi chữ một ô có chữ mờ, 🧽 từng ô, ✅ hiện từ in đúng, ghi số lần viết; tắt được ở Cài đặt); Góc bố mẹ → ✍️ Tập viết: lưới 26 chữ + "Chữ hay sai" kèm câu nhắc bé; chữ đã 3 sao học lại ở mức sau B1 → C1 → C2 (C2 không có chấm bắt đầu) |
 | 0.8 | Quest 1 → 4 |
-| 0.9 | 🔢 Math-b = T4 Xếp số, T5 Tia số · Math-c = T7 Đọc và so sánh |
+| 0.9.0 *(xong)* | 🔢 Math-b + Math-c ([SPEC-math.md](SPEC-math.md); bố mẹ chọn làm trước Quest 2026-11-11): T4 Xếp số (first / next / next / last, mức 3 lớn → nhỏ), T5 Tia số (ếch nhảy từng bước; after / before → between → one more / one less), T7 Đọc và so sánh (câu đố 3 câu karaoke, chạm nhân vật; số tới 20 khi đã có ⭐⭐ ở T5) — danh sách Toán đủ T1 → T7 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 
 ## 8. Kiểm tra

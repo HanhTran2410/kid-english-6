@@ -172,3 +172,92 @@ export function sentenceLine(sentence, showVi) {
   const el = h('div.mt-sentence', {}, h('div.sentence.small', {}, ...words), showVi && sentence.vi ? h('p.sentence-vi', { text: sentence.vi }) : null);
   return { el, words };
 }
+
+// ---------- T4: xếp số (4.4) ----------
+
+/** Hàng 4 chỗ trống có nhãn first / next / next / last + khay 4 thẻ số. `place(card, i)`: thẻ bay vào chỗ i. */
+export function orderBoard(numbers, labels) {
+  const cards = numbers.map((n) => h('button.mt-card.mt-ord', { type: 'button', 'aria-label': String(n), dataset: { n: String(n) } }, h('span.mt-num', { text: String(n) })));
+  const slots = labels.map((label, i) => h('div.mt-oslot', { dataset: { index: String(i) } }, h('span.mt-olabel', { text: label })));
+  return {
+    el: h('div.mt-order', {}, h('div.mt-oslots', {}, ...slots), h('div.mt-tray.mt-otray', {}, ...cards)),
+    cards,
+    slots,
+    place(card, i) {
+      slots[i].append(card);
+      card.classList.add('placed');
+      card.disabled = true;
+    },
+  };
+}
+
+// ---------- T5: tia số + ếch (4.5) ----------
+
+/**
+ * Tia số [from, to], ếch đứng ở `start`. `jump(to, onStep)`: ếch nhảy từng bước (mỗi bước sáng viền số đó một lần),
+ * gọi `onStep(k)` sau bước thứ k (Olly đếm bước). Giảm chuyển động: ếch đổi chỗ không trượt (CSS).
+ */
+export function numberLine([from, to], start) {
+  const ticks = [];
+  for (let n = from; n <= to; n++) ticks.push(h('button.mt-tick', { type: 'button', 'aria-label': String(n), dataset: { n: String(n) } }, h('span.mt-tick-num', { text: String(n) })));
+  const frog = h('span.mt-frog', { text: '🐸', 'aria-hidden': 'true' });
+  const track = h('div.mt-track', {}, ...ticks, frog);
+  const el = h('div.mt-numline', {}, track);
+  let at = start;
+  const place = () => {
+    const tick = ticks[at - from];
+    if (!tick) return;
+    frog.style.left = `${tick.offsetLeft + tick.offsetWidth / 2}px`;
+    frog.dataset.at = String(at);
+  };
+  const onResize = () => {
+    if (!el.isConnected) {
+      window.removeEventListener('resize', onResize);
+      return;
+    }
+    place();
+  };
+  window.addEventListener('resize', onResize);
+  const line = {
+    el,
+    ticks,
+    frog,
+    get at() { return at; },
+    /** Đặt ếch ngay (không nhảy). */
+    set(n) {
+      at = n;
+      place();
+    },
+    async jump(target, onStep) {
+      const dir = Math.sign(target - at);
+      let k = 0;
+      while (at !== target) {
+        at += dir;
+        k++;
+        place();
+        const tick = ticks[at - from];
+        tick.classList.remove('step');
+        void tick.offsetWidth;
+        tick.classList.add('step');
+        await onStep(k);
+      }
+      return k;
+    },
+  };
+  requestAnimationFrame(place);
+  return line;
+}
+
+// ---------- T7: nhân vật + đồ vật (4.7) ----------
+
+/** Thẻ nhân vật chạm được; đồ vật đúng số lượng, cùng cỡ ở hai bên, nhóm 5 cách nhau; `showThings()` hiện đồ. */
+export function personCard(p, thingEmoji, side) {
+  const things = h('div.mt-pthings', { hidden: true, 'aria-label': `${p.n}` },
+    ...Array.from({ length: p.n }, () => h('span.mt-pthing', { text: thingEmoji })));
+  const card = h('button.mt-person', { type: 'button', 'aria-label': p.name, dataset: { side, name: p.name } },
+    h('span.mt-pface', { text: p.emoji }), h('span.mt-pname', { text: p.name }), things);
+  card.showThings = () => {
+    things.hidden = false;
+  };
+  return card;
+}

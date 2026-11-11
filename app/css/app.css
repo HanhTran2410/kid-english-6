@@ -739,3 +739,35 @@ circle.wr-ok { fill: #2f9e44; }
   .wr-cell .wr-pad { height: clamp(120px, 22vh, 170px); }
   .wr-cell-clear { width: 44px; height: 44px; font-size: 20px; }
 }
+
+/* ---------- 🔢 Math-b / c (SPEC-math 4.4, 4.5, 4.7): xếp số, tia số + ếch, câu đố ---------- */
+.mt-order { display: grid; justify-items: center; gap: 22px; }
+.mt-oslots { display: flex; gap: clamp(8px, 2vw, 18px); }
+.mt-oslot { position: relative; display: grid; place-items: center; width: clamp(76px, 15vmin, 120px); height: clamp(90px, 17vmin, 130px); border-radius: 22px; border: 4px dashed rgba(38, 33, 92, 0.25); background: rgba(255, 255, 255, 0.5); }
+.mt-olabel { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); font-size: 16px; font-weight: 800; color: var(--ink-soft); }
+.mt-otray { min-height: clamp(90px, 17vmin, 130px); flex-wrap: wrap; }
+.mt-card.mt-ord { min-width: clamp(76px, 15vmin, 120px); min-height: clamp(76px, 15vmin, 120px); padding: 8px 10px; place-content: center; }
+.mt-card.mt-ord .mt-num { font-size: clamp(44px, 8vmin, 68px); }
+.mt-oslot .mt-card.mt-ord { box-shadow: none; background: #d3f9d8; }
+.mt-numline { width: min(100%, 1000px); overflow: hidden; padding: 70px 8px 6px; }
+.mt-track { position: relative; display: flex; gap: 4px; justify-content: space-between; border-top: 5px solid var(--ink); padding-top: 8px; }
+.mt-tick { position: relative; display: grid; place-items: center; flex: 1 1 0; min-width: 0; max-width: 72px; min-height: 64px; padding: 4px 2px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); font-size: clamp(22px, 4vmin, 34px); font-weight: 800; }
+.mt-tick::before { content: ''; position: absolute; top: -14px; left: 50%; width: 4px; height: 12px; background: var(--ink); transform: translateX(-50%); }
+.mt-tick.given { outline: 4px solid var(--sky); }
+.mt-tick.step { animation: mt-step 0.4s; }
+@keyframes mt-step { 50% { outline: 4px solid var(--yellow); } }
+.mt-frog { position: absolute; top: -66px; transform: translateX(-50%); font-family: var(--emoji); font-size: 46px; line-height: 1; transition: left 280ms cubic-bezier(0.3, -0.4, 0.4, 1.4); pointer-events: none; }
+.mt-puzzle { display: grid; justify-items: center; gap: 4px; max-width: 900px; }
+.mt-people { align-items: stretch; }
+.mt-person { display: grid; justify-items: center; align-content: start; gap: 6px; min-width: clamp(140px, 30vmin, 260px); padding: 14px; border-radius: 28px; background: var(--card); box-shadow: var(--shadow); }
+.mt-pface { font-family: var(--emoji); font-size: clamp(56px, 10vmin, 84px); line-height: 1; }
+.mt-pname { font-size: clamp(22px, 4vmin, 30px); font-weight: 800; font-family: var(--read-font); }
+.mt-pthings { display: flex; flex-wrap: wrap; justify-content: center; gap: 2px; max-width: 230px; }
+.mt-pthing { font-family: var(--emoji); font-size: 26px; line-height: 1.1; }
+.mt-pthing:nth-child(5n) { margin-right: 10px; }
+@media (max-width: 600px) {
+  .mt-tick { font-size: 22px; }
+  .mt-person { min-width: 0; flex: 1; padding: 10px 6px; }
+  .mt-pthing { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .mt-frog { transition: none; } }

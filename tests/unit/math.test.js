@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
   BUILTIN_MATH, MATH_ITEMS, makeItems, seeded, roundProblems, sentenceOf, numberWord, readPlan, unlockedLevel, weakKind,
   kindsAt, THINGS, THING_PAIRS, isNear10, tensOf, onesOf, pairLineT2, blocksLine, tensLine, explainVi, itemRef, signsAt,
+  MATH_BY_ID, orderedT4, T7_PUZZLES, T7_PEOPLE, T7_THINGS, puzzleText, t7Item, numberWord as word,
 } from '../../app/js/math/math.js';
 import { starsFor, RESULT } from '../../app/js/progress.js';
 import { QUESTIONS, translateQuestion } from '../../app/js/captions.js';
@@ -29,8 +30,9 @@ test('đọc số thành chữ tới 100', () => {
   assert.throws(() => numberWord(101));
 });
 
-test('bài đợt Math-a: T1, T2, T3, T6 (khóa math-t*)', () => {
-  assert.deepEqual(BUILTIN_MATH.map((l) => l.key), ['t1', 't2', 't3', 't6']);
+test('bài Math-a / b / c: T1 → T7 theo thứ tự (khóa math-t*)', () => {
+  assert.deepEqual(BUILTIN_MATH.map((l) => l.key), ['t1', 't2', 't3', 't4', 't5', 't6', 't7']);
+  assert.deepEqual(BUILTIN_MATH.map((l) => l.batch), ['a', 'a', 'a', 'b', 'b', 'a', 'c']);
   for (const l of BUILTIN_MATH) assert.equal(l.id, `math-${l.key}`);
 });
 
@@ -180,10 +182,93 @@ test('sao (6.3): 8/8 độc lập = 3⭐; 7/8 = 2⭐; sai 1 rồi đúng ≠ ind
 });
 
 test('khóa tiến độ mục (6.4) và câu hỏi Math có phụ đề tiếng Việt', () => {
-  const [t1, t2, , t6] = BUILTIN_MATH;
+  const [t1, t2, t6] = ['math-t1', 'math-t2', 'math-t6'].map((id) => MATH_BY_ID.get(id));
   assert.deepEqual(itemRef(t1, { a: 7, b: 4 }), { lessonId: 'math-t1', activity: 'compare', itemId: '7-4' });
   assert.deepEqual(itemRef(t2, { ask: 'more', left: { n: 5 }, right: { n: 3 } }), { lessonId: 'math-t2', activity: 'more', itemId: '5-3' });
   assert.deepEqual(itemRef(t6, { make: 34 }), { lessonId: 'math-t6', activity: 'make', itemId: '34' });
   for (const q of ['whichBigger', 'whichSmaller', 'whichMore', 'whichFewer', 'whichSign']) assert.ok(translateQuestion(QUESTIONS[q]()), q);
   assert.match(translateQuestion(QUESTIONS.makeNumber(34)), /số 34/);
+});
+
+test('T4 Line them up (4.4): 4 số khác nhau, không cho sẵn đúng thứ tự; mức 1 ≤ 10 cách ≥ 2; mức 3 xếp lớn → nhỏ', () => {
+  for (const level of [1, 2, 3]) {
+    for (const items of rounds('t4', level)) {
+      for (const x of items) {
+        assert.equal(new Set(x.numbers).size, 4);
+        const sorted = [...x.numbers].sort((a, b) => a - b);
+        assert.notEqual(x.numbers.join(), sorted.join());
+        assert.notEqual(x.numbers.join(), [...sorted].reverse().join());
+        assert.equal(x.order, level === 3 ? 'desc' : 'asc');
+        if (level === 1) assert.ok(sorted.every((n, i) => n <= 10 && (!i || n - sorted[i - 1] >= 2)));
+        else assert.ok(sorted.every((n) => n >= 1 && n <= 20));
+      }
+    }
+  }
+  const it = { numbers: [7, 3, 9, 5], order: 'asc' };
+  assert.deepEqual(orderedT4(it), [3, 5, 7, 9]);
+  assert.equal(sentenceOf('t4', it).en, 'The numbers are in order: three, five, seven, nine.');
+  assert.deepEqual(orderedT4({ ...it, order: 'desc' }), [9, 7, 5, 3]);
+  assert.deepEqual(itemRef(MATH_BY_ID.get('math-t4'), it), { lessonId: 'math-t4', activity: 'order-asc', itemId: '3-5-7-9' });
+  for (const q of ['smallestFirst', 'biggestFirst']) assert.ok(translateQuestion(QUESTIONS[q]()), q);
+});
+
+test('T5 Number line (4.5): đủ loại câu theo mức; đáp án đúng 1 bước; không ở mép tia, không vượt 0 / phạm vi; tia 11 (hoặc 7) số', () => {
+  for (const level of [1, 2, 3]) {
+    for (const lineLen of [11, 7]) {
+      const seen = new Set();
+      for (const items of rounds('t5', level, { lineLen })) {
+        for (const x of items) {
+          seen.add(x.ask);
+          const max = level === 1 ? 10 : 20;
+          const [s, e] = x.line;
+          assert.equal(e - s + 1, lineLen);
+          assert.ok(s >= 0 && e <= max, `tia ${s}–${e}`);
+          assert.ok(x.answer > s && x.answer < e, 'đáp án không ở mép tia');
+          assert.ok(x.n >= s && x.n <= e);
+          const step = { after: 1, more: 1, before: -1, less: -1, between: 1 }[x.ask];
+          assert.equal(x.answer, x.n + step);
+          if (x.ask === 'between') assert.equal(x.m, x.n + 2);
+        }
+      }
+      const want = level === 1 ? ['after', 'before'] : level === 2 ? ['after', 'before', 'between'] : ['after', 'before', 'between', 'more', 'less'];
+      assert.deepEqual([...seen].sort(), want.sort(), `mức ${level}`);
+    }
+  }
+  assert.equal(sentenceOf('t5', { ask: 'after', n: 7, answer: 8 }).en, 'Eight comes after seven.');
+  assert.equal(sentenceOf('t5', { ask: 'between', n: 12, m: 14, answer: 13 }).en, 'Thirteen is between twelve and fourteen.');
+  assert.equal(sentenceOf('t5', { ask: 'more', n: 9, answer: 10 }).en, 'Ten is one more than nine.');
+  assert.deepEqual(itemRef(MATH_BY_ID.get('math-t5'), { ask: 'after', n: 7 }), { lessonId: 'math-t5', activity: 'after', itemId: '7' });
+  for (const q of ['comesAfter', 'comesBefore', 'oneMore', 'oneLess']) assert.match(translateQuestion(QUESTIONS[q](7)), /7/, q);
+  assert.match(translateQuestion(QUESTIONS.between(12, 14)), /12 và 14/);
+});
+
+test('T7 Read and compare (4.7, 7): câu đố viết sẵn — người / đồ có hình, số khớp câu, một đáp án; mức 1–2 ≤ 10, mức 3 tới 20 khi đã có ⭐⭐ T5', () => {
+  assert.ok(T7_PUZZLES.length >= 20);
+  for (const p of T7_PUZZLES) {
+    const [[a, x], [b, y]] = p.people;
+    assert.ok(T7_PEOPLE[a] && T7_PEOPLE[b] && a !== b, p.id);
+    assert.ok(T7_THINGS[p.thing], p.id);
+    assert.ok(x >= 2 && y >= 2 && x !== y && x <= 20 && y <= 20, p.id);
+    for (const ask of ['more', 'fewer']) {
+      const it = t7Item(p, ask);
+      const { en, vi } = puzzleText(it);
+      // Số trong câu khớp số người có; đúng một đáp án; answer khớp ask.
+      assert.deepEqual((en.match(/\d+/g) ?? []).map(Number), [x, y], p.id);
+      const win = ask === 'more' ? (x > y ? a : b) : (x < y ? a : b);
+      assert.equal(it.answer, win, p.id);
+      assert.equal(en.split('. ').length, 3, 'câu đố 3 câu');
+      assert.ok(vi && translateQuestion(en).startsWith(vi.replace(/\?$/, '')), p.id);
+      assert.ok(explainVi('t7', it).includes(T7_PEOPLE[win].vi), p.id);
+    }
+  }
+  const max = (items) => Math.max(...items.flatMap((x) => x.people.map((p) => p.n)));
+  for (const items of rounds('t7', 1)) assert.ok(max(items) <= 10 && items.every((x) => Math.abs(x.people[0].n - x.people[1].n) >= 2));
+  for (const items of rounds('t7', 2)) assert.ok(max(items) <= 10);
+  for (const items of rounds('t7', 3)) assert.ok(max(items) <= 10, 'chưa có ⭐⭐ T5 → vẫn ≤ 10');
+  const big = rounds('t7', 3, { allow20: true });
+  assert.ok(big.every((items) => items.filter((x) => Math.max(...x.people.map((p) => p.n)) > 10).length >= 3));
+  for (const items of [...big, ...rounds('t7', 1)]) assert.equal(new Set(items.map((x) => x.id)).size, 8, 'không lặp câu đố');
+  assert.equal(sentenceOf('t7', t7Item(T7_PUZZLES[0], 'more')).en, 'Tom has more apples.');
+  assert.equal(sentenceOf('t7', t7Item(T7_PUZZLES[0], 'fewer')).en, 'Anna has fewer apples.');
+  assert.equal(word(20), 'twenty');
 });

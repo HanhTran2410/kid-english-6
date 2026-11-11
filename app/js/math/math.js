@@ -10,7 +10,10 @@ export const BUILTIN_MATH = [
   { id: 'math-t1', key: 't1', emoji: '🔢', title: 'Bigger or smaller?', titleVi: 'Số nào lớn hơn', batch: 'a' },
   { id: 'math-t2', key: 't2', emoji: '🐘', title: 'Which group has more?', titleVi: 'Nhóm nào nhiều hơn', batch: 'a' },
   { id: 'math-t3', key: 't3', emoji: '🐊', title: 'Hungry crocodile', titleVi: 'Cá sấu > < =', batch: 'a' },
+  { id: 'math-t4', key: 't4', emoji: '📏', title: 'Line them up', titleVi: 'Xếp số', batch: 'b' },
+  { id: 'math-t5', key: 't5', emoji: '🐸', title: 'Number line', titleVi: 'Tia số', batch: 'b' },
   { id: 'math-t6', key: 't6', emoji: '🧱', title: 'Tens and ones', titleVi: 'Chục và đơn vị', batch: 'a' },
+  { id: 'math-t7', key: 't7', emoji: '📖', title: 'Read and compare', titleVi: 'Đọc và so sánh', batch: 'c' },
 ];
 export const MATH_BY_ID = new Map(BUILTIN_MATH.map((l) => [l.id, l]));
 export const isMathLesson = (lessonId) => String(lessonId ?? '').startsWith('math-');
@@ -109,6 +112,9 @@ export function kindsAt(key, level) {
   if (key === 't2') return ['t2:more', 't2:fewer', 't2:same'];
   if (key === 't3') return level >= 2 ? ['t3:greater', 't3:less', 't3:equal'] : ['t3:greater', 't3:less'];
   if (key === 't6') return level === 1 ? ['t6:make'] : level === 2 ? ['t6:diff-tens'] : ['t6:diff-tens', 't6:same-tens', 't6:swap-digits'];
+  if (key === 't4') return level === 3 ? ['t4:desc'] : ['t4:asc'];
+  if (key === 't5') return level === 1 ? ['t5:after', 't5:before'] : level === 2 ? ['t5:after', 't5:before', 't5:between'] : ['t5:after', 't5:before', 't5:between', 't5:more', 't5:less'];
+  if (key === 't7') return ['t7:more', 't7:fewer'];
   return [];
 }
 
@@ -149,8 +155,11 @@ export function kindStats(records) {
 
 // ---------- Luật cân bằng chung (mục 7) ----------
 
-/** Bên của đáp án (T1, T2, T3) để cân bằng trái / phải; null = không có bên (the same, dấu =, T6 tạo số). */
+/** Bên của đáp án để cân bằng trái / phải (T1, T2, T3, T6 so sánh, T7 nhân vật; T5 sau / trước trên tia số);
+ * null = không có bên (the same, dấu =, T6 tạo số, T4 xếp hàng, T5 between). */
 export const sideOf = (item) => item.side ?? null;
+
+const SINGLE_KINDS = new Set(['t6:make', 't4:asc', 't4:desc']);
 
 /** Kiểm tra một lượt theo luật chung. Trả về danh sách lỗi (rỗng = hợp lệ). */
 export function roundProblems(items) {
@@ -169,8 +178,8 @@ export function roundProblems(items) {
   items.forEach((it, i) => {
     pairs.set(it.pair, (pairs.get(it.pair) ?? 0) + 1);
     if (i > 0 && it.pair === items[i - 1].pair) errs.push('lặp ngay mục trước');
-    // T6 mức 1 (tạo số) chỉ có một kiểu câu, không có bên đáp án: không xét.
-    if (i > 0 && it.kind !== 't6:make' && it.kind === items[i - 1].kind && it.ask === items[i - 1].ask && sides[i] === sides[i - 1]) errs.push('hai mục liền giống kiểu câu + vị trí đáp án');
+    // Bài chỉ có một kiểu câu và không có bên đáp án (T6 tạo số, T4 xếp hàng): không xét.
+    if (i > 0 && !SINGLE_KINDS.has(it.kind) && it.kind === items[i - 1].kind && it.ask === items[i - 1].ask && sides[i] === sides[i - 1]) errs.push('hai mục liền giống kiểu câu + vị trí đáp án');
   });
   for (const [p, n] of pairs) if (n > 2) errs.push(`cặp ${p} lặp quá 2 lần`);
   return errs;
@@ -431,15 +440,217 @@ function makeT6(level, rand, { weak = null } = {}) {
   return generate(rand, build, check, weak);
 }
 
+// ---------- T4 — Line them up (Math-b, mục 4.4) ----------
+
+/** Thứ tự đúng của 4 số (asc: nhỏ → lớn; desc: lớn → nhỏ). */
+export const orderedT4 = (item) => [...item.numbers].sort((a, b) => (item.order === 'desc' ? b - a : a - b));
+/** Nhãn chỗ trống (4.4): first / next / next / last. */
+export const SLOT_LABELS = ['first', 'next', 'next', 'last'];
+
+export function sentenceT4(item) {
+  const list = orderedT4(item);
+  return { en: `The numbers are in order: ${list.map(numberWord).join(', ')}.`, vi: `Các số theo thứ tự: ${list.join(', ')}.` };
+}
+
+function makeT4(level, rand) {
+  const max = level === 1 ? 10 : 20;
+  const gap = level === 1 ? 2 : 1; // mức 1: khoảng cách ≥ 2
+  const order = level === 3 ? 'desc' : 'asc'; // mức 3 xếp lớn → nhỏ
+  const one = () => {
+    for (;;) {
+      const set = new Set();
+      while (set.size < 4) set.add(randInt(rand, 1, max));
+      const sorted = [...set].sort((a, b) => a - b);
+      if (sorted.some((x, i) => i && x - sorted[i - 1] < gap)) continue;
+      const numbers = shuffle(rand, sorted);
+      // Không cho sẵn đúng thứ tự (cả xuôi lẫn ngược).
+      if (numbers.join() === sorted.join() || numbers.join() === [...sorted].reverse().join()) continue;
+      return { numbers, order, kind: `t4:${order}`, side: null, pair: sorted.join('-') };
+    }
+  };
+  const check = (items) => items.every((x) => new Set(x.numbers).size === 4 && x.numbers.every((n) => n >= 1 && n <= max));
+  return generate(rand, () => Array.from({ length: MATH_ITEMS }, one), check, null);
+}
+
+// ---------- T5 — Number line (Math-b, mục 4.5) ----------
+
+const T5_ANSWER = { after: 1, more: 1, before: -1, less: -1, between: 1 };
+const T5_SIDE = { after: 'right', more: 'right', before: 'left', less: 'left', between: null };
+export const T5_LINE = 11; // tia số 11 số liên tiếp (iPhone dọc: 7, xem screens/math.js)
+
+export function sentenceT5(item) {
+  const { ask, n, m, answer: x } = item;
+  const X = cap(numberWord(x));
+  if (ask === 'after') return { en: `${X} comes after ${numberWord(n)}.`, vi: `${x} đứng ngay sau ${n}.` };
+  if (ask === 'before') return { en: `${X} comes before ${numberWord(n)}.`, vi: `${x} đứng ngay trước ${n}.` };
+  if (ask === 'between') return { en: `${X} is between ${numberWord(n)} and ${numberWord(m)}.`, vi: `${x} nằm giữa ${n} và ${m}.` };
+  if (ask === 'more') return { en: `${X} is one more than ${numberWord(n)}.`, vi: `${x} là số hơn ${n} một.` };
+  return { en: `${X} is one less than ${numberWord(n)}.`, vi: `${x} là số kém ${n} một.` };
+}
+
+/**
+ * @param {{ weak?: string|null, lineLen?: number }} opts `lineLen`: số số trên tia (11; màn hẹp 7)
+ */
+function makeT5(level, rand, { weak = null, lineLen = T5_LINE } = {}) {
+  const max = level === 1 ? 10 : 20;
+  const base = level === 1
+    ? ['t5:after', 't5:after', 't5:after', 't5:after', 't5:before', 't5:before', 't5:before', 't5:before']
+    : level === 2
+      ? ['t5:after', 't5:after', 't5:after', 't5:before', 't5:before', 't5:before', 't5:between', 't5:between']
+      : ['t5:after', 't5:before', 't5:between', 't5:between', 't5:more', 't5:more', 't5:less', 't5:less'];
+  const one = (kind) => {
+    const ask = kind.slice(3);
+    for (let tries = 0; tries < 200; tries++) {
+      const n = randInt(rand, 0, max);
+      const m = ask === 'between' ? n + 2 : null;
+      const answer = n + T5_ANSWER[ask];
+      if (answer < 0 || answer > max || (m != null && m > max)) continue;
+      // Tia số: `lineLen` số liên tiếp trong [0, max], chứa n (và m), đáp án không nằm ở mép tia.
+      const starts = [];
+      for (let s = 0; s + lineLen - 1 <= max; s++) {
+        const e = s + lineLen - 1;
+        if (answer > s && answer < e && n >= s && n <= e && (m == null || m <= e)) starts.push(s);
+      }
+      if (!starts.length) continue;
+      const s = pick(rand, starts);
+      return { ask, n, m, answer, line: [s, s + lineLen - 1], kind, side: T5_SIDE[ask], pair: `${ask}-${n}` };
+    }
+    return null;
+  };
+  const build = (w) => {
+    const kinds = kindPlan(rand, base, w);
+    const items = kinds.map(one);
+    return items.every(Boolean) ? items : null;
+  };
+  const check = (items) => items.every((x) => x.line[0] >= 0 && x.line[1] <= max && x.answer > x.line[0] && x.answer < x.line[1]);
+  return generate(rand, build, check, weak);
+}
+
+// ---------- T7 — Read and compare (Math-c, mục 4.7): câu đố viết sẵn ----------
+
+/** Nhân vật (có hình) và tên tiếng Việt khi dịch. */
+export const T7_PEOPLE = {
+  Tom: { emoji: '👦', vi: 'Tom' },
+  Anna: { emoji: '👧', vi: 'Anna' },
+  Dad: { emoji: '👨', vi: 'Bố' },
+  Mum: { emoji: '👩', vi: 'Mẹ' },
+  Grandpa: { emoji: '👴', vi: 'Ông' },
+  Grandma: { emoji: '👵', vi: 'Bà' },
+};
+/** Đồ vật (số nhiều, có hình). */
+export const T7_THINGS = {
+  apples: { emoji: '🍎', vi: 'quả táo' },
+  balls: { emoji: '⚽', vi: 'quả bóng' },
+  cars: { emoji: '🚗', vi: 'chiếc ô tô' },
+  books: { emoji: '📕', vi: 'quyển sách' },
+  sweets: { emoji: '🍬', vi: 'cái kẹo' },
+  flowers: { emoji: '🌸', vi: 'bông hoa' },
+  stars: { emoji: '⭐', vi: 'ngôi sao' },
+  cookies: { emoji: '🍪', vi: 'cái bánh quy' },
+  ducks: { emoji: '🦆', vi: 'con vịt' },
+  fish: { emoji: '🐟', vi: 'con cá' },
+};
+/**
+ * Câu đố (4.7): hai người, một loại đồ, số ≥ 2 (không có "1 apples"), không bằng nhau. Câu hỏi more / fewer chọn khi
+ * sinh lượt nên một câu đố dùng được cả hai chiều.
+ */
+export const T7_PUZZLES = [
+  { id: 'p1', people: [['Tom', 5], ['Anna', 3]], thing: 'apples' },
+  { id: 'p2', people: [['Anna', 4], ['Tom', 7]], thing: 'balls' },
+  { id: 'p3', people: [['Dad', 6], ['Mum', 2]], thing: 'cars' },
+  { id: 'p4', people: [['Mum', 8], ['Dad', 5]], thing: 'books' },
+  { id: 'p5', people: [['Grandpa', 3], ['Grandma', 9]], thing: 'flowers' },
+  { id: 'p6', people: [['Grandma', 7], ['Grandpa', 4]], thing: 'stars' },
+  { id: 'p7', people: [['Tom', 2], ['Dad', 6]], thing: 'cookies' },
+  { id: 'p8', people: [['Anna', 9], ['Mum', 6]], thing: 'ducks' },
+  { id: 'p9', people: [['Tom', 10], ['Grandma', 8]], thing: 'sweets' },
+  { id: 'p10', people: [['Mum', 3], ['Anna', 5]], thing: 'fish' },
+  { id: 'p11', people: [['Dad', 4], ['Tom', 9]], thing: 'apples' },
+  { id: 'p12', people: [['Grandpa', 8], ['Anna', 2]], thing: 'balls' },
+  { id: 'p13', people: [['Grandma', 5], ['Tom', 6]], thing: 'cars' },
+  { id: 'p14', people: [['Anna', 7], ['Dad', 10]], thing: 'stars' },
+  { id: 'p15', people: [['Mum', 9], ['Grandpa', 7]], thing: 'cookies' },
+  { id: 'p16', people: [['Tom', 3], ['Mum', 4]], thing: 'flowers' },
+  // Số tới 20 (mức 3, sau khi bé có ⭐⭐ ở T5).
+  { id: 'q1', people: [['Tom', 12], ['Anna', 15]], thing: 'stars' },
+  { id: 'q2', people: [['Dad', 18], ['Mum', 11]], thing: 'apples' },
+  { id: 'q3', people: [['Grandma', 14], ['Grandpa', 16]], thing: 'cookies' },
+  { id: 'q4', people: [['Anna', 20], ['Tom', 13]], thing: 'balls' },
+  { id: 'q5', people: [['Mum', 9], ['Dad', 17]], thing: 'sweets' },
+  { id: 'q6', people: [['Grandpa', 19], ['Anna', 11]], thing: 'flowers' },
+  { id: 'q7', people: [['Tom', 16], ['Grandma', 10]], thing: 'ducks' },
+  { id: 'q8', people: [['Dad', 12], ['Tom', 14]], thing: 'fish' },
+  { id: 'q9', people: [['Anna', 13], ['Mum', 18]], thing: 'books' },
+  { id: 'q10', people: [['Grandma', 15], ['Dad', 11]], thing: 'cars' },
+];
+export const T7_BY_ID = new Map(T7_PUZZLES.map((p) => [p.id, p]));
+const puzzleMax = (p) => Math.max(p.people[0][1], p.people[1][1]);
+
+/** Câu đố (Olly đọc karaoke): "Tom has 5 apples. Anna has 3 apples. Who has more?" + dòng dịch. */
+export function puzzleText(item) {
+  const [[a, x], [b, y]] = item.people.map((p) => [p.name, p.n]);
+  const t = T7_THINGS[item.thing];
+  const vi = (name) => T7_PEOPLE[name].vi;
+  return {
+    en: `${a} has ${x} ${item.thing}. ${b} has ${y} ${item.thing}. Who has ${item.ask}?`,
+    vi: `${vi(a)} có ${x} ${t.vi}. ${vi(b)} có ${y} ${t.vi}. Ai có ${item.ask === 'more' ? 'nhiều' : 'ít'} hơn?`,
+  };
+}
+
+export function sentenceT7(item) {
+  const t = T7_THINGS[item.thing];
+  return item.ask === 'more'
+    ? { en: `${item.answer} has more ${item.thing}.`, vi: `${T7_PEOPLE[item.answer].vi} có nhiều ${t.vi} hơn.` }
+    : { en: `${item.answer} has fewer ${item.thing}.`, vi: `${T7_PEOPLE[item.answer].vi} có ít ${t.vi} hơn.` };
+}
+
+/** Một mục T7 từ câu đố + câu hỏi. */
+export function t7Item(p, ask) {
+  const people = p.people.map(([name, n]) => ({ name, emoji: T7_PEOPLE[name].emoji, n }));
+  const win = ask === 'more' ? (people[0].n > people[1].n ? 0 : 1) : (people[0].n < people[1].n ? 0 : 1);
+  return { id: p.id, people, thing: p.thing, ask, answer: people[win].name, kind: `t7:${ask}`, side: win === 0 ? 'left' : 'right', pair: p.id };
+}
+
+/**
+ * Mức 1: số ≤ 10, chênh ≥ 2, đồ vật luôn hiện; mức 2: số ≤ 10, đồ vật hiện khi sai; mức 3: thêm câu đố số tới 20
+ * khi `allow20` (bé đã có ⭐⭐ ở T5, 4.7), không thì vẫn ≤ 10.
+ */
+function makeT7(level, rand, { weak = null, allow20 = false } = {}) {
+  const pool = T7_PUZZLES.filter((p) => {
+    const [x, y] = p.people.map((q) => q[1]);
+    if (level === 1) return puzzleMax(p) <= 10 && Math.abs(x - y) >= 2;
+    if (level === 2 || !allow20) return puzzleMax(p) <= 10;
+    return true;
+  });
+  const build = (w) => {
+    const kinds = kindPlan(rand, ['t7:more', 't7:more', 't7:more', 't7:more', 't7:fewer', 't7:fewer', 't7:fewer', 't7:fewer'], w);
+    let chosen = shuffle(rand, pool).slice(0, MATH_ITEMS);
+    // Mức 3 có số tới 20: ít nhất 3 câu đố số lớn.
+    if (level === 3 && allow20) {
+      const big = shuffle(rand, pool.filter((p) => puzzleMax(p) > 10)).slice(0, 4);
+      const small = shuffle(rand, pool.filter((p) => puzzleMax(p) <= 10)).slice(0, MATH_ITEMS - big.length);
+      chosen = shuffle(rand, [...big, ...small]);
+    }
+    return chosen.map((p, i) => t7Item(p, kinds[i].slice(3)));
+  };
+  const check = (items) => {
+    const more = items.filter((x) => x.ask === 'more').length;
+    const left = items.filter((x) => x.side === 'left').length;
+    return more >= 3 && more <= 5 && left >= 3 && left <= 5 && new Set(items.map((x) => x.id)).size === items.length;
+  };
+  return generate(rand, build, check, weak);
+}
+
 // ---------- Chung ----------
 
-const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t6: makeT6 };
-const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t6: sentenceT6 };
+const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t4: makeT4, t5: makeT5, t6: makeT6, t7: makeT7 };
+const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t4: sentenceT4, t5: sentenceT5, t6: sentenceT6, t7: sentenceT7 };
 
 /**
  * 8 mục của một lượt.
- * @param {string} key 't1' | 't2' | 't3' | 't6'
- * @param {{ weak?: string|null, maxGroup?: number }} [opts] `weak`: kiểu hay sai (6.4); `maxGroup`: số đồ tối đa / nhóm (T2)
+ * @param {string} key 't1' … 't7'
+ * @param {{ weak?: string|null, maxGroup?: number, lineLen?: number, allow20?: boolean }} [opts] `weak`: kiểu hay sai (6.4);
+ *   `maxGroup`: số đồ tối đa / nhóm (T2); `lineLen`: số số trên tia (T5); `allow20`: câu đố số tới 20 (T7 mức 3)
  */
 export function makeItems(key, level, rand = Math.random, opts = {}) {
   const make = MAKERS[key];
@@ -452,8 +663,12 @@ export const sentenceOf = (key, item) => SENTENCES[key](item);
 
 /** Khóa tiến độ của mục (mục 6.4): activity + itemId. */
 export function itemRef(lesson, item) {
-  const activity = { t1: 'compare', t2: item.ask, t3: 'sign', t6: item.make != null ? 'make' : 'compare' }[lesson.key];
-  const itemId = item.make != null ? String(item.make) : lesson.key === 't2' ? `${item.left.n}-${item.right.n}` : `${item.a}-${item.b}`;
+  const { key } = lesson;
+  if (key === 't4') return { lessonId: lesson.id, activity: `order-${item.order}`, itemId: orderedT4(item).join('-') };
+  if (key === 't5') return { lessonId: lesson.id, activity: item.ask, itemId: item.m != null ? `${item.n}-${item.m}` : String(item.n) };
+  if (key === 't7') return { lessonId: lesson.id, activity: item.ask, itemId: item.id };
+  const activity = { t1: 'compare', t2: item.ask, t3: 'sign', t6: item.make != null ? 'make' : 'compare' }[key];
+  const itemId = item.make != null ? String(item.make) : key === 't2' ? `${item.left.n}-${item.right.n}` : `${item.a}-${item.b}`;
   return { lessonId: lesson.id, activity, itemId };
 }
 
@@ -479,6 +694,25 @@ export function unlockedLevel(bestByLevel, all = false) {
 
 /** Câu giải thích tiếng Việt khi sai 2 lần (4.1). */
 export function explainVi(key, item) {
+  if (key === 't4') {
+    const word = item.order === 'desc' ? 'lớn nhất' : 'nhỏ nhất';
+    return `Bé tìm số ${word} trong các số còn lại rồi đặt vào chỗ tiếp theo. Thứ tự đúng: ${orderedT4(item).join(', ')}.`;
+  }
+  if (key === 't5') {
+    const { ask, n, m, answer: x } = item;
+    if (ask === 'after') return `Số đứng ngay sau ${n} là ${x}: từ ${n}, ếch nhảy đúng 1 bước sang phải.`;
+    if (ask === 'before') return `Số đứng ngay trước ${n} là ${x}: từ ${n}, ếch nhảy đúng 1 bước sang trái.`;
+    if (ask === 'between') return `Số nằm giữa ${n} và ${m} là ${x}: nó đứng ngay sau ${n} và ngay trước ${m}.`;
+    if (ask === 'more') return `Hơn một nghĩa là nhảy 1 bước tới trước (sang phải): ${n} hơn một là ${x}.`;
+    return `Kém một nghĩa là nhảy 1 bước lùi lại (sang trái): ${n} kém một là ${x}.`;
+  }
+  if (key === 't7') {
+    const [p, q] = item.people;
+    const t = T7_THINGS[item.thing].vi;
+    const vi = (name) => T7_PEOPLE[name].vi;
+    const [hi, lo] = p.n > q.n ? [p, q] : [q, p];
+    return `${vi(p.name)} có ${p.n} ${t}, ${vi(q.name)} có ${q.n} ${t}. ${hi.n} nhiều hơn ${lo.n}, nên ${vi(hi.name)} có nhiều hơn, ${vi(lo.name)} có ít hơn. Câu hỏi là "ai có ${item.ask === 'more' ? 'nhiều' : 'ít'} hơn" → chọn ${vi(item.answer)}.`;
+  }
   if (key === 't2') {
     if (item.answer === 'same') return `Bé đếm từng con: bên trái ${item.left.n}, bên phải ${item.right.n}. Hai bên bằng nhau nên chọn nút "= The same".`;
     const l = item.left;
