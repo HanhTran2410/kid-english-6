@@ -158,14 +158,28 @@ export function dtw(a, b) {
 
 const nearest = (p, list) => list.reduce((best, q) => Math.min(best, dist(p, q)), Infinity);
 
+const AHEAD = 20; // tiến độ chỉ nhảy tối đa 20 điểm mẫu (~40 đơn vị) mỗi bước
+
 /**
- * Điểm `p` rơi vào đâu trên nét mẫu: d = khoảng cách gần nhất, t = tiến độ lớn nhất trong các điểm mẫu gần như gần
- * nhất (nét khép kín / đi lại đường cũ có nhiều điểm trùng chỗ — lấy t lớn nhất).
+ * Nét bé đã đi tới đâu trên nét mẫu (t, 0 → 1): lần theo từng điểm nét bé, mỗi điểm chỉ khớp với điểm mẫu ở phía
+ * trước tiến độ hiện tại (trong bán kính `r`). Nét khép kín (o, bụng b / p) hay đi lại đường cũ (r n m h b p) có
+ * nhiều đoạn mẫu trùng chỗ — đi theo thứ tự thì không nhảy nhầm sang đoạn cuối khi bé mới dừng ở giữa.
  */
-function endOnTemplate(p, T) {
-  const d = nearest(p, T);
-  const t = T.filter((q) => dist(p, q) <= d + 3).reduce((best, q) => Math.max(best, q.t), 0);
-  return { d, t };
+function progressAlong(a, T, r) {
+  let k = 0;
+  for (const p of a) {
+    let best = -1;
+    let bestD = r;
+    for (let j = k; j < Math.min(T.length, k + AHEAD); j++) {
+      const d = dist(p, T[j]);
+      if (d <= bestD) {
+        bestD = d;
+        best = j;
+      }
+    }
+    if (best > k) k = best;
+  }
+  return T[k].t;
 }
 
 /**
@@ -201,13 +215,13 @@ export function judgeStroke(input, tpl, cfg, { guided = false } = {}) {
   const covered = T.map((p) => nearest(p, a) <= cfg.nearR);
   const coverOk = covered.filter(Boolean).length >= cfg.cover * T.length && T.some((p, i) => p.t >= TAIL_T && covered[i]);
   const stayOk = a.filter((p) => nearest(p, T) <= cfg.farR).length >= cfg.stay * a.length;
-  // Đi hết đường còn gồm: điểm cuối nét bé rơi vào đoạn cuối nét mẫu (nét ngắn như gạch ngang t: nửa nét vẫn phủ
+  // Đi hết đường còn gồm: lần theo nét bé thì tới được đoạn cuối nét mẫu (nét ngắn như gạch ngang t: nửa nét vẫn phủ
   // đủ trong bán kính nearR) và gần điểm cuối mẫu (nét gộp hai nét của t dừng ở xa → stray).
-  const end = endOnTemplate(a.at(-1), T);
-  const endOk = end.t >= TAIL_T && dist(a.at(-1), T.at(-1)) <= cfg.farR;
+  const reached = progressAlong(a, T, cfg.nearR);
+  const endOk = reached >= TAIL_T && dist(a.at(-1), T.at(-1)) <= cfg.farR;
   if (!coverOk || !stayOk || !endOk) {
     // Lỡ nhấc tay (5.3): nét đi đúng đường nhưng dừng giữa chừng — điểm cuối nằm ngay trên nét mẫu.
-    return { ok: false, reason: 'stray', lifted: stayOk && end.t < TAIL_T && end.d <= cfg.nearR * 0.8 };
+    return { ok: false, reason: 'stray', lifted: stayOk && reached < TAIL_T && nearest(a.at(-1), T) <= cfg.nearR * 0.8 };
   }
   return { ok: true };
 }

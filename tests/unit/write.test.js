@@ -10,10 +10,10 @@ import {
 } from '../../app/js/write/stroke.js';
 import { emptyItem } from '../../app/js/progress.js';
 import { translateQuestion } from '../../app/js/captions.js';
+import { SOUND_INFO } from '../../app/js/phonics.js';
 import { fakeStroke } from '../write-fake.js';
 
 const { easy, hard } = WRITE_LEVELS;
-const PROTOTYPE = ['c', 'a', 'd', 'l', 't', 'm', 'g', 'z'];
 const judge = (raw, stroke, cfg = easy, opts) => judgeStroke(prepareInput(raw), sampleStroke(stroke), cfg, opts);
 const allStrokes = () => Object.entries(LETTERS).flatMap(([l, info]) => info.strokes.map((s, i) => ({ l, i, s })));
 
@@ -40,8 +40,8 @@ test('cung to < from đi ngược chiều kim đồng hồ: c đi qua phía trê
   assert.ok(start.x > 40 && start.y < 70 && end.x > 40 && end.y > 80, 'từ 2 giờ tới 4 giờ');
 });
 
-test('dữ liệu chữ: 8 chữ prototype, mỗi chữ đúng một nhóm, đủ câu EN / VI, câu EN có phụ đề', () => {
-  assert.deepEqual(Object.keys(LETTERS).sort(), [...PROTOTYPE].sort());
+test('dữ liệu chữ: đủ 26 chữ, mỗi chữ đúng một nhóm, có âm rời, đủ câu EN / VI, câu EN có phụ đề', () => {
+  assert.deepEqual(Object.keys(LETTERS).sort(), [...'abcdefghijklmnopqrstuvwxyz']);
   for (const l of Object.keys(LETTERS)) {
     assert.equal(WRITE_GROUPS.filter((g) => g.letters.includes(l)).length, 1, l);
     assert.equal(WRITE_GROUPS.find((g) => g.letters.includes(l)).id, LETTERS[l].group, l);
@@ -49,9 +49,11 @@ test('dữ liệu chữ: 8 chữ prototype, mỗi chữ đúng một nhóm, đ�
     assert.ok(info.say && info.vi, l);
     assert.equal(info.strokeVi.length, info.strokes.length, l);
     assert.equal(translateQuestion(info.say), info.vi, l);
+    assert.ok(SOUND_INFO[info.sound], `${l}: âm ${info.sound}`);
   }
+  assert.equal(new Set(Object.values(LETTERS).map((x) => x.say)).size, 26, 'câu say riêng từng chữ');
   assert.equal(new Set(WRITE_GROUPS.flatMap((g) => g.letters)).size, 26);
-  assert.deepEqual(LETTER_ORDER, ['c', 'a', 'd', 'g', 'l', 't', 'm', 'z']);
+  assert.deepEqual(LETTER_ORDER, WRITE_GROUPS.flatMap((g) => g.letters));
   for (const line of Object.values(WRITE_LINES)) assert.ok(translateQuestion(line), line);
 });
 
@@ -64,16 +66,23 @@ test('đoạn liền mạch (≤ 0,5), nét trong khung', () => {
   }
 });
 
-test('quy tắc nối nét (6.3): nét sau chạm chữ đã viết ≤ 6; a d g: nét thẳng tiếp xúc bụng, hai đầu bụng cách ≤ 4', () => {
+test('quy tắc nối nét (6.3): nét sau chạm chữ đã viết ≤ 6; chấm cách thân ≥ 12 và nằm trên; a d g q: nét thẳng tiếp xúc bụng (WR-13)', () => {
   for (const [l, info] of Object.entries(LETTERS)) {
     const pts = info.strokes.map((s) => sampleStroke(s, 1).points);
     for (let i = 1; i < pts.length; i++) {
-      if (isDotStroke(info.strokes[i])) continue;
+      if (isDotStroke(info.strokes[i])) {
+        const dot = pts[i][0];
+        const body = pts.filter((_, k) => k !== i).flat();
+        assert.ok(body.every((q) => dist(dot, q) >= 12), `${l}: chấm cách thân ≥ 12`);
+        assert.ok(body.every((q) => dot.y < q.y), `${l}: chấm nằm trên thân`);
+        assert.equal(i, info.strokes.length - 1, `${l}: chấm là nét cuối`);
+        continue;
+      }
       const before = pts.slice(0, i).flat();
       assert.ok(pts[i].some((p) => before.some((q) => dist(p, q) <= 6)), `${l} nét ${i + 1}`);
     }
   }
-  for (const l of ['a', 'd', 'g']) {
+  for (const l of ['a', 'd', 'g', 'q']) {
     const [bowl, stem] = LETTERS[l].strokes;
     const [, cx, , rx] = bowl[0];
     const x = stem[0][1];
@@ -83,24 +92,34 @@ test('quy tắc nối nét (6.3): nét sau chạm chữ đã viết ≤ 6; a d g
   }
 });
 
-test('m: đoạn đi lên trùng đoạn đi xuống và ngắn hơn; chữ cao / thấp / có đuôi đúng dòng kẻ; tách nét đi từ trên xuống, ngang trái → phải', () => {
-  const segs = LETTERS.m.strokes[0];
-  for (let k = 1; k < segs.length; k++) {
-    const [kind, x1, y1, x2, y2] = segs[k];
-    if (kind !== 'line' || y2 >= y1) continue;
-    const [, dx1, dy1, dx2, dy2] = segs[k - 1];
-    assert.equal(x1, dx1);
-    assert.equal(x2, dx2);
-    assert.ok(y1 - y2 < dy2 - dy1, 'lên ngắn hơn xuống');
+test('r n m h b p: một nét, đoạn đi lên trùng đoạn đi xuống và ngắn hơn; chữ cao / thấp / có đuôi đúng dòng kẻ; tách nét đi từ trên xuống, ngang trái → phải', () => {
+  for (const l of ['r', 'n', 'm', 'h', 'b', 'p']) {
+    assert.equal(LETTERS[l].strokes.length, 1, `${l}: một nét liền`);
+    const segs = LETTERS[l].strokes[0];
+    let ups = 0;
+    for (let k = 1; k < segs.length; k++) {
+      const [kind, x1, y1, x2, y2] = segs[k];
+      if (kind !== 'line' || y2 >= y1) continue;
+      ups++;
+      const [pk, dx1, dy1, dx2, dy2] = segs[k - 1];
+      assert.equal(pk, 'line', l);
+      assert.ok(x1 === dx1 && x2 === dx2 && x1 === x2, `${l}: lên trùng đường xuống`);
+      assert.ok(y1 - y2 < dy2 - dy1, `${l}: lên ngắn hơn xuống`);
+    }
+    assert.ok(ups >= 1, `${l}: có đoạn đi ngược lên`);
   }
   const top = (l) => Math.min(...LETTERS[l].strokes.flatMap((s) => sampleStroke(s).points.map((p) => p.y)));
   const bottom = (l) => Math.max(...LETTERS[l].strokes.flatMap((s) => sampleStroke(s).points.map((p) => p.y)));
-  for (const l of ['d', 'l']) assert.ok(top(l) <= 20, l);
+  for (const l of [...'bdfhkl']) assert.ok(top(l) <= 20, `${l}: chữ cao chạm dòng trên`);
   assert.equal(top('t'), 18);
-  for (const l of ['c', 'a', 'm', 'z']) assert.ok(top(l) >= 49 && bottom(l) <= 101, l);
-  assert.ok(bottom('g') >= 130);
+  for (const l of [...'acemnorsuvwxz']) assert.ok(top(l) >= 49 && bottom(l) <= 101, `${l}: chữ thấp`);
+  for (const l of [...'gjpqy']) assert.ok(bottom(l) >= 130, `${l}: có đuôi`);
+  for (const l of [...'ij']) {
+    const stem = sampleStroke(LETTERS[l].strokes[0]).points;
+    assert.ok(Math.min(...stem.map((p) => p.y)) >= 49, `${l}: thân bắt đầu ở dòng giữa`);
+  }
   for (const { l, s } of allStrokes()) {
-    if (l === 'm' || s.length > 1 || s[0][0] !== 'line') continue;
+    if (s.length > 1 || s[0][0] !== 'line') continue;
     const [, x1, y1, x2, y2] = s[0];
     if (y1 === y2) assert.ok(x1 < x2, `${l}: ngang trái → phải`);
     else assert.ok(y1 < y2, `${l}: từ trên xuống`);
@@ -109,6 +128,7 @@ test('m: đoạn đi lên trùng đoạn đi xuống và ngắn hơn; chữ cao 
 
 test('chấm nét — mọi nét của mọi chữ (bảng 12.1, mức Dễ)', () => {
   for (const { l, i, s } of allStrokes()) {
+    if (isDotStroke(s)) continue; // nét chấm: test riêng
     const name = `${l} nét ${i + 1}`;
     assert.deepEqual(judge(fakeStroke(s), s), { ok: true }, `${name}: đúng nét mẫu`);
     assert.equal(judge(fakeStroke(s, { reverse: true }), s).reason, 'reverse', `${name}: đảo ngược`);
@@ -132,6 +152,16 @@ test('nét gộp hai nét của t → stray; viết nét 2 trước nét 1 → s
   assert.equal(r.lifted, false);
   assert.equal(judge(fakeStroke(across), down).reason, 'start');
   assert.equal(judge(fakeStroke(LETTERS.z.strokes[2]), LETTERS.z.strokes[1]).reason, 'start');
+});
+
+test('i, j (WR-05): chạm chấm trước nét thẳng → start; nét chấm của i: chạm đúng / chạm xa / kéo dài', () => {
+  for (const l of ['i', 'j']) {
+    const [stem, dot] = LETTERS[l].strokes;
+    assert.equal(judge([{ x: dot[0][1], y: dot[0][2] }], stem).ignored, true, `${l}: chạm khi cần nét kéo → bỏ qua (không tính sai)`);
+    assert.equal(judge(fakeStroke([['line', dot[0][1], 20, dot[0][1], 40]]), stem).reason, 'start', `${l}: kéo ở chỗ chấm trước → start`);
+    assert.deepEqual(judge([{ x: dot[0][1] + 3, y: dot[0][2] - 2 }], dot), { ok: true }, l);
+    assert.equal(judge(fakeStroke(stem), dot).reason, 'dot', `${l}: kéo nét thẳng khi cần chấm`);
+  }
 });
 
 test('nét chấm: chạm cạnh chấm → đúng; chạm xa → start; kéo nét dài → dot', () => {

@@ -126,7 +126,7 @@ async function recordTurn(db, letter, result, reasons) {
 async function introduce(ctx) {
   const { t, letter, info, layout, signal } = ctx;
   await t.say(`This is ${letter}.`);
-  await t.say(`${letter} says`);
+  await t.say(info.soundSay ?? `${letter} says`);
   await playPhoneme(info.sound, { stage: layout.stage, signal }).catch(() => {});
 }
 
@@ -241,7 +241,12 @@ function runTurn(ctx, turnIndex) {
       }
       if (verdict.ok) {
         play('ding');
-        pad.markDone(i, inkPath);
+        if (templates[i].dot) {
+          inkPath.remove(); // chạm không vẽ ra nét: hiện chấm mẫu màu xanh lá
+          pad.markDone(i, null);
+        } else {
+          pad.markDone(i, inkPath);
+        }
         history.push(i);
         advance();
         return;

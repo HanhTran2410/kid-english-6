@@ -1,7 +1,7 @@
 # SPEC — ✍️ Tập viết (khu Spell, bản 0.7) — Olly English
 
 > Phiên bản spec: **draft2** · Ngày: 2026-11-11 · Dựa trên app 0.5.1 (làm sau Math-a — app 0.6.0 — nên đổi số bản thành 0.7.x) (SPEC.md draft2, mục 3.2)
-> Trạng thái: **đã chốt 2026-11-11**; câu hỏi mục 15 đã chốt (đổi font chữ đọc sang Andika ở 0.7.0). **Đợt W-a0 (prototype 8 chữ) đã làm ở 0.7.0** — ghi chú ở mục 14.1.
+> Trạng thái: **đã chốt 2026-11-11**; câu hỏi mục 15 đã chốt (đổi font chữ đọc sang Andika ở 0.7.0). **Đợt W-a0 (prototype 8 chữ) đã làm ở 0.7.0, W-a (đủ 26 chữ) ở 0.7.1** — ghi chú ở mục 14.1, 14.2.
 >
 > Viết chi tiết phần "Tập viết chữ" và "Viết từ" mà SPEC.md mục 3.2 mới chốt hướng. Các quyết định giữ từ trước:
 > - chấm từng nét theo **điểm bắt đầu**, **hướng**, **độ phủ đường**, **thứ tự nét**, **đủ nét**;
@@ -561,9 +561,9 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 
 | Đợt | Phạm vi | Bản |
 |---|---|---|
-| **W-a0 — prototype** | dữ liệu + bộ chấm + màn một chữ (A, B1, B2, C, phản hồi, tô có dẫn) cho **8 chữ c a d l t m g z** · tab Tập viết hiện 8 chữ này · ghi nét thử · cài đặt độ dễ + ưu tiên bút · sao, tiến độ chữ · đổi font chữ đọc sang Andika (mục 6.5) | 0.7.0 |
+| **W-a0 — prototype** *(xong)* | dữ liệu + bộ chấm + màn một chữ (A, B1, B2, C, phản hồi, tô có dẫn) cho **8 chữ c a d l t m g z** · tab Tập viết hiện 8 chữ này · ghi nét thử · cài đặt độ dễ + ưu tiên bút · sao, tiến độ chữ · đổi font chữ đọc sang Andika (mục 6.5) | 0.7.0 |
 | — | bé thử thật, chỉnh ngưỡng `WRITE_LEVELS` từ nét đã ghi | — |
-| **W-a — đủ 26 chữ** | thêm 18 chữ còn lại + câu EN / VI · WR-20 ảnh lưới chữ | 0.7.1 |
+| **W-a — đủ 26 chữ** *(xong)* | thêm 18 chữ còn lại + câu EN / VI · WR-20 ảnh lưới chữ | 0.7.1 |
 | **W-b** | Viết từ cuối bài Spell · Góc bố mẹ → Tiến độ chữ · mức sau của chữ đã 3 sao | 0.7.2 |
 
 - 8 chữ prototype phủ đủ kiểu nét: cong (c), bụng + thẳng (a, d), thẳng (l), hai nét chéo nhau (t), xuống – lên lại – vòng (m), đuôi móc (g), nét ngang + xiên (z).
@@ -591,6 +591,14 @@ Tọa độ là bản đầu, chỉnh được khi xem hình thật (WR-20). Cá
 - Lượt đang làm: `app.current.params.ws = { letter, turn, results }`; mở lại bằng ▶ sau khi ra nền → đúng chữ, đúng lượt, nét của lượt dở mất (9.2). Thoát / tải lại → bắt đầu từ bước A.
 - Cài đặt mới: `writeLevel` (easy / medium / hard), `penFirst` (bật sẵn), `writeRecord` (tắt sẵn).
 - Chưa làm ở 0.7.0: WR-05 (i), WR-10 / 21 / 22 / 23 (Viết từ), WR-11 (giảm chuyển động — có code, chưa có test riêng), WR-19 (đổi cỡ khung giữa lượt — có test cỡ khung WR-12), WR-20 (ảnh lưới 26 chữ).
+
+### 14.2 Ghi chú khi làm W-a (0.7.1)
+- Đủ 26 chữ theo bảng 6.4; câu `say` / `vi` theo bảng mục 7, `strokeVi` viết riêng từng nét. Thứ tự lưới theo nhóm (mục 2.1).
+- **q:** chưa có âm rời /k/ riêng cho q, dùng âm **qu** đã có file: Olly nói *"This is q. q and u say /kw/."* (trường `soundSay`).
+- **Đo "đi hết đường" chỉnh lại:** lần theo từng điểm nét bé, mỗi điểm chỉ khớp với điểm mẫu **phía trước** tiến độ hiện tại (tối đa ~40 đơn vị, trong bán kính `nearR`); tới được t ≥ 0,85 mới tính là đi hết. Cách 0.7.0 (lấy điểm mẫu gần điểm cuối nhất) chấm nhầm "đúng" cho nửa đầu nét p: bé dừng ở thân, chỗ đó sát đoạn khép bụng ở cuối nét.
+- **WR-05 (i):** chạm vào chỗ chấm khi đang cần nét thẳng = **chạm → bỏ qua** (theo mục 5.3, không tính sai), không phải `start` như bảng 12.4 ghi. Kéo một nét ở chỗ chấm trước nét thẳng thì mới là `start`. Nét chấm làm đúng → hiện chấm mẫu màu xanh lá (chạm không vẽ ra nét).
+- **WR-20:** `tests/ui/write-sheet.spec.js` vẽ bảng 26 chữ (mỗi nét một màu, số + mũi tên ở điểm bắt đầu) → `test-results/…/bang-26-chu.png`, đính kèm báo cáo Playwright.
+- Bảng test chấm nét 12.1 chạy với mọi nét kéo của 26 chữ; nét chấm (i, j) có test riêng.
 
 ## 15. Câu hỏi còn lại cho bố mẹ
 1. ~~**Font chữ đọc:** Andika hay giữ Nunito?~~ **Đã chốt 2026-11-11:** đổi chữ đọc sang **Andika** ở **0.7.0**; nút, tiêu đề, tiếng Việt giữ Nunito (mục 6.5).

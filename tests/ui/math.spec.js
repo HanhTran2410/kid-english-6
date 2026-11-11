@@ -117,15 +117,18 @@ test('T1: sai 1 lần → hình kiểm chứng, đúng → helped; sai 2 lần �
   await page.getByRole('button', { name: 'Đến lượt con' }).click();
   let r = await round(page);
   await expect.poll(() => spoken(page)).toContain(r.items[0].ask === 'bigger' ? 'Which number is bigger?' : 'Which number is smaller?');
+  // Xem trạng thái trước rồi mới bấm: bấm thừa sau khi mục đã chốt sẽ rơi sang mục sau.
   await expect.poll(async () => {
-    await page.locator(wrongSel('t1', r.items[0])).click({ timeout: 300 }).catch(() => {});
-    return (await round(page)).wrong;
+    const cur = await round(page);
+    if (cur.wrong < 1) await page.locator(wrongSel('t1', r.items[0])).click({ timeout: 300 }).catch(() => {});
+    return cur.wrong;
   }).toBe(1);
   await expect.poll(async () => (await spoken(page)).some((s) => s.startsWith("Let's check!"))).toBe(true);
   await expect(page.locator('.mt-card .mt-block').first()).toBeVisible();
   await expect.poll(async () => {
-    await page.locator(correctSel('t1', r.items[0])).click({ timeout: 300 }).catch(() => {});
-    return (await round(page)).results[0];
+    const cur = await round(page);
+    if (cur.results[0] == null) await page.locator(correctSel('t1', r.items[0])).click({ timeout: 300 }).catch(() => {});
+    return cur.results[0];
   }).toBe('helped');
 
   // Mục 2: sai hai lần. (Phần đọc câu có thể rơi ngay sau mục 1 — readPlan ngẫu nhiên — thì bỏ qua.)
@@ -142,8 +145,9 @@ test('T1: sai 1 lần → hình kiểm chứng, đúng → helped; sai 2 lần �
   await expect(page.locator('.vi-help')).toBeVisible();
   await expect(page.locator(`${correctSel('t1', r.items[1])}.hint`)).toBeVisible();
   await expect.poll(async () => {
-    await page.locator(correctSel('t1', r.items[1])).click({ timeout: 300 }).catch(() => {});
-    return (await round(page)).results[1];
+    const cur = await round(page);
+    if (cur.results[1] == null) await page.locator(correctSel('t1', r.items[1])).click({ timeout: 300 }).catch(() => {});
+    return cur.results[1];
   }).toBe('missed');
   const viCount = (await spoken(page)).filter((s) => /cột khối/.test(s)).length;
   expect(viCount).toBe(1);

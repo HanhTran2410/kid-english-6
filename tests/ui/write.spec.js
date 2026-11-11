@@ -49,13 +49,14 @@ async function waitTurn(page, name) {
   await expect(page.locator('.wr-pad:not(.locked)')).toBeVisible();
 }
 
-test('WR-01: tab Tập viết — 4 nhóm, 8 chữ prototype, ⭐ Tiếp theo ở c', async ({ page }) => {
+test('WR-01: tab Tập viết — 4 nhóm, 26 chữ, ⭐ Tiếp theo ở c', async ({ page }) => {
   await fakeSpeech(page);
   await startApp(page);
   await page.getByRole('button', { name: 'Đánh vần và viết' }).click();
   await page.getByRole('button', { name: '✍️ Tập viết' }).click();
   await expect(page.locator('.wr-group')).toHaveCount(4);
-  await expect(page.locator('.wr-card')).toHaveCount(8);
+  await expect(page.locator('.wr-card')).toHaveCount(26);
+  for (const g of ['curly', 'ladder', 'robot', 'zigzag']) await expect(page.locator(`.wr-group[data-group="${g}"] .wr-card`).first()).toBeVisible();
   await expect(page.locator('.wr-card.next')).toHaveAttribute('data-letter', 'c');
 });
 
@@ -151,6 +152,26 @@ test('WR-07 + WR-08 + WR-18: hai ngón chỉ ngón đầu viết; pointercancel 
   await waitTurn(page, 'B2');
   const rec = await progress(page, 'write/letter/z');
   expect(rec.independent).toBe(1);
+});
+
+test('WR-05: i — chạm chỗ chấm trước nét thẳng → bỏ qua; viết nét thẳng → "Now the dot!"; kéo dài ở chấm → dot; chạm chấm → xong', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openLetter(page, 'i');
+  await toB1(page);
+  const [stem, dot] = LETTERS.i.strokes;
+  const at = { x: dot[0][1], y: dot[0][2] };
+  await draw(page, [at]);
+  await expect(page.locator('#app')).toHaveAttribute('data-stroke', '0');
+  await draw(page, fakeStroke(stem));
+  await expect(page.locator('#app')).toHaveAttribute('data-stroke', '1');
+  await expect.poll(() => spoken(page)).toContain('Now the dot!');
+  await draw(page, fakeStroke([['line', at.x, 0, at.x, 45]]));
+  await expect.poll(() => spoken(page)).toContain('Just tap the dot!');
+  await draw(page, [{ x: at.x + 2, y: at.y + 1 }]);
+  await waitTurn(page, 'B2');
+  const rec = await progress(page, 'write/letter/i');
+  expect([rec.helped, rec.reasons.dot, rec.reasons.start]).toEqual([1, 1, 0]);
 });
 
 test('WR-17: viết thêm sau khi chữ xong → bỏ qua (khung khóa), không đổi kết quả', async ({ page }) => {
