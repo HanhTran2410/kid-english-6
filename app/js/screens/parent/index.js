@@ -11,6 +11,7 @@ import { picturesView } from './pictures.js';
 import { sceneEditView } from './scene-edit.js';
 import { libraryView } from './library.js';
 import { recordingsView } from './recordings.js';
+import { mathView } from './math.js';
 
 const VIEWS = {
   menu: menuView,
@@ -20,6 +21,7 @@ const VIEWS = {
   'scene-edit': sceneEditView,
   library: libraryView,
   recordings: recordingsView,
+  math: mathView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -36,6 +38,7 @@ function menuView(app) {
       item('📚', 'Bài học', () => goParent(app, 'lessons')),
       item('🖼️', 'Kho ảnh', () => goParent(app, 'library')),
       item('🎙️', 'Ghi âm', () => goParent(app, 'recordings')),
+      item('🔢', 'Toán (tiến độ)', () => goParent(app, 'math')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );
@@ -112,6 +115,7 @@ function settingsView(app) {
       viNote),
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test,
       field('Giọng thứ hai (bạn nói chuyện với bé ở khu Nói chuyện)', voiceSel2, 'Máy chỉ có một giọng tiếng Anh thì bạn ấy nói cao giọng hơn.'), test2),
+    section('🔢 Toán', check('mathAllLevels', 'Mở mọi mức của khu Toán (bé chọn được cả mức chưa mở)')),
     section('⏱️ Thời gian', field('Mỗi buổi học', limitSel, 'Hết giờ Olly đi ngủ; bố mẹ nhấn giữ 🌙 3 giây để cho học thêm 15 phút.')),
     section('🎤 Nhận dạng giọng nói', h('label.check', {}, recog, h('span', { text: ' Dùng nhận dạng giọng nói khi bé đọc / nói' })),
       check('recordVoice', 'Ghi âm câu bé nói ở khu Nói chuyện (bố mẹ nghe lại ở 🎙️ Ghi âm; chỉ lưu trên máy này)')),

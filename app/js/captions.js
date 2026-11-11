@@ -14,6 +14,13 @@ export const QUESTIONS = {
   readSentence: () => 'Your turn! Read the sentence!',
   whichPicture: () => 'Which picture shows it?',
   findInPicture: () => 'Where is it? Tap the picture!',
+  // Khu 🔢 Math (SPEC-math 7)
+  whichBigger: () => 'Which number is bigger?',
+  whichSmaller: () => 'Which number is smaller?',
+  whichMore: () => 'Which group has more?',
+  whichFewer: () => 'Which group has fewer?',
+  whichSign: () => 'Which sign goes in the middle?',
+  makeNumber: (n) => `Make ${n}!`,
 };
 
 /**
@@ -37,6 +44,12 @@ export function translateQuestion(en, meaning = '') {
     [/^Find the word: (.+)!$/, (x) => `Tìm chữ "${x}"${m}! Bé chạm vào thẻ đúng.`],
     [/^Spell: (.+)!$/, (x) => `Xếp các ô thành từ "${x}"${m}. Bé chạm từng ô theo đúng thứ tự âm.`],
     [/^What is missing in (.+)\?$/, (x) => `Từ "${x}"${m} còn thiếu ô nào? Bé chạm vào ô đúng.`],
+    [/^Which number is bigger\?$/, () => 'Số nào lớn hơn? Bé chạm vào số lớn hơn.'],
+    [/^Which number is smaller\?$/, () => 'Số nào nhỏ hơn? Bé chạm vào số nhỏ hơn.'],
+    [/^Which group has more\?$/, () => 'Nhóm nào nhiều hơn? Bé đếm từng con rồi chạm nút dưới nhóm đó (bằng nhau thì chạm "= The same").'],
+    [/^Which group has fewer\?$/, () => 'Nhóm nào ít hơn? Bé đếm từng con rồi chạm nút dưới nhóm đó (bằng nhau thì chạm "= The same").'],
+    [/^Which sign goes in the middle\?$/, () => 'Dấu nào điền vào ô giữa: lớn hơn (>), bé hơn (<) hay bằng (=)? Bé chạm dấu trong khay.'],
+    [/^Make (.+)!$/, (x) => `Bé xếp số ${x}: thêm thanh chục và khối lẻ, rồi bấm ✅.`],
   ];
   for (const [re, fn] of rules) {
     const hit = s.match(re);

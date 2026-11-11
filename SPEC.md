@@ -131,7 +131,7 @@ Một bức tranh, Olly đọc lần lượt các câu tả tranh; mũi tên ch�
 ### 3.2. ✏️ Spell / Đánh vần và viết
 - **Nghe – xếp ô**: Olly đọc từ → bé **chạm** ô trong khay để đặt vào chỗ trống kế tiếp (chạm ô đã đặt → về khay; chạm dễ hơn kéo với bé 6 tuổi trên iPad — đã chốt 2026-11-06) — **ô grapheme** (ô *sh* là một miếng, khi đã học âm đó) vào chỗ trống, có ô nhiễu. Ô sai rung, Olly phát **âm** đúng của chỗ đó (file). Chạm ô bất kỳ → nghe âm của ô.
 - **Điền ô thiếu**: *c _ t* + hình.
-- **Tập viết chữ** (chữ thường a–z), làm ở 0.6. Mỗi chữ có dữ liệu nét: danh sách nét theo thứ tự, mỗi nét là đường điểm theo chiều viết.
+- **Tập viết chữ** (chữ thường a–z), làm ở 0.7 — chi tiết ở [SPEC-write.md](SPEC-write.md). Mỗi chữ có dữ liệu nét: danh sách nét theo thứ tự, mỗi nét là đường điểm theo chiều viết.
   - Chấm từng nét theo: **điểm bắt đầu** (trong 15% khung chữ), **hướng** (đi cùng chiều đường mẫu), **phủ đường** (≥ 75% điểm mẫu nằm gần nét bé vẽ), **thứ tự nét**, **đủ nét**.
   - Nhấc tay = hết một nét. Nút xóa nét vừa vẽ. Viết ngược chiều hoặc bắt đầu sai chỗ → nét mờ đi, Olly vẽ mẫu nét đó có mũi tên, bé viết lại nét đó (không chê, không trừ sao lần đầu).
   - Bản đầu **dễ dãi**: ưu tiên đúng điểm bắt đầu và hướng; độ khớp hình chỉ cần đạt ngưỡng thấp. Siết dần khi có dữ liệu thử thật.
@@ -396,9 +396,10 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.4.4 *(xong)* | 🖼️ Kho ảnh (5.6, giống kid-english): ảnh dùng chung theo TỪ / CÂU cho mọi bài (đặt ảnh "cat" một lần, mọi bài có "cat" dùng); Góc bố mẹ → Kho ảnh: mọi từ + câu của các bài, tìm / lọc chưa có ảnh, chọn ≤ 16 mục → 1 prompt ảnh lưới → cắt → lưu, ảnh lẻ, xóa; thay tranh có sẵn của Tả tranh (bản sao giữ câu + prompt vẽ tranh theo các câu, đặt lại mũi tên, tranh gốc ẩn / hiện lại); ảnh theo bài của 0.3.3 tự chuyển vào kho |
 | sau | Truyện ngắn (3.1.6) |
 | 0.5.0 | Talk (3.3): khu 💬 mở, 6 bài hội thoại hằng ngày có sẵn, 3 mức hỗ trợ, bạn hỏi giọng thứ hai, các bước khi bé im lặng, ghi âm + Góc bố mẹ → 🎙️ Ghi âm (6.2), prompt AI bài theo sách có hội thoại |
-| 0.6 | Spell: tập viết chữ + viết từ |
-| 0.7 | Quest 1 → 4 |
-| 0.8 | 🔢 Math (SPEC-math.md, sau Quest — chốt 2026-11-10): Math-a = khu thứ 5 + T1 Số nào lớn hơn, T2 Nhóm nào nhiều hơn, T3 Cá sấu > < =, T6 Chục và đơn vị (tới 100) · Math-b = T4 Xếp số, T5 Tia số · Math-c = T7 Đọc và so sánh |
+| 0.6.0 *(xong)* | 🔢 Math-a ([SPEC-math.md](SPEC-math.md); bố mẹ đổi thứ tự 2026-11-11: làm trước Tập viết và Quest): khu thứ 5 (màn chính 3 + 2), T1 Số nào lớn hơn, T2 Nhóm nào nhiều hơn, T3 Cá sấu > < =, T6 Chục và đơn vị (tới 100); làm mẫu → 8 mục → bé đọc câu → sao, 3 mức (mở khi ≥ 2⭐), ra nền quay lại đúng mục; Góc bố mẹ → 🔢 Toán (tiến độ, kiểu hay sai), Cài đặt → mở mọi mức |
+| 0.7 | Spell: tập viết chữ + viết từ ([SPEC-write.md](SPEC-write.md)) |
+| 0.8 | Quest 1 → 4 |
+| 0.9 | 🔢 Math-b = T4 Xếp số, T5 Tia số · Math-c = T7 Đọc và so sánh |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 
 ## 8. Kiểm tra

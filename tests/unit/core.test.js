@@ -8,8 +8,8 @@ import { openDatabase, STORES } from '../../app/js/db.js';
 import { loadSettings, saveSetting, DEFAULT_SETTINGS, VI_HELP_AFTER, needsVietnameseHelp } from '../../app/js/settings.js';
 import { newSession, addTime, isTimeUp } from '../../app/js/session.js';
 
-test('4 khu học theo thứ tự Read, Spell, Talk, Quest; mỗi khu có tên Anh / Việt, màu, câu mở đầu', () => {
-  assert.deepEqual(ZONES.map((z) => z.id), ['read', 'spell', 'talk', 'quest']);
+test('5 khu học theo thứ tự Read, Spell, Talk, Quest, Math; mỗi khu có tên Anh / Việt, màu, câu mở đầu', () => {
+  assert.deepEqual(ZONES.map((z) => z.id), ['read', 'spell', 'talk', 'quest', 'math']);
   for (const z of ZONES) {
     assert.ok(z.en && z.vi && z.emoji && z.color && z.intro, z.id);
     assert.equal(ZONE_BY_ID.get(z.id), z);

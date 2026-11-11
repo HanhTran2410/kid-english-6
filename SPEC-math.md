@@ -1,7 +1,7 @@
 # SPEC — Khu mới "🔢 Math / Toán" cho Olly English (bé 6 tuổi)
 
 > Phiên bản spec: **draft3** · Ngày: 2026-11-10 · Dựa trên app 0.5.0 (SPEC.md draft2)
-> Trạng thái: **đã chốt 2026-11-10** (mục 11). Làm **sau khu Quest**; phần tới 100 (T6) làm ngay ở đợt đầu.
+> Trạng thái: **đã chốt 2026-11-10** (mục 11). **Math-a đã làm ở 0.6.0 (2026-11-11)** — bố mẹ đổi thứ tự: làm trước Tập viết và Quest. Math-b, Math-c: 0.9.
 >
 > Spec riêng cho bé **6 tuổi** (lớp 1). Phần so sánh bằng hình cho bé 3–5 tuổi nằm ở app kid-english (`C:\kid-english\SPEC-math.md`). Hai app **không dùng chung** bài toán.
 
@@ -334,13 +334,22 @@ T2 theo cùng phạm vi số lượng: mức 1 tối đa 6 đồ / nhóm, mức 
 
 | Đợt | Phạm vi | Mục tiêu |
 |---|---|---|
-| **Math-a** | Khu 🔢 (5 thẻ ở màn chính, 2.1) · danh sách bài · khung bài chung (làm mẫu → 8 mục → đọc câu → sao, mức) · **T1 · T2 · T3 · T6** | Trọn một vòng học so sánh: số, số lượng, ký hiệu, và số tới 100 (chục – đơn vị) |
+| **Math-a** *(xong, 0.6.0)* | Khu 🔢 (5 thẻ ở màn chính, 2.1) · danh sách bài · khung bài chung (làm mẫu → 8 mục → đọc câu → sao, mức) · **T1 · T2 · T3 · T6** | Trọn một vòng học so sánh: số, số lượng, ký hiệu, và số tới 100 (chục – đơn vị) |
 | **Math-b** | **T4 · T5** | Thứ tự số và tia số (có *one more / one less*) |
 | **Math-c** | **T7** | Đọc hiểu câu đố |
 | Sau | *How many more?*, cộng / trừ trong phạm vi 10 | 11.3 |
 
 - Math-a phải xong **cả khung**: làm mẫu, 8 mục, đọc câu, sao, mức, chơi lại, thoát giữa chừng, hết giờ buổi học. Không chỉ giao diện.
-- Thứ tự trong lộ trình SPEC.md mục 7: **sau khu Quest** (đã chốt 2026-11-10).
+- Thứ tự trong lộ trình SPEC.md mục 7: chốt 2026-11-10 là sau khu Quest; **2026-11-11 bố mẹ đổi: Math-a làm ngay (0.6.0)**, Math-b / Math-c ở 0.9.
+
+### 8.1. Ghi chú khi làm Math-a (0.6.0)
+- Code: `js/math/math.js` (hàm thuần: bài, đọc số, bộ sinh 4 bài, luật cân bằng `roundProblems`, `weakKind`, `readPlan`, `unlockedLevel`), `js/math/views.js` (thẻ số, cột khối, que chục, cá sấu SVG, nhóm đồ + dây nối, bàn xếp số), `js/screens/math.js` (danh sách, chọn mức, làm mẫu, 8 mục, đọc câu, sao), `js/screens/parent/math.js`.
+- Mức lưu ở `lesson:math-tX/L1..L3`; `lesson:math-tX` = hoàn thành bài (⭐ Tiếp theo). Bản ghi mục có thêm trường `kind`. Câu bé đọc: `math-tX/read/<câu>`.
+- Cài đặt `mathAllLevels` (Cài đặt → 🔢 Toán) = nút "Mở mọi mức" của 6.2 (ô đánh dấu, tắt lại được).
+- T2: chọn nhóm bằng nút 👆 dưới mỗi nhóm (chạm vào con vật là để đếm); dây nối là đường cong để các cặp cùng hàng không chồng lên nhau.
+- T6 mức 1: nút +10 / +1, chạm thanh / khối đã đặt để bỏ (tối đa 9 thanh, 9 khối), bấm ✅ để chấm; sai lần 1: "You made …" + câu cấu tạo số.
+- Hình kiểm chứng của T6 (que chục) luôn hiện ở mức 2–3 (spec không nói rõ); T1 mức 3 có nút 🔍.
+- `Teacher.waitTap` thêm tùy chọn `onIdle` (gọi một lần) cho 3.5; các khu khác không đổi.
 
 ## 9. Ghi chú tương thích
 - Khu Math không ảnh hưởng 4 khu cũ: bài Math không nằm trong kho `lessons`, không hiện ở Bài học / Kho ảnh / Thư viện bài.

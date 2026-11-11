@@ -9,7 +9,8 @@ export const DEFAULT_SETTINGS = {
   readVietnamese: false, // Olly đọc thêm câu tiếng Việt thành tiếng (SPEC 6.1)
   hiddenScenes: [], // tranh có sẵn đã được thay bằng bản sao (Kho ảnh)
   sceneAutoNext: true, // Tả tranh tự chạy sang câu sau (SPEC-ta-tranh mục 14)
-  showVi: true, // hiện dòng tiếng Việt dưới câu: đọc câu, truyện, tả tranh (SPEC 6.1)
+  showVi: true,
+  mathAllLevels: false, // Góc bố mẹ mở mọi mức của khu Toán (SPEC-math 6.2) // hiện dòng tiếng Việt dưới câu: đọc câu, truyện, tả tranh (SPEC 6.1)
   // Bé sai nhiều lần (VI_HELP_AFTER lần liên tiếp cùng một mục) thì Olly giải thích bằng tiếng Việt (SPEC mục 4.1).
   explainVietnamese: true,
   recordVoice: true,

@@ -138,12 +138,16 @@ export class Teacher {
     setTimeout(() => burst.remove(), 1400);
   }
 
-  /** Chờ bé chạm một trong các phần tử (bỏ qua khi Olly đang nói). 20 giây không chạm → Olly gọi. */
-  waitTap(targets) {
+  /**
+   * Chờ bé chạm một trong các phần tử (bỏ qua khi Olly đang nói). 20 giây không chạm → Olly gọi.
+   * `onIdle` (khu Math, SPEC-math 3.5): thay câu gọi bằng hàm này và chỉ gọi MỘT lần.
+   */
+  waitTap(targets, { onIdle = null } = {}) {
     const { app } = this;
     return new Promise((resolve, reject) => {
       const startedAt = Date.now();
       let calledAt = startedAt;
+      let idleDone = false;
       const cleanup = () => {
         clearInterval(idle);
         for (const t of targets) t.removeEventListener('click', onTap);
@@ -161,9 +165,15 @@ export class Teacher {
       for (const t of targets) t.addEventListener('click', onTap);
       this.signal.addEventListener('abort', onAbort, { once: true });
       const idle = setInterval(() => {
+        if (idleDone) return;
         if (Date.now() - Math.max(app.lastTouchAt, calledAt) > scaled(IDLE_CALL_MS) && !app.speaker.speaking) {
           calledAt = Date.now();
-          this.say('Hello? Tap me!').catch(() => {});
+          if (onIdle) {
+            idleDone = true;
+            onIdle();
+          } else {
+            this.say('Hello? Tap me!').catch(() => {});
+          }
         }
       }, scaled(1000));
     });
