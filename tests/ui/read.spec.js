@@ -47,10 +47,8 @@ test('Read: học hết bài nhóm 1 → sao, ⭐ Tiếp theo sang nhóm 2; 🔊
   await fakeSpeech(page);
   await startApp(page);
 
-  // Khu chưa làm: "Sắp mở", không chuyển màn.
-  await expect(page.locator('.zone-card.soon')).toHaveCount(1);
-  await page.getByRole('button', { name: 'Thử thách' }).click();
-  await expect(page.locator('.toast')).toContainText('Khu này Olly đang chuẩn bị nhé!');
+  // 0.10.0: mọi khu đã mở (Quest mở), không còn thẻ "Sắp mở".
+  await expect(page.locator('.zone-card.soon')).toHaveCount(0);
   await expect(page.locator('.zone-card')).toHaveCount(5);
   await expect(page.locator('.home-version')).toHaveText(/^v\d+\.\d+\.\d+$/);
 

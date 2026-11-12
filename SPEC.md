@@ -188,7 +188,7 @@ Một bức tranh, Olly đọc lần lượt các câu tả tranh; mũi tên ch�
 - Xong cả bài ở mức N → **N sao** (`lesson:<id>/talk`, giữ sao cao nhất). Sao Talk theo mức hỗ trợ, không theo máy nghe (4.2).
 - Tiến độ lượt: `<lessonId>/talk/<dialogueId>-<turnId>`.
 
-### 3.4. 🧩 Quest / Thử thách (0.7, chia nhỏ)
+### 3.4. 🧩 Quest / Thử thách (0.8, chia nhỏ — chi tiết ở [SPEC-quest.md](SPEC-quest.md))
 | Bước | Trò | Ghi chú |
 |---|---|---|
 | Quest 1 | **Read and Do** — đọc chỉ dẫn (*"Put the red ball in the box."*), kéo đồ vật trong tranh | làm trước: dùng lại từ + hình của Read / Spell |
@@ -400,7 +400,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.7.0 *(xong)* | ✍️ Tập viết prototype ([SPEC-write.md](SPEC-write.md) đợt W-a0): tab ✍️ Tập viết trong khu Spell, 8 chữ c a d g l t m z — xem mẫu → tô 2 lượt → tự viết, chấm từng nét (bắt đầu, hướng, đi hết đường, thứ tự), sai 2 lần → tiếng Việt + tô có dẫn, sao; Góc bố mẹ → ✍️ Tập viết (tiến độ, ghi nét thử, xuất JSON), Cài đặt → độ dễ chấm nét + ưu tiên bút; chữ đọc đổi sang font Andika (a, g một tầng) |
 | 0.7.1 *(xong)* | ✍️ đủ 26 chữ a–z (thêm o q e s f i j u y r n h b p k v w x): nét theo bảng SPEC-write 6.4, câu hướng dẫn Anh / Việt từng chữ và từng nét, chữ i / j có nét chấm (nét cuối, chỉ cần chạm); bảng 26 chữ để bố mẹ duyệt hình (WR-20) |
 | 0.7.2 *(xong)* | ✍️ Viết từ cuối bài Spell (từ đã xếp đúng 2 lần liên tiếp, tối đa 2 từ; mỗi chữ một ô có chữ mờ, 🧽 từng ô, ✅ hiện từ in đúng, ghi số lần viết; tắt được ở Cài đặt); Góc bố mẹ → ✍️ Tập viết: lưới 26 chữ + "Chữ hay sai" kèm câu nhắc bé; chữ đã 3 sao học lại ở mức sau B1 → C1 → C2 (C2 không có chấm bắt đầu) |
-| 0.8 | Quest 1 → 4 |
+| 0.10.0 *(xong)* | 🧩 Quest đợt Q-0 + Q-a ([SPEC-quest.md](SPEC-quest.md) draft2, đã chốt 2026-11-11; số bản đổi từ "0.8" sang 0.10.x vì 0.9.0 đã phát hành — chuông "bản mới" chỉ báo khi số bản lớn hơn): tách khung lượt chơi chung từ Toán (`screens/round.js`, Toán không đổi hành vi); khu 🧩 mở; nội dung chỉ từ bài Tập đọc bé đã đọc xong + kiểm tra đọc được từng từ; Quest 1 Read and Do (giới thiệu *put / under*, cầm đồ → ô đích hình mờ, chấm đồ / chỗ / vị trí, câu hai việc); Quest 2 Build a Sentence (thẻ từ, giữ thẻ đúng, Olly xếp nốt); Góc bố mẹ → 🧩 Quest, Cài đặt → Mở mọi mức của Quest |
+| 0.10.1 – 0.10.2 | 🧩 Quest 3 Guess the Word (67 câu đố, bố mẹ duyệt) · Quest 4 Mini Crossword |
 | 0.9.0 *(xong)* | 🔢 Math-b + Math-c ([SPEC-math.md](SPEC-math.md); bố mẹ chọn làm trước Quest 2026-11-11): T4 Xếp số (first / next / next / last, mức 3 lớn → nhỏ), T5 Tia số (ếch nhảy từng bước; after / before → between → one more / one less), T7 Đọc và so sánh (câu đố 3 câu karaoke, chạm nhân vật; số tới 20 khi đã có ⭐⭐ ở T5) — danh sách Toán đủ T1 → T7 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 

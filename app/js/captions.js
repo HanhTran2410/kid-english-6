@@ -44,6 +44,9 @@ export const QUESTIONS = {
   between: (n, m) => `What number is between ${n} and ${m}?`,
   oneMore: (n) => `What is one more than ${n}?`,
   oneLess: (n) => `What is one less than ${n}?`,
+  // 🧩 Quest (SPEC-quest 9)
+  readAndDo: () => 'Read it and do it!',
+  makeSentence: () => 'Make the sentence!',
   // ✍️ Viết từ cuối bài Spell (SPEC-write 8.2)
   writeWord: (word) => `Write ${word}. ${[...word].join(' – ')}.`,
 };
@@ -89,6 +92,13 @@ export function translateQuestion(en, meaning = '') {
       const vi = (name) => T7_PEOPLE[name]?.vi ?? name;
       const t = T7_THINGS[thing]?.vi ?? thing;
       return `${vi(a)} có ${x} ${t}. ${vi(b)} có ${y} ${t}. Ai có ${ask === 'more' ? 'nhiều' : 'ít'} hơn? Bé chạm vào người đúng.`;
+    }],
+    [/^Read it and do it!$/, () => 'Bé đọc câu rồi làm theo: chạm đồ vật, rồi chạm chỗ đặt.'],
+    [/^Make the sentence!$/, () => 'Bé chạm các thẻ từ theo đúng thứ tự để thành câu.'],
+    [/^Put the (\w+) (in|on|under) the (\w+)(?: and the (\w+) (in|on|under) the (\w+))?\.$/, (a, w1, p1, b, w2, p2) => {
+      const pos = { in: 'vào trong', on: 'lên trên', under: 'xuống dưới' };
+      const one = `đặt "${a}" ${pos[w1]} "${p1}"`;
+      return `Câu chỉ dẫn: ${b ? `${one}, và đặt "${b}" ${pos[w2]} "${p2}"` : one}. Bé chạm đồ vật, rồi chạm chỗ đặt.`;
     }],
     [/^Make (.+)!$/, (x) => `Bé xếp số ${x}: thêm thanh chục và khối lẻ, rồi bấm ✅.`],
   ];

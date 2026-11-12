@@ -89,6 +89,11 @@ test('Soạn tranh: ảnh + câu + chạm đặt mũi tên → lưu; dán JSON A
   await expect(page.locator('.scene-art img')).toBeVisible();
   await expect(page.locator('.scene-counter')).toHaveText(/\/3$/);
   await page.getByRole('button', { name: 'Dừng' }).click();
+  // Ở ?fast tranh có thể đã tự chạy tới câu cuối trước khi kịp dừng: lùi về câu 1 rồi mới sang câu 2.
+  await expect.poll(async () => {
+    await page.getByRole('button', { name: 'Câu trước' }).click({ timeout: 300 }).catch(() => {});
+    return page.locator('.scene-counter').textContent();
+  }, { timeout: 20_000 }).toMatch(/^1\//);
   await page.getByRole('button', { name: 'Câu sau' }).click();
   await expect(page.locator('.scene-arrow')).toHaveAttribute('data-from', 'right');
 

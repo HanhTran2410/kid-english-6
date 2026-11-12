@@ -1,20 +1,16 @@
-// Khu 🔢 Math / Toán (SPEC-math.md): danh sách bài (mọi bài mở sẵn, ⭐ "Tiếp theo"), chọn mức đã mở, Olly làm mẫu,
-// 8 mục có chấm (đúng ngay / sai 1 lần → hình kiểm chứng / sai 2 lần → tiếng Việt + đáp án), bé đọc câu ở 2–3 mục
-// (không tính sao), sao + mở mức. Lượt đang dở nằm trong `app.current.params.round` → ra nền rồi quay lại đúng mục (3.6).
+// Khu 🔢 Math / Toán (SPEC-math.md): các kiểu mục của 7 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
+// câu đố) và phần Olly làm mẫu. Khung lượt chơi (chọn mức, 8 mục, đọc câu, sao, ra nền quay lại) ở screens/round.js.
 
-import { h, toast } from '../ui.js';
+import { h } from '../ui.js';
 import { play } from '../speech/sfx.js';
-import { isAbort } from '../timing.js';
-import { mascotElement } from '../mascot.js';
-import { homeButton } from './child.js';
-import { ZONE_BY_ID } from '../zones.js';
-import { activityLayout, Teacher } from '../read/teacher.js';
-import { sentenceResult } from '../read/sentence-stages.js';
 import { QUESTIONS } from '../captions.js';
 import { needsVietnameseHelp } from '../settings.js';
-import { RESULT, getItem, applyResult, recordItem, getLessonProgress, recordLessonDone, starsFor } from '../progress.js';
+import { RESULT } from '../progress.js';
 import {
-  BUILTIN_MATH, MATH_BY_ID, MATH_ITEMS, MAX_LEVEL, makeItems, sentenceOf, itemRef, readPlan, unlockedLevel, weakKind, kindsAt,
+  roundListScreen, roundLessonScreen, levelProgress, showVi, praiseAndRead, shake, waitPick, chooseLoop, ollyTap,
+} from './round.js';
+import {
+  BUILTIN_MATH, MATH_BY_ID, makeItems, sentenceOf, itemRef, kindsAt,
   explainVi, numberWord, pairLineT2, blocksLine, tensLine, signsAt, tensOf, onesOf, cap,
   orderedT4, SLOT_LABELS, puzzleText, T7_THINGS, T7_BY_ID, t7Item, T5_LINE,
 } from '../math/math.js';
@@ -22,8 +18,6 @@ import {
   numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl, orderBoard, numberLine, personCard,
 } from '../math/views.js';
 
-const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
-const say = (app, text) => app.speaker.speak(text).catch(() => {});
 
 /** Mô tả mức trên nút chọn mức. */
 const LEVEL_VI = {
@@ -39,250 +33,38 @@ const LEVEL_VI = {
 /** Tia số: 11 số; iPhone dọc chỉ đủ chỗ cho 7 ô ≥ 48 px (SPEC-math 8.2). */
 const lineLen = () => (window.innerWidth < 600 ? 7 : T5_LINE);
 
+/** Cấu hình khung lượt chơi (screens/round.js) cho khu Toán. */
+const MATH_CONFIG = {
+  zone: 'math',
+  route: 'math-lesson',
+  rootClass: 'math',
+  lessons: BUILTIN_MATH,
+  byId: MATH_BY_ID,
+  allLevelsSetting: 'mathAllLevels',
+  levelVi: (lesson) => LEVEL_VI[lesson.key],
+  kindsAt: (lesson, level) => kindsAt(lesson.key, level),
+  async makeItems(app, lesson, level, weak) {
+    const maxGroup = window.innerWidth < 600 ? 8 : 10;
+    const opts = { weak, maxGroup, lineLen: lineLen(), allow20: lesson.key === 't7' && await allow20(app.db) };
+    return makeItems(lesson.key, level, Math.random, opts);
+  },
+  itemRef,
+  sentenceOf: (lesson, item) => sentenceOf(lesson.key, item),
+  runItem: (ctx, item) => runItem(ctx, item),
+  showSolved: (ctx, item) => showSolved(ctx, item),
+  demoSteps: (dctx, opts) => demoSteps(dctx, opts),
+};
+
+export const mathScreen = (app) => roundListScreen(app, MATH_CONFIG);
+export const mathLessonScreen = (app, params = {}) => roundLessonScreen(app, params, MATH_CONFIG);
+
 /** T7 mức 3 có câu đố số tới 20 khi bé đã có ⭐⭐ ở T5 (4.7). */
 async function allow20(db) {
   const t5 = await levelProgress(db, 'math-t5');
   return Object.values(t5).some((p) => p.bestStars >= 2);
 }
 
-/** Tiến độ từng mức của bài: { 1: {...}, 2: {...}, 3: {...} } (khóa "lesson:<id>/L<n>", SPEC-math 6.2). */
-async function levelProgress(db, lessonId) {
-  const out = {};
-  for (let L = 1; L <= MAX_LEVEL; L++) out[L] = await getLessonProgress(db, lessonId, `L${L}`);
-  return out;
-}
-const bestOf = (levels) => Object.fromEntries(Object.entries(levels).map(([k, p]) => [k, p.bestStars]));
-
-/** Ghi kết quả mục kèm kiểu câu `kind` (6.4). */
-async function recordMath(db, ref, result, kind) {
-  await db.put('progress', { ...applyResult(await getItem(db, ref), result), kind });
-}
-
-/** AbortController con: hủy theo signal cha, hoặc tự hủy (nút ⏭). */
-function linked(signal) {
-  const c = new AbortController();
-  const on = () => c.abort();
-  signal.addEventListener('abort', on, { once: true });
-  c.dispose = () => signal.removeEventListener('abort', on);
-  return c;
-}
-
-/** Nút ▶ / ⏭ (3.4): bấm khi Olly đang nói thì dừng câu đang nói rồi mới làm. */
-function pressed(app, btn, signal) {
-  return new Promise((resolve, reject) => {
-    const onAbort = () => reject(new DOMException('Đã dừng', 'AbortError'));
-    signal.addEventListener('abort', onAbort, { once: true });
-    btn.addEventListener('click', () => {
-      signal.removeEventListener('abort', onAbort);
-      app.speaker.cancel();
-      play('tap');
-      resolve();
-    }, { once: true });
-  });
-}
-
-// ---------- Danh sách bài ----------
-
-export function mathScreen(app) {
-  const info = ZONE_BY_ID.get('math');
-  app.root.className = 'child-screen read-list zone-list-math';
-  const list = h('div.lesson-cards');
-  app.root.append(h('header.child-top', {}, homeButton(app), h('h1.read-title', { text: `${info.emoji} ${info.en}` }), mascotElement('read-olly')), list);
-  say(app, info.intro);
-  (async () => {
-    const lessons = BUILTIN_MATH;
-    const totals = await Promise.all(lessons.map((l) => getLessonProgress(app.db, l.id)));
-    const levels = await Promise.all(lessons.map((l) => levelProgress(app.db, l.id)));
-    const next = lessons.findIndex((_, i) => !totals[i].completedAt);
-    lessons.forEach((l, i) => {
-      // Sao của mức cao nhất đã chơi, kèm nhãn "Mức N" (6.3).
-      const played = [3, 2, 1].find((L) => levels[i][L].plays);
-      list.append(h(`button.lesson-card${i === next ? '.next' : ''}`, {
-        type: 'button', 'aria-label': l.title, dataset: { lesson: l.id },
-        onclick: () => {
-          play('tap');
-          app.go('math-lesson', { lessonId: l.id });
-        },
-      },
-      h('span.lesson-emoji', { text: l.emoji }),
-      h('span.lesson-title', { text: l.title }),
-      h('span.lesson-vi', { text: l.titleVi }),
-      h('span.lesson-stars', { text: starText(played ? levels[i][played].bestStars : 0) }),
-      played ? h('span.mt-level-chip', { text: `Mức ${played}` }) : null,
-      i === next ? h('span.next-badge', { text: '⭐ Tiếp theo' }) : null));
-    });
-  })().catch((err) => {
-    console.error(err);
-    toast('Không đọc được danh sách bài.');
-  });
-}
-
-// ---------- Một bài ----------
-
-export function mathLessonScreen(app, params = {}) {
-  const lesson = MATH_BY_ID.get(params.lessonId);
-  if (!lesson) {
-    queueMicrotask(() => app.go('math'));
-    return null;
-  }
-  const signal = app.startActivity();
-  const layout = activityLayout(app, { onHome: () => app.go('math') });
-  const t = new Teacher(app, { signal, stage: layout.stage, replayBtn: layout.replayBtn });
-  app.root.dataset.lesson = lesson.id;
-  app.root.classList.add('math');
-  const ctx = { app, t, stage: layout.stage, signal, lesson, layout, round: null };
-  runLesson(ctx, params).catch((err) => {
-    if (isAbort(err)) return;
-    console.error(err);
-    toast('Có lỗi khi học bài này.');
-  });
-  return null;
-}
-
-async function runLesson(ctx, params) {
-  const { app, lesson, t, layout } = ctx;
-  const levels = await levelProgress(app.db, lesson.id);
-  const unlocked = unlockedLevel(bestOf(levels), app.settings.mathAllLevels);
-  // Ra nền rồi quay lại (bấm ▶ ở lớp "Bắt đầu") → tiếp lượt đang dở; mở bài mới / tải lại → lượt mới (3.6).
-  let round = params.continueDirectly && params.round?.lessonId === lesson.id ? params.round : null;
-  if (!round) {
-    const level = unlocked > 1 ? await chooseLevel(ctx, unlocked, levels) : 1;
-    const records = await app.db.getAllByIndex('progress', 'lessonId', lesson.id);
-    const weak = weakKind(records, kindsAt(lesson.key, level));
-    const maxGroup = window.innerWidth < 600 ? 8 : 10;
-    const opts = { weak, maxGroup, lineLen: lineLen(), allow20: lesson.key === 't7' && await allow20(app.db) };
-    round = {
-      lessonId: lesson.id, level, items: makeItems(lesson.key, level, Math.random, opts), readAt: readPlan(),
-      index: 0, results: [], wrong: 0, phase: 'demo', firstAtLevel: !levels[level].plays,
-    };
-  }
-  ctx.round = round;
-  if (app.current?.name === 'math-lesson') app.current.params.round = round;
-  app.root.dataset.level = String(round.level);
-
-  if (round.phase === 'demo') {
-    const total = await getLessonProgress(app.db, lesson.id);
-    await runDemo(ctx, { short: total.bestStars > 0 });
-    round.phase = 'item';
-  }
-
-  layout.setProgress(round.index / MATH_ITEMS);
-  while (round.index < MATH_ITEMS) {
-    const item = round.items[round.index];
-    app.root.dataset.index = String(round.index);
-    let line = null;
-    if (round.phase === 'item') {
-      const out = await runItem(ctx, item);
-      round.results[round.index] = out.result;
-      round.wrong = 0;
-      round.phase = round.readAt.includes(round.index) ? 'read' : 'next';
-      line = out.line;
-      const ref = itemRef(lesson, item);
-      recordMath(app.db, ref, out.result, item.kind).catch(() => {});
-    }
-    if (round.phase === 'read') {
-      if (!line) line = showSolved(ctx, item); // quay lại từ nền đúng lúc đang đọc câu
-      await runRead(ctx, item, line);
-    }
-    round.index++;
-    round.phase = 'item';
-    layout.setProgress(round.index / MATH_ITEMS);
-    // Sang mục sau 1,2 giây sau khi Olly nói xong (3.4).
-    await t.pause(1200);
-  }
-  await finishRound(ctx, unlocked);
-}
-
-async function chooseLevel(ctx, unlocked, levels) {
-  const { app, t, stage, lesson } = ctx;
-  const buttons = Array.from({ length: unlocked }, (_, i) => i + 1).map((L) => h(`button.level-btn${L === unlocked ? '.suggested' : ''}`, {
-    type: 'button', 'aria-label': `Mức ${L}`, dataset: { level: String(L) },
-  },
-  h('span.level-en', { text: `Level ${L}` }),
-  h('span.level-vi', { text: LEVEL_VI[lesson.key][L - 1] }),
-  h('span.level-stars', { text: starText(levels[L].bestStars) })));
-  stage.replaceChildren(h('div.level-panel', {},
-    h('p.level-title', {}, h('span', { text: `${lesson.emoji} ${lesson.title}` })),
-    h('p.level-sub', { text: lesson.titleVi }),
-    h('div.level-list', {}, ...buttons)));
-  t.say('Pick a level!').catch(() => {});
-  const picked = await t.waitTap(buttons);
-  play('pop');
-  app.speaker.cancel();
-  return Number(picked.dataset.level);
-}
-
 // ---------- Các kiểu mục ----------
-
-const showVi = (app) => app.settings.showVi !== false;
-
-/** Olly khen (theo kết quả) rồi đọc câu so sánh trọn vẹn (karaoke) — câu ở lại trên màn. */
-async function praiseAndRead(ctx, item, result) {
-  const { app, t, stage, lesson } = ctx;
-  if (result === RESULT.INDEPENDENT) await t.say('Yes! Well done!');
-  else if (result === RESULT.HELPED) await t.say('Yes! Good job!');
-  const s = sentenceOf(lesson.key, item);
-  stage.querySelector('.mt-sentence')?.remove();
-  const line = sentenceLine(s, showVi(app));
-  stage.append(line.el);
-  await t.karaoke(s.en, line.words);
-  if (app.settings.readVietnamese && s.vi) await t.sayVi(s.vi);
-  return line;
-}
-
-const shake = (el) => {
-  el.classList.remove('shake');
-  void el.offsetWidth;
-  el.classList.add('shake');
-};
-
-/** Chờ bé chạm; 20 giây không chạm → nhắc lại câu hỏi MỘT lần, 🔊 sáng viền một lần (3.5). */
-function waitPick(ctx, targets) {
-  const { t, layout } = ctx;
-  return t.waitTap(targets, {
-    onIdle: () => {
-      layout.replayBtn.classList.add('glow');
-      setTimeout(() => layout.replayBtn.classList.remove('glow'), 2500);
-      (t.questionSpeak ? t.questionSpeak() : t.say(t.question ?? '')).catch(() => {});
-    },
-  });
-}
-
-/**
- * Bé chọn (3.2): đúng ngay → INDEPENDENT; sai 1 → `onWrong1` (hình kiểm chứng) rồi hỏi lại; đúng sau đó → HELPED;
- * sai 2 → giải thích tiếng Việt một lần, đáp án sáng, bé chạm đáp án → MISSED. Lần sai lưu ở `round.wrong`
- * (ra nền rồi quay lại vẫn tính).
- */
-async function chooseLoop(ctx, view) {
-  const { app, t, round } = ctx;
-  const { options, correct, question, speak, explain, onWrong1, onPick } = view;
-  await t.ask(question, { speak });
-  for (;;) {
-    if (round.wrong >= 2) correct.classList.add('hint');
-    const picked = await waitPick(ctx, round.wrong >= 2 ? [correct] : options);
-    await onPick?.(picked);
-    if (picked === correct) {
-      play('ding');
-      correct.classList.remove('hint');
-      correct.classList.add('right');
-      t.celebrate(correct);
-      t.endQuestion();
-      return round.wrong === 0 ? RESULT.INDEPENDENT : round.wrong === 1 ? RESULT.HELPED : RESULT.MISSED;
-    }
-    round.wrong++;
-    play('boing');
-    shake(picked);
-    await view.onWrong?.(picked);
-    if (round.wrong === 1) {
-      await onWrong1();
-      await speak();
-    } else {
-      if (needsVietnameseHelp(app.settings, round.wrong)) await t.explainVi(explain);
-      correct.classList.add('hint');
-      await t.say('This one!');
-    }
-  }
-}
 
 /** Dựng màn của một mục; trả về các phần để chọn / làm mẫu / hiện đã giải. */
 function buildView(ctx, item) {
@@ -630,68 +412,7 @@ function showSolved(ctx, item) {
   return line;
 }
 
-// ---------- Bé đọc câu (3.3): luyện, không tính sao ----------
-
-async function runRead(ctx, item, line) {
-  const { app, stage, signal, lesson, layout } = ctx;
-  const sub = linked(signal);
-  const rt = new Teacher(app, { signal: sub.signal, stage, replayBtn: layout.replayBtn });
-  const skip = h('button.big-btn.mt-skip', { type: 'button', 'aria-label': 'Bỏ qua phần đọc', text: '⏭' });
-  skip.addEventListener('click', () => {
-    play('tap');
-    app.speaker.cancel();
-    sub.abort();
-  });
-  app.root.append(skip);
-  const s = sentenceOf(lesson.key, item);
-  let result = null;
-  try {
-    await rt.say('Read it with me!');
-    await rt.karaoke(s.en, line.words);
-    await rt.ask(QUESTIONS.readSentence(), { meaning: s.vi });
-    const heard = await rt.hearSentence(s.en);
-    if (!heard) {
-      const done = h('button.big-btn.done-btn', { type: 'button', 'aria-label': 'Con đọc xong', text: '✅' });
-      stage.append(done);
-      try {
-        await rt.waitTap([done]);
-        play('pop');
-      } finally {
-        done.remove();
-      }
-      result = RESULT.PRACTICED;
-    } else {
-      const words = line.words.map((el) => el.dataset.word);
-      line.words.forEach((el) => el.classList.add(heard.has(el.dataset.word) ? 'heard' : 'missed'));
-      result = sentenceResult(words, heard);
-      if (result === RESULT.INDEPENDENT) {
-        play('ding');
-        await rt.say('Great reading!');
-      } else {
-        await rt.say('Good try! Listen.');
-        await rt.karaoke(s.en, line.words);
-      }
-    }
-  } catch (err) {
-    if (!isAbort(err) || signal.aborted) throw err; // ⏭: bỏ phần đọc, sang mục sau
-  } finally {
-    skip.remove();
-    rt.endQuestion();
-    sub.dispose();
-  }
-  if (result) recordItem(app.db, { lessonId: lesson.id, activity: 'read', itemId: s.en }, result).catch(() => {});
-}
-
 // ---------- Olly làm mẫu (3.1) ----------
-
-/** Olly "chạm" đáp án: sáng + sao. */
-async function ollyTap(t, el) {
-  el.classList.add('olly-tap');
-  play('ding');
-  el.classList.add('right');
-  t.celebrate(el);
-  await t.pause(500);
-}
 
 async function demoCompare(dctx, item, pic, { before = null } = {}) {
   const { t } = dctx;
@@ -870,67 +591,4 @@ async function demoSteps(dctx, { short }) {
   // Chơi lại bài đã có sao: rút còn 1 lượt (bước "=" lần đầu chơi mức 2 vẫn giữ).
   const run = short && lesson.key !== 't3' ? steps.slice(0, 1) : steps;
   for (const step of run) await step();
-}
-
-async function runDemo(ctx, { short }) {
-  const { app, signal, stage, layout } = ctx;
-  const sub = linked(signal);
-  const dt = new Teacher(app, { signal: sub.signal, stage, replayBtn: layout.replayBtn });
-  const dctx = { ...ctx, t: dt, signal: sub.signal };
-  app.root.dataset.phase = 'demo';
-  let skipped = false;
-  let skip = null;
-  if (short) {
-    skip = h('button.big-btn.mt-skip', { type: 'button', 'aria-label': 'Bỏ qua phần làm mẫu', text: '⏭' });
-    skip.addEventListener('click', () => {
-      play('tap');
-      skipped = true;
-      app.speaker.cancel();
-      sub.abort();
-    });
-    app.root.append(skip);
-  }
-  try {
-    await demoSteps(dctx, { short });
-  } catch (err) {
-    if (!isAbort(err) || signal.aborted) throw err;
-  } finally {
-    skip?.remove();
-    dt.endQuestion();
-    sub.dispose();
-  }
-  if (!skipped) {
-    const go = h('button.big-btn.primary.mt-go', { type: 'button', 'aria-label': 'Đến lượt con', text: '▶' });
-    stage.append(go);
-    ctx.t.say('Your turn!').catch(() => {});
-    await pressed(app, go, signal);
-  }
-  delete app.root.dataset.phase;
-}
-
-// ---------- Kết thúc lượt: sao + mở mức (6.2, 6.3) ----------
-
-async function finishRound(ctx, unlockedBefore) {
-  const { app, t, layout, lesson, round } = ctx;
-  const stars = starsFor(round.results);
-  const now = Date.now();
-  await recordLessonDone(app.db, lesson.id, stars, now, `L${round.level}`);
-  await recordLessonDone(app.db, lesson.id, stars, now);
-  const unlocked = unlockedLevel(bestOf(await levelProgress(app.db, lesson.id)), app.settings.mathAllLevels);
-  if (app.current?.name === 'math-lesson') delete app.current.params.round;
-  layout.setProgress(1);
-  play('tada');
-  const opened = unlocked > unlockedBefore;
-  const leave = () => app.go(app.timeUp ? 'sleep' : 'math');
-  layout.stage.replaceChildren(h('div.done-panel', {},
-    h('p.done-title', { text: 'Great job!' }),
-    h('p.done-stars', { 'aria-label': `${stars} sao`, text: starText(stars) }),
-    h('p.mt-level-chip', { text: `Mức ${round.level}` }),
-    opened ? h('p.mt-unlock', { text: `🔓 Đã mở Mức ${unlocked}!` }) : null,
-    h('div.done-actions', {},
-      h('button.big-btn', { type: 'button', 'aria-label': 'Học lại', text: '🔁', onclick: () => app.go('math-lesson', { lessonId: lesson.id }) }),
-      h('button.big-btn.primary', { type: 'button', 'aria-label': 'Bài khác', text: '🔢', onclick: leave }))));
-  t.celebrate();
-  await t.say(stars === 3 ? 'Wow! Three stars! Great job!' : 'Great job! You did it!').catch(() => {});
-  if (opened) await t.say(`Level ${numberWord(unlocked)} is open!`).catch(() => {});
 }

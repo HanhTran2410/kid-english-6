@@ -16,6 +16,7 @@ export const DEFAULT_SETTINGS = {
   writeRecord: false, // ✍️ Ghi nét thử (SPEC-write 12.3)
   writeTrials: [], // nét thử đã ghi (tối đa 300 nét gần nhất)
   writeWords: true, // ✍️ Viết từ cuối bài Spell (SPEC-write 8.1)
+  questAllLevels: false, // 🧩 Mở mọi mức của Quest (SPEC-quest 10.3)
   // Bé sai nhiều lần (VI_HELP_AFTER lần liên tiếp cùng một mục) thì Olly giải thích bằng tiếng Việt (SPEC mục 4.1).
   explainVietnamese: true,
   recordVoice: true,

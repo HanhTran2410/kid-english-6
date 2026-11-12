@@ -7,6 +7,7 @@ import { startScreen, homeScreen, sleepScreen } from './screens/child.js';
 import { readScreen, spellScreen, talkScreen, lessonScreen } from './screens/read.js';
 import { sceneScreen } from './screens/scene.js';
 import { mathScreen, mathLessonScreen } from './screens/math.js';
+import { questScreen, questLessonScreen } from './screens/quest.js';
 import { writeScreen } from './screens/write.js';
 import { parentScreen } from './screens/parent/index.js';
 import { startNotices } from './notices.js';
@@ -69,6 +70,8 @@ async function boot() {
   app.register('scene', sceneScreen);
   app.register('math', mathScreen);
   app.register('math-lesson', mathLessonScreen);
+  app.register('quest', questScreen);
+  app.register('quest-lesson', questLessonScreen);
   app.register('write', writeScreen);
   app.register('sleep', sleepScreen);
   app.register('parent', parentScreen);

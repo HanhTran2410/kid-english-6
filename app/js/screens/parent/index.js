@@ -13,6 +13,7 @@ import { libraryView } from './library.js';
 import { recordingsView } from './recordings.js';
 import { mathView } from './math.js';
 import { writeView } from './write.js';
+import { questView } from './quest.js';
 import { WRITE_LEVELS, LEVEL_VI } from '../../write/stroke.js';
 
 const VIEWS = {
@@ -25,6 +26,7 @@ const VIEWS = {
   recordings: recordingsView,
   math: mathView,
   write: writeView,
+  quest: questView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -43,6 +45,7 @@ function menuView(app) {
       item('🎙️', 'Ghi âm', () => goParent(app, 'recordings')),
       item('🔢', 'Toán (tiến độ)', () => goParent(app, 'math')),
       item('✍️', 'Tập viết (tiến độ, ghi nét thử)', () => goParent(app, 'write')),
+      item('🧩', 'Quest (tiến độ)', () => goParent(app, 'quest')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );
@@ -122,6 +125,7 @@ function settingsView(app) {
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test,
       field('Giọng thứ hai (bạn nói chuyện với bé ở khu Nói chuyện)', voiceSel2, 'Máy chỉ có một giọng tiếng Anh thì bạn ấy nói cao giọng hơn.'), test2),
     section('🔢 Toán', check('mathAllLevels', 'Mở mọi mức của khu Toán (bé chọn được cả mức chưa mở)')),
+    section('🧩 Quest', check('questAllLevels', 'Mở mọi mức của Quest (tắt lại không mất mức bé đã mở)')),
     section('✍️ Tập viết',
       field('Độ dễ chấm nét', writeLevel, 'Dễ: chấm dễ dãi (bé mới tập). Vừa / Khó: phải viết sát đường mẫu hơn.'),
       check('penFirst', 'Ưu tiên bút: khi bé viết bằng bút (Apple Pencil…) thì bỏ qua ngón tay / bàn tay tì lên màn'),
