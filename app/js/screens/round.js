@@ -8,6 +8,7 @@
 //     tùy chọn: available(app, lesson) → false = chưa đủ nội dung (thẻ mờ, không mở lượt; SPEC-quest 2.5),
 //     emptyLine { en, vi } (câu Olly nói khi đó), onStart(ctx) (gắn thêm việc khi mở màn bài),
 //     readable(lesson, item) → false = bé chưa đọc được câu của mục, bỏ phần bé đọc (Olly đã đọc khi khen) }
+//   runItem có thể trả { results: [...] } để chấm nhiều mục liền nhau trong một lần chơi (Quest 4: một lưới nhiều từ).
 
 import { h, toast } from '../ui.js';
 import { play } from '../speech/sfx.js';
@@ -166,11 +167,17 @@ async function runLesson(ctx, params) {
     let line = null;
     if (round.phase === 'item') {
       const out = await cfg.runItem(ctx, item);
-      round.results[round.index] = out.result;
+      // Một lần chơi có thể chấm nhiều mục liền nhau (Quest 4: một lưới = 3–4 từ): `out.results` theo thứ tự mục.
+      const results = out.results ?? [out.result];
+      results.forEach((result, k) => {
+        round.results[round.index + k] = result;
+        const it = round.items[round.index + k];
+        recordKind(app.db, cfg.itemRef(lesson, it), result, it.kind).catch(() => {});
+      });
+      round.index += results.length - 1;
       round.wrong = 0;
       round.phase = round.readAt.includes(round.index) && (cfg.readable?.(lesson, item) ?? true) ? 'read' : 'next';
       line = out.line;
-      recordKind(app.db, cfg.itemRef(lesson, item), out.result, item.kind).catch(() => {});
     }
     if (round.phase === 'read') {
       if (!line) line = cfg.showSolved(ctx, item); // quay lại từ nền đúng lúc đang đọc câu

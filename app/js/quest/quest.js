@@ -13,6 +13,7 @@ export const BUILTIN_QUESTS = [
   { id: 'quest-q1', key: 'q1', emoji: '🧸', title: 'Read and Do', titleVi: 'Đọc rồi làm', batch: 'a' },
   { id: 'quest-q2', key: 'q2', emoji: '🧱', title: 'Build a Sentence', titleVi: 'Xếp câu', batch: 'a' },
   { id: 'quest-q3', key: 'q3', emoji: '🔍', title: 'Guess the Word', titleVi: 'Đoán từ', batch: 'b' },
+  { id: 'quest-q4', key: 'q4', emoji: '✏️', title: 'Mini Crossword', titleVi: 'Ô chữ nhỏ', batch: 'c' },
 ];
 export const QUEST_BY_ID = new Map(BUILTIN_QUESTS.map((q) => [q.id, q]));
 
@@ -305,6 +306,7 @@ export function questKindsAt(key, level) {
   if (key === 'q1') return level === 3 ? ['q1:in', 'q1:on', 'q1:under', 'q1:two'] : ['q1:in', 'q1:on'];
   if (key === 'q2') return ['q2:short', 'q2:long'];
   if (key === 'q3') return level === 1 ? ['q3:pic'] : ['q3:word', 'q3:look-alike'];
+  if (key === 'q4') return level === 1 ? ['q4:cvc'] : ['q4:cvc', 'q4:digraph'];
   return [];
 }
 
@@ -317,11 +319,12 @@ export function questSentence(key, item) {
 
 /** Khóa tiến độ (10.1): ID ổn định của nội dung. */
 export function questRef(lesson, item) {
-  return { lessonId: lesson.id, activity: { q1: 'do', q2: 'build', q3: 'guess' }[lesson.key], itemId: item.id };
+  return { lessonId: lesson.id, activity: { q1: 'do', q2: 'build', q3: 'guess', q4: 'cross' }[lesson.key], itemId: item.id };
 }
 
-/** Giải thích tiếng Việt khi sai 2 lần. Quest 1 theo đúng lỗi; Quest 2 dịch câu + thứ tự từ. */
+/** Giải thích tiếng Việt khi sai 2 lần. Quest 1 theo đúng lỗi; Quest 2 dịch câu + thứ tự từ; Quest 4 nghĩa + số chữ. */
 export function questExplainVi(key, item, { action = null, error = null, byWord = null } = {}) {
+  if (key === 'q4') return `Từ "${item.word}" nghĩa là ${byWord?.get(item.word)?.vi ?? item.word}. Từ này có ${item.word.length} chữ: ${[...item.word].join(' – ')}.`;
   if (key === 'q3') return `Gợi ý: ${item.vi.join(' ')} Đáp án là "${item.word}" (${byWord?.get(item.word)?.vi ?? item.word}).`;
   if (key === 'q2') return `Câu "${item.en}" nghĩa là: ${item.vi} Câu tiếng Anh bắt đầu bằng ai / cái gì, rồi tới việc làm. Thứ tự đúng: ${item.words.join(' – ')}.`;
   const vi = (w) => byWord?.get(w)?.vi ?? w;

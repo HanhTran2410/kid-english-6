@@ -831,4 +831,29 @@ circle.wr-ok { fill: #2f9e44; }
   .qt-choice.pic { width: 104px; height: 104px; font-size: 60px; }
   .qt-word { font-size: 34px; }
 }
+/* Quest 4 — Mini Crossword (SPEC-quest 7.1): ưu tiên lưới; iPad lưới trái + hình / khay phải, iPhone dọc lưới trên. */
+.cw-wrap { display: flex; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 48px); width: 100%; }
+.cw-grid { --cell: clamp(48px, min(9.5vmin, 13vw), 76px); display: grid; grid-template-columns: repeat(var(--cols), var(--cell)); grid-template-rows: repeat(var(--rows), var(--cell)); gap: 4px; }
+.cw-cell { position: relative; display: grid; place-items: center; padding: 0; border-radius: 10px; background: var(--card); box-shadow: 0 2px 0 rgba(38, 33, 92, 0.18); font-family: var(--read-font); font-size: calc(var(--cell) * 0.6); font-weight: 700; color: var(--ink); }
+.cw-cell.active { outline: 4px solid var(--sky); z-index: 1; }
+.cw-cell.active.across::after, .cw-cell.active.down::after { position: absolute; right: 2px; bottom: 0; font-size: 14px; color: var(--sky); }
+.cw-cell.active.across::after { content: '→'; }
+.cw-cell.active.down::after { content: '↓'; }
+.cw-cell.locked { background: #d3f9d8; }
+.cw-num { position: absolute; top: 1px; left: 4px; font-size: 13px; font-weight: 800; color: var(--ink-soft); }
+.cw-side { display: grid; justify-items: center; gap: 12px; max-width: 440px; }
+.cw-clues { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.cw-clue { display: flex; align-items: center; gap: 4px; min-width: 64px; min-height: 64px; padding: 4px 10px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow); }
+.cw-pic { font-family: var(--emoji); font-size: clamp(36px, 6vmin, 48px); line-height: 1; }
+.cw-pic img { width: 46px; height: 46px; object-fit: contain; }
+.cw-tag { font-size: 16px; font-weight: 800; color: var(--ink-soft); }
+.cw-clue.active { outline: 4px solid var(--sky); }
+.cw-clue.done { background: #d3f9d8; box-shadow: none; opacity: 0.7; }
+.cw-tray { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; min-height: 68px; }
+.cw-tile { width: 64px; height: 64px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); font-family: var(--read-font); font-size: 36px; font-weight: 700; }
+@media (max-width: 700px) {
+  .cw-wrap { flex-direction: column; gap: 12px; }
+  .cw-tile { width: 56px; height: 56px; font-size: 32px; }
+  .cw-clue { min-height: 56px; }
+}
 @media (prefers-reduced-motion: reduce) { .qt-thing, .qt-thing.placed { transition: none; animation: none; } .qt-target.hint { animation: none; } }

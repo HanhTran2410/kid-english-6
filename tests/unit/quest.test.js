@@ -21,8 +21,8 @@ const setup = (groups) => {
 };
 const ALL = [1, 2, 3, 4, 5, 6, 7];
 
-test('3 trò (đợt Q-a + Q-b), khóa quest-q*', () => {
-  assert.deepEqual(BUILTIN_QUESTS.map((q) => q.id), ['quest-q1', 'quest-q2', 'quest-q3']);
+test('4 trò (đợt Q-a, Q-b, Q-c), khóa quest-q*', () => {
+  assert.deepEqual(BUILTIN_QUESTS.map((q) => q.id), ['quest-q1', 'quest-q2', 'quest-q3', 'quest-q4']);
 });
 
 test('learnedPhonics (2.2): chỉ gộp grapheme / tricky của ĐÚNG các nhóm đã xong (QU-09)', () => {

@@ -64,6 +64,44 @@ async function tapChoice(page, word, accepted) {
 }
 const cls = (page, word, c) => async () => (await page.locator(`.qt-choice[data-word="${word}"]`).getAttribute('class')).includes(c);
 
+/** Quest 4: chữ cần đặt cho từ i theo thứ tự ô của từ (bỏ ô đã khóa của từ khác). */
+function q4Letters(grid, locked, i) {
+  const e = grid.entries[i];
+  const [dr, dc] = e.dir === 'across' ? [0, 1] : [1, 0];
+  return [...e.word].filter((_, k) => {
+    const cell = grid.cells.find((x) => x.row === e.row + dr * k && x.col === e.col + dc * k);
+    return !cell.entries.some((j) => locked[j]);
+  });
+}
+const q4Sig = (page) => page.evaluate(() => {
+  const st = window.kidEnglish6.current?.params?.round?.q4;
+  return JSON.stringify([document.querySelectorAll('.cw-tile:not([hidden])').length, st?.wrong, st?.locked]);
+});
+/** Chạm hình gợi ý của từ i tới khi được chọn (chạm lúc Olly đang nói bị bỏ qua — 8.2). */
+async function q4Select(page, i) {
+  const clue = page.locator(`.cw-clue[data-entry="${i}"]`);
+  await expect.poll(async () => {
+    await clue.click({ timeout: 300 }).catch(() => {});
+    return (await clue.getAttribute('class')).includes('active');
+  }, { timeout: 15_000 }).toBe(true);
+}
+/** Chạm chữ trong khay tới khi chữ vào ô (hoặc từ được chấm). */
+async function q4Put(page, ch) {
+  const before = await q4Sig(page);
+  await expect.poll(async () => {
+    await page.locator(`.cw-tile[data-letter="${ch}"]:not([hidden])`).first().click({ timeout: 300 }).catch(() => {});
+    return (await q4Sig(page)) !== before;
+  }, { timeout: 15_000 }).toBe(true);
+}
+/** Quest 4: điền đúng một từ chưa khóa của lưới đang hiện. */
+async function doQ4(page, item, r) {
+  const locked = r.q4?.locked ?? item.grid.entries.map(() => false);
+  const i = locked.findIndex((x) => !x);
+  if (i < 0) return;
+  await q4Select(page, i);
+  for (const ch of q4Letters(item.grid, locked, i)) await q4Put(page, ch);
+}
+
 async function playRound(page, key) {
   for (let guard = 0; guard < 600; guard++) {
     if (await page.locator('.done-panel').isVisible()) return;
@@ -74,6 +112,7 @@ async function playRound(page, key) {
       const item = r.items[r.index];
       if (key === 'q1') await doQ1(page, item);
       else if (key === 'q3') await page.locator(`.qt-choice[data-word="${item.word}"]`).click({ timeout: 500 }).catch(() => {});
+      else if (key === 'q4') await doQ4(page, item, r);
       else await doQ2(page, item);
     }
     await page.waitForTimeout(80);
@@ -85,12 +124,14 @@ test('QU-02: chưa đọc xong bài nào → Quest 1 mờ, mở vào "Let\'s rea
   await fakeSpeech(page);
   await startApp(page);
   await page.getByRole('button', { name: 'Thử thách' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(3);
+  await expect(page.locator('.lesson-card')).toHaveCount(4);
   await expect(page.locator('.lesson-card.next')).toHaveAttribute('data-lesson', 'quest-q1');
   await expect(page.locator('.lesson-card[data-lesson="quest-q1"]')).toHaveClass(/dim/);
   await expect(page.locator('.lesson-card[data-lesson="quest-q2"]')).not.toHaveClass(/dim/);
   // Quest 3: nhóm 1 chưa có câu đố bé đọc được (RD-14).
   await expect(page.locator('.lesson-card[data-lesson="quest-q3"]')).toHaveClass(/dim/);
+  // Quest 4 không cần đọc câu: ô chữ từ nhóm 1 (ant, pin, tap…) ghép được.
+  await expect(page.locator('.lesson-card[data-lesson="quest-q4"]')).not.toHaveClass(/dim/);
   await page.getByRole('button', { name: 'Read and Do' }).click();
   await expect.poll(() => spoken(page)).toContain("Let's read more first!");
   await expect(page.locator('#app')).toHaveAttribute('data-empty', '1');
@@ -277,6 +318,93 @@ test('Quest 3 mức 2 — chữ, không hình; làm mẫu có hình nhỏ; sai 1
   await expect(page.locator(`.qt-choice[data-word="${item.word}"]`)).toHaveClass(/hint/);
   await tapChoice(page, item.word, async () => (await round(page)).results[0] != null);
   expect((await round(page)).results[0]).toBe('missed');
+});
+
+test('QU-21: Quest 4 mức 1 — chạm hình → ô của từ sáng + Olly đánh vần âm từ file; đúng → khóa; ô giao nhau dùng chung, từ kia thấy sẵn chữ; 2 lưới = 6 mục → 3⭐', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await readDone(page, [1, 2, 3]);
+  await openQuest(page, 'Mini Crossword');
+  await toItems(page);
+  const r = await round(page);
+  expect(r.items).toHaveLength(6);
+  const item = r.items[0];
+  const { grid } = item;
+  await expect(page.locator('.cw-cell')).toHaveCount(grid.cells.length);
+  await expect(page.locator('.cw-clue')).toHaveCount(3);
+  const w0 = grid.entries[0].word;
+  await q4Select(page, 0);
+  await expect(page.locator('.cw-cell.active')).toHaveCount(w0.length);
+  await expect.poll(() => spoken(page)).toContain(`Spell: ${w0}!`);
+  // Mức 1: đánh vần bằng file âm rời (âm cuối của từ là âm phát sau cùng).
+  await expect(page.locator('.stage')).toHaveAttribute('data-last-sound', item.soundsOf[w0].at(-1));
+  await expect(page.locator('.cw-tile')).toHaveCount(w0.length); // mức 1 không có chữ nhiễu
+  for (const ch of w0) await q4Put(page, ch);
+  await expect.poll(async () => (await round(page)).q4.locked[0]).toBe(true);
+  await expect(page.locator('.cw-cell.locked')).toHaveCount(w0.length);
+  // Ô giao nhau: một ô, đã khóa, có sẵn chữ; từ kia chỉ cần điền các ô còn lại.
+  const cross = grid.cells.find((c) => c.entries.includes(0) && c.entries.length === 2);
+  const j = cross.entries.find((x) => x !== 0);
+  const crossEl = page.locator(`.cw-cell[data-key="${cross.row},${cross.col}"]`);
+  await expect(crossEl).toHaveClass(/locked/);
+  await expect(crossEl.locator('.cw-letter')).toHaveText(cross.letter);
+  await q4Select(page, j);
+  const need = q4Letters(grid, [true, false, false], j);
+  expect(need.length).toBe(grid.entries[j].word.length - 1);
+  await expect(page.locator('.cw-tile')).toHaveCount(need.length);
+  await playRound(page, 'q4');
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '3 sao');
+  expect((await progress(page, `quest-q4/cross/${w0}`)).independent).toBe(1);
+  expect((await progress(page, 'lesson:quest-q4/L1')).bestStars).toBe(3);
+});
+
+test('Quest 4 sai: chỉ ô sai của từ đang chọn rung + về khay, ô đúng giữ; sai 2 → Olly điền nốt, khóa → missed', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await readDone(page, [1, 2, 3]);
+  await openQuest(page, 'Mini Crossword');
+  await toItems(page);
+  const { grid } = (await round(page)).items[0];
+  const i = grid.entries.findIndex((e) => e.word[0] !== e.word.at(-1));
+  const word = grid.entries[i].word;
+  await q4Select(page, i);
+  // Đặt ngược: chữ đầu / cuối sai chỗ, chữ giữa (nếu trùng) đúng.
+  for (const ch of [...word].reverse()) await q4Put(page, ch);
+  await expect.poll(async () => (await round(page)).q4.wrong[i]).toBe(1);
+  const filled = await page.locator('.cw-cell.active .cw-letter').evaluateAll((els) => els.filter((e) => e.textContent).length);
+  expect(filled).toBe([...word].filter((ch, k) => ch === word[word.length - 1 - k]).length);
+  await expect(page.locator('.cw-cell.locked')).toHaveCount(0); // từ khác không bị đụng tới
+  await expect.poll(() => spoken(page)).toContain('Try again!');
+  // Lần 2 lại đặt ngược các ô còn trống → sai 2.
+  const empties = [...word].filter((ch, k) => ch !== word[word.length - 1 - k]);
+  for (const ch of [...empties].reverse()) await q4Put(page, ch);
+  await expect.poll(async () => (await round(page)).q4.results[i]).toBe('missed');
+  await expect(page.locator('.cw-cell.locked')).toHaveCount(word.length);
+});
+
+test('QU-26: iPhone dọc, Quest 4 mức 3 — ô ≥ 48 px, lưới trên, hình + khay dưới, không tràn, không cuộn khi điền', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await fakeSpeech(page);
+  await startApp(page);
+  await readDone(page, [1, 2, 3, 4, 5, 6, 7]);
+  await page.evaluate(() => { window.kidEnglish6.settings.questAllLevels = true; });
+  await openQuest(page, 'Mini Crossword');
+  await page.getByRole('button', { name: 'Mức 3' }).click();
+  await toItems(page);
+  const item = (await round(page)).items[0];
+  expect(item.grid.entries).toHaveLength(4);
+  await q4Select(page, 0);
+  await expect(page.locator('.cw-tile')).toHaveCount(item.grid.entries[0].word.length + 2); // 2 chữ nhiễu
+  for (const el of await page.locator('.cw-cell').all()) {
+    const box = await el.boundingBox();
+    expect(Math.min(box.width, box.height)).toBeGreaterThanOrEqual(48);
+  }
+  const grid = await page.locator('.cw-grid').boundingBox();
+  const tray = await page.locator('.cw-tray').boundingBox();
+  expect(tray.y).toBeGreaterThan(grid.y + grid.height - 1);
+  expect(tray.y + tray.height).toBeLessThanOrEqual(844);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+  expect(await page.evaluate(() => document.scrollingElement.scrollHeight)).toBeLessThanOrEqual(844);
 });
 
 test('QU-07: iPhone dọc — đồ / ô đích / thẻ ≥ 64 px, không tràn ngang', async ({ page }) => {

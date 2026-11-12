@@ -49,6 +49,8 @@ export const QUESTIONS = {
   makeSentence: () => 'Make the sentence!',
   whatIsIt: () => 'What is it?',
   startsWith: () => 'It starts with…',
+  tapPicture: () => 'Tap a picture!',
+  spellPicture: () => 'Spell the picture!',
   // ✍️ Viết từ cuối bài Spell (SPEC-write 8.2)
   writeWord: (word) => `Write ${word}. ${[...word].join(' – ')}.`,
 };
@@ -99,6 +101,8 @@ export function translateQuestion(en, meaning = '') {
     [/^Make the sentence!$/, () => 'Bé chạm các thẻ từ theo đúng thứ tự để thành câu.'],
     [/^What is it\?$/, () => `Đó là gì? Bé đọc 2 câu gợi ý${m} rồi chạm đáp án đúng.`],
     [/^It starts with…$/, () => 'Từ này bắt đầu bằng âm Olly vừa đọc. Bé tìm từ có âm đầu đó nhé.'],
+    [/^Tap a picture!$/, () => 'Bé chạm một hình gợi ý để chọn từ, rồi xếp chữ vào các ô của từ đó.'],
+    [/^Spell the picture!$/, () => 'Bé nhìn hình, nhớ từ tiếng Anh rồi xếp chữ vào ô. Bấm 🔊 để nghe Olly đọc từ.'],
     [/^Put the (\w+) (in|on|under) the (\w+)(?: and the (\w+) (in|on|under) the (\w+))?\.$/, (a, w1, p1, b, w2, p2) => {
       const pos = { in: 'vào trong', on: 'lên trên', under: 'xuống dưới' };
       const one = `đặt "${a}" ${pos[w1]} "${p1}"`;

@@ -19,6 +19,8 @@ const KIND_VI = {
   'q3:pic': 'đoán từ — chọn hình',
   'q3:word': 'đoán từ — đọc từ',
   'q3:look-alike': 'đoán từ — có từ giống chữ',
+  'q4:cvc': 'ô chữ — từ một chữ một âm',
+  'q4:digraph': 'ô chữ — từ có âm 2 chữ (sh, ee…)',
 };
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
 

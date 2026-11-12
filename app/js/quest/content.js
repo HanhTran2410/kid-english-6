@@ -58,7 +58,7 @@ export function questPool(lessons, lp) {
     for (const w of l.words) {
       if (!w.emoji || seen.has(w.en) || !/^[a-z]+$/.test(w.en) || !canRead(w.en, lp).ok) continue;
       seen.add(w.en);
-      words.push({ en: w.en, vi: w.vi, emoji: w.emoji, group: l.group });
+      words.push({ en: w.en, vi: w.vi, emoji: w.emoji, group: l.group, sounds: w.sounds });
     }
   }
   const sentences = inGroups.flatMap((l) => (l.sentences ?? [])

@@ -474,3 +474,14 @@ Câu mới:
 - Câu gợi ý của Quest 3 cỡ chữ riêng (`.quest .qt-clue .sword`) — câu 2 vế dài bị `sentence.small` thu nhỏ quá.
 - Test: unit `makeQ3` (RD-08, 14, 15, 17, QU-19, âm đầu ch / sh / qu), UI Quest 3 mức 1 (hình, sai 1 → mờ + âm đầu từ file → helped, câu tổng kết, sao) và mức 2 (chữ, hình nhỏ ở làm mẫu, chữ đầu sáng, sai 2 → missed).
 - Chưa làm: Quest 4 (QU-21 → QU-23, QU-26).
+
+## 16. Ghi chú khi làm Q-c — Quest 4 (0.10.2)
+- Bộ ghép `js/quest/crossword.js`: `buildCrossword` (7.5; từ trùng / dài hơn 6 / không chữ chung → `null`), `validCrossword` (mọi dãy ≥ 2 ô liền là một từ, liền mạch, ≤ 6 × 6), `makeQ4`. Bộ từ cho mỗi lần thử: từ sau phải có chữ chung với một từ đã chọn — không thì gần 20% lượt ở kho lớn không ghép được. Kho đủ 7 nhóm: ~0,5% lượt mức 3 vẫn không ghép được sau 20 bộ → màn sinh lại (tối đa 5 lần), không bao giờ hiện lưới sai.
+- Bộ *tree / queen / bee* không ghép được (hai *e* liền của *queen* buộc hai từ dọc chạm nhau) — test giữ làm ví dụ `null`.
+- Mục = từ (`quest-q4/cross/<từ>`), mục của một lưới liền nhau; `runItem` chạy cả lưới và trả `{ results: [...] }` — khung `round.js` nhận nhiều kết quả một lần (Toán / Quest 1–3 không đổi). Trạng thái lưới (`round.q4`: từ đã khóa, lần sai, kết quả) nằm trong lượt → ra nền rồi quay lại giữ từ đã khóa.
+- Quest 4 không có phần bé đọc câu (`readable` false).
+- Số trên ô theo **ô bắt đầu** như ô chữ thật (từ ngang và dọc chung ô đầu → *1→* và *1↓*); hình gợi ý xếp theo số.
+- Quest 4 dùng kho 2.2 (từ có hình của nhóm đã học) nên **mở được từ nhóm 1** (*ant, pin, tap…*), khác Quest 1 và 3.
+- Câu Olly: *"Tap a picture!"* khi mở lưới; *"Spell: {word}!"* (mức 1 + âm từ file; mức 2); mức 3 *"Spell the picture!"*, 🔊 đọc từ; đúng → *"Yes! {word}!"*; sai 1 → *"Try again!"* (+ đọc lại từ ở mức 1–2).
+- Test: unit `crossword.test.js` (lưới hợp lệ, ô giao chung, `null`, chữ lặp, digraph 2 ô, 500 lượt × mức × 3 kho, chữ nhiễu không có trong từ); UI QU-21 (khóa, ô giao có sẵn chữ, 6 mục → 3⭐), sai 1 / sai 2 (chỉ ô sai về khay, Olly điền nốt → missed), QU-26 (iPhone dọc mức 3).
+- Khu 🧩 đủ 4 trò.

@@ -11,7 +11,7 @@ test('màn chính: Olly chào, 5 khu học, không còn khu "Sắp mở" (QU-01)
 
   await expect(page.locator('.zone-card.soon')).toHaveCount(0);
   await page.getByRole('button', { name: 'Thử thách' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(3);
+  await expect(page.locator('.lesson-card')).toHaveCount(4);
   await expect.poll(() => spoken(page)).toContain('Are you ready for a quest?');
   await page.getByRole('button', { name: 'Về màn hình chính' }).click();
   await expect(page.locator('.zone-card')).toHaveCount(5);

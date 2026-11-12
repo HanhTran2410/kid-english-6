@@ -21,11 +21,13 @@ import {
   BUILTIN_QUESTS, QUEST_BY_ID, makeQ1, makeQ2, makeQ3, judgeQ1, q1WrongLine, q1HintWords, q2Wrong, q2Prefix,
   questKindsAt, questSentence, questRef, questExplainVi, firstSoundOf,
 } from '../quest/quest.js';
+import { makeQ4, entryCells } from '../quest/crossword.js';
 
 const LEVEL_VI = {
   q1: ['Olly đọc câu', 'Bé tự đọc', 'Thêm under, hai việc'],
   q2: ['Câu ngắn, Olly đọc', 'Bé tự đọc', 'Tự xếp cả câu'],
   q3: ['Chọn hình', 'Đọc 3 từ', '4 từ, có từ giống chữ'],
+  q4: ['Từ 3 chữ, Olly đánh vần', 'Olly đọc từ, 1 chữ thừa', 'Chỉ có hình, 2 chữ thừa'],
 };
 /** Vị trí đặt được của từng chỗ (SPEC-quest 4.4); under chỉ từ mức 3. */
 const PLACE_WHERE = { box: ['in', 'on'], bag: ['in'], cup: ['in'], bed: ['on', 'under'] };
@@ -44,8 +46,13 @@ async function questContent(app) {
   return { lp, pool: questPool(BUILTIN_LESSONS, lp) };
 }
 
-const MAKERS = { q1: makeQ1, q2: makeQ2, q3: makeQ3 };
-const RUNNERS = { q1: (ctx, item) => runQ1(ctx, item), q2: (ctx, item) => runQ2(ctx, item), q3: (ctx, item) => runQ3(ctx, item) };
+const MAKERS = { q1: makeQ1, q2: makeQ2, q3: makeQ3, q4: makeQ4 };
+const RUNNERS = {
+  q1: (ctx, item) => runQ1(ctx, item),
+  q2: (ctx, item) => runQ2(ctx, item),
+  q3: (ctx, item) => runQ3(ctx, item),
+  q4: (ctx, item) => runQ4(ctx, item),
+};
 
 /** Hình + nghĩa của mục (lưu trong mục để quay lại từ nền vẫn có). */
 function decorate(key, it, pool, lib) {
@@ -55,6 +62,12 @@ function decorate(key, it, pool, lib) {
   } else if (key === 'q3') {
     it.pics = picsOf(it.options, pool, lib);
     it.viOf = pool.byWord.get(it.word)?.vi ?? it.word;
+  } else if (key === 'q4') {
+    // Mỗi mục mang đủ hình / nghĩa / âm của cả lưới (lần chơi bắt đầu ở mục đầu lưới, kể cả khi quay lại từ nền).
+    const words = it.grid.entries.map((e) => e.word);
+    it.pics = picsOf(words, pool, lib);
+    it.viOf = Object.fromEntries(words.map((w) => [w, pool.byWord.get(w)?.vi ?? w]));
+    it.soundsOf = Object.fromEntries(words.map((w) => [w, pool.byWord.get(w)?.sounds ?? []]));
   }
   return it;
 }
@@ -90,7 +103,9 @@ const QUEST_CONFIG = {
   },
   async makeItems(app, lesson, level) {
     const { lp, pool } = await questContent(app);
-    const items = MAKERS[lesson.key](level, Math.random, pool, lp);
+    let items = MAKERS[lesson.key](level, Math.random, pool, lp);
+    // Quest 4: hiếm khi 20 bộ từ đều không ghép được lưới ở mức cao → sinh lại (không bao giờ hiện lưới sai, 7.5).
+    for (let k = 0; !items.length && lesson.key === 'q4' && k < 5; k++) items = makeQ4(level, Math.random, pool, lp);
     const lib = await libraryImages(app.db);
     return items.map((it) => decorate(lesson.key, it, pool, lib));
   },
@@ -101,8 +116,8 @@ const QUEST_CONFIG = {
     if (ctx.lesson.key === 'q1') return buildQ1(ctx, item, { solved: true }).line;
     return ctx.lesson.key === 'q3' ? solvedQ3(ctx, item) : solvedQ2(ctx, item);
   },
-  // Quest 3: câu tổng kết bé chưa đọc được → không có phần bé đọc (Olly đã đọc khi khen).
-  readable: (lesson, item) => lesson.key !== 'q3' || item.sumReadable,
+  // Quest 3: câu tổng kết bé chưa đọc được → không có phần bé đọc (Olly đã đọc khi khen). Quest 4 không có câu đọc (3).
+  readable: (lesson, item) => (lesson.key === 'q3' ? item.sumReadable : lesson.key !== 'q4'),
   demoSteps: (dctx, opts) => demoSteps(dctx, opts),
   // 🔊 không tính là trợ giúp; đếm số lần bấm để bố mẹ xem (SPEC-quest 10.2).
   onStart(ctx) {
@@ -451,6 +466,225 @@ async function runQ3(ctx, item) {
   return { result, line };
 }
 
+// ---------- Quest 4 — Mini Crossword (SPEC-quest 7) ----------
+
+const ARROW = { across: '→', down: '↓' };
+const cellKey = (c) => `${c.row},${c.col}`;
+
+/**
+ * Màn một lưới: ô chữ (mỗi ô một DỮ LIỆU dùng chung cho mọi từ đi qua — 7.2), hình gợi ý có số + mũi tên chiều, khay chữ.
+ * `locked[i]`: từ i đã đúng → ô của nó xanh, có chữ, không ghi đè.
+ */
+function buildQ4(ctx, item, locked) {
+  const { stage } = ctx;
+  const { grid } = item;
+  const board = h('div.cw-grid', { role: 'grid', 'aria-label': 'Ô chữ' });
+  board.style.setProperty('--rows', String(grid.rows));
+  board.style.setProperty('--cols', String(grid.cols));
+  const cells = new Map();
+  // Số như ô chữ thật: theo ô bắt đầu (trên → dưới, trái → phải); từ ngang và dọc chung ô đầu thì chung số (1→, 1↓).
+  const starts = [...new Set(grid.entries.map(cellKey))]
+    .sort((a, b) => a.split(',')[0] - b.split(',')[0] || a.split(',')[1] - b.split(',')[1]);
+  const numOf = (e) => starts.indexOf(cellKey(e)) + 1;
+  for (const c of grid.cells) {
+    const num = starts.indexOf(cellKey(c)) + 1;
+    const el = h('button.cw-cell', { type: 'button', 'aria-label': `Ô ${c.row + 1}-${c.col + 1}`, dataset: { key: cellKey(c), entries: c.entries.join(' ') } },
+      num ? h('span.cw-num', { text: String(num) }) : null, h('span.cw-letter'));
+    el.style.gridRow = String(c.row + 1);
+    el.style.gridColumn = String(c.col + 1);
+    cells.set(cellKey(c), { ...c, el, letterEl: el.querySelector('.cw-letter'), tile: null });
+    board.append(el);
+  }
+  const clues = grid.entries.map((e, i) => h('button.cw-clue', { type: 'button', 'aria-label': `Từ ${numOf(e)} ${ARROW[e.dir]}`, dataset: { entry: String(i) } },
+    h('span.cw-pic', {}, picEl(item.pics?.[e.word])), h('span.cw-tag', { text: `${numOf(e)}${ARROW[e.dir]}` })));
+  const tray = h('div.cw-tray');
+  const nudge = h('p.qt-nudge', { 'aria-live': 'polite' });
+  const byNumber = [...clues].sort((a, b) => {
+    const [ea, eb] = [grid.entries[a.dataset.entry], grid.entries[b.dataset.entry]];
+    return numOf(ea) - numOf(eb) || (ea.dir === 'across' ? -1 : 1);
+  });
+  stage.replaceChildren(h('div.cw-wrap', {}, board, h('div.cw-side', {}, h('div.cw-clues', {}, ...byNumber), nudge, tray)));
+  const view = {
+    board, cells, clues, tray, nudge,
+    cellsOf: (i) => entryCells(grid.entries[i]).map((c) => cells.get(cellKey(c))),
+    isLocked: (cell) => cell.entries.some((j) => locked[j]),
+    lock(i) {
+      locked[i] = true;
+      for (const cell of view.cellsOf(i)) {
+        cell.tile?.remove();
+        cell.tile = null;
+        cell.letterEl.textContent = cell.letter;
+        cell.el.classList.add('locked');
+      }
+      clues[i].classList.add('done');
+    },
+  };
+  grid.entries.forEach((_, i) => locked[i] && view.lock(i));
+  return view;
+}
+
+/** Olly nói từ theo mức (7.1): mức 1 đánh vần âm (file âm rời), mức 2 đọc từ, mức 3 không đọc (🔊 đọc được). */
+async function sayCrossWord(ctx, item, word) {
+  const { t, stage, signal, round } = ctx;
+  const spell = async () => {
+    await t.say(QUESTIONS.spellIt(word));
+    if ((round?.level ?? 1) === 1) {
+      for (const s of item.soundsOf?.[word] ?? []) await playPhoneme(s, { stage, signal }).catch(() => {});
+    }
+  };
+  const meaning = item.viOf?.[word];
+  if ((round?.level ?? 1) < 3) {
+    await t.ask(QUESTIONS.spellIt(word), { meaning, speak: spell });
+  } else {
+    await t.ask(QUESTIONS.spellPicture(), { speak: () => t.say(QUESTIONS.spellPicture()) });
+    t.questionSpeak = spell;
+  }
+}
+
+async function runQ4(ctx, item) {
+  const { app, t, round } = ctx;
+  const n = item.grid.entries.length;
+  // Trạng thái lưới nằm trong lượt → ra nền rồi quay lại vẫn giữ từ đã khóa, lần sai (SPEC-quest 3, 7.3).
+  if (round.q4?.gridIndex !== item.gridIndex) {
+    round.q4 = { gridIndex: item.gridIndex, locked: Array(n).fill(false), wrong: Array(n).fill(0), results: Array(n).fill(null) };
+  }
+  const st = round.q4;
+  const view = buildQ4(ctx, item, st.locked);
+  let current = -1;
+  const words = item.grid.entries.map((e) => e.word);
+  const extrasOf = (i) => round.items.find((x) => x.gridIndex === item.gridIndex && x.entry === i)?.extras ?? [];
+  /** Bỏ chữ chưa chấm (kể cả ở ô giao nhau) khi đổi từ — 7.2. */
+  const clearPending = () => {
+    for (const cell of view.cells.values()) {
+      if (cell.tile && !view.isLocked(cell)) {
+        cell.tile = null;
+        cell.letterEl.textContent = '';
+      }
+    }
+  };
+  const select = async (i) => {
+    clearPending();
+    current = i;
+    for (const cell of view.cells.values()) cell.el.classList.remove('active', 'across', 'down');
+    for (const cell of view.cellsOf(i)) cell.el.classList.add('active', item.grid.entries[i].dir);
+    view.clues.forEach((c, k) => c.classList.toggle('active', k === i));
+    // Khay: chữ của các ô chưa khóa + chữ nhiễu theo mức (7.1, 7.3).
+    const letters = view.cellsOf(i).filter((c) => !view.isLocked(c)).map((c) => c.letter);
+    const tiles = shuffleEls([...letters, ...extrasOf(i)].map((ch, k) => h('button.cw-tile', { type: 'button', 'aria-label': ch, dataset: { letter: ch, tile: String(k) }, text: ch })));
+    view.tray.replaceChildren(...tiles);
+    view.nudge.textContent = '';
+    play('tap');
+    await sayCrossWord(ctx, item, words[i]);
+  };
+  /** Chốt từ i: khóa ô (kể cả ô giao nhau), ghi kết quả một lần, bỏ chọn. */
+  const finish = async (i, result, line) => {
+    view.lock(i);
+    st.results[i] = result;
+    t.endQuestion();
+    for (const cell of view.cells.values()) cell.el.classList.remove('active', 'across', 'down', 'hint');
+    view.clues[i].classList.remove('active');
+    view.tray.replaceChildren();
+    current = -1;
+    await t.say(line);
+  };
+  await t.ask(QUESTIONS.tapPicture(), { speak: () => t.say(QUESTIONS.tapPicture()) });
+  while (st.locked.some((x) => !x)) {
+    const open = view.clues.filter((_, i) => !st.locked[i]);
+    const openCells = [...view.cells.values()].filter((c) => !view.isLocked(c)).map((c) => c.el);
+    const tiles = [...view.tray.querySelectorAll('.cw-tile:not([hidden])')];
+    const picked = await waitPick(ctx, [...open, ...openCells, ...tiles]);
+    if (picked.classList.contains('cw-clue')) {
+      await select(Number(picked.dataset.entry));
+      continue;
+    }
+    if (picked.classList.contains('cw-cell')) {
+      const cell = view.cells.get(picked.dataset.key);
+      const mine = current >= 0 && cell.entries.includes(current);
+      if (mine && cell.tile) {
+        // Chạm chữ đã đặt (chưa chấm) → về khay.
+        play('tap');
+        cell.tile.hidden = false;
+        cell.tile = null;
+        cell.letterEl.textContent = '';
+      } else if (!mine) {
+        const next = cell.entries.find((j) => !st.locked[j]);
+        await select(next);
+      }
+      continue;
+    }
+    // Chữ trong khay → ô trống kế tiếp của từ đang chọn.
+    const empty = view.cellsOf(current).find((c) => !view.isLocked(c) && !c.tile);
+    if (!empty) continue;
+    play('tap');
+    empty.tile = picked;
+    empty.letterEl.textContent = picked.dataset.letter;
+    picked.hidden = true;
+    if (view.cellsOf(current).some((c) => !view.isLocked(c) && !c.tile)) continue;
+    // Đủ ô → chấm, chỉ phản hồi ở từ đang chọn (7.2).
+    await t.pause(250);
+    const i = current;
+    const wrongCells = view.cellsOf(i).filter((c) => !view.isLocked(c) && c.tile.dataset.letter !== c.letter);
+    if (!wrongCells.length) {
+      play('ding');
+      t.celebrate(view.clues[i]);
+      await finish(i, st.wrong[i] === 0 ? RESULT.INDEPENDENT : RESULT.HELPED, `Yes! ${words[i]}!`);
+      continue;
+    }
+    st.wrong[i]++;
+    play('boing');
+    for (const c of wrongCells) {
+      c.tile.hidden = false;
+      c.tile = null;
+      c.letterEl.textContent = '';
+      shake(c.el);
+    }
+    if (st.wrong[i] === 1) {
+      await t.say('Try again!');
+      if (round.level < 3) await sayCrossWord(ctx, item, words[i]);
+      continue;
+    }
+    // Sai 2: tiếng Việt (nghĩa + số chữ) rồi Olly điền nốt, khóa → missed (7.3).
+    if (needsVietnameseHelp(app.settings, 2)) {
+      const byWord = new Map(Object.entries(item.viOf ?? {}).map(([w, vi]) => [w, { vi }]));
+      await t.explainVi(questExplainVi('q4', { word: words[i] }, { byWord }));
+    }
+    for (const c of view.cellsOf(i)) {
+      if (view.isLocked(c) || c.tile) continue;
+      c.letterEl.textContent = c.letter;
+      c.el.classList.add('hint');
+      await t.pause(300);
+    }
+    await finish(i, RESULT.MISSED, words[i]);
+  }
+  t.celebrate(view.board);
+  play('ding');
+  const results = [...st.results];
+  round.q4 = null;
+  await t.pause(600);
+  return { results, line: null };
+}
+
+async function demoQ4(dctx, item) {
+  const { t } = dctx;
+  const locked = item.grid.entries.map(() => false);
+  const view = buildQ4(dctx, item, locked);
+  // Olly chạm hình gợi ý của từ 1 rồi đặt từng chữ, từ đúng thì khóa.
+  await ollyTap(t, view.clues[0]);
+  view.clues[0].classList.remove('right');
+  for (const cell of view.cellsOf(0)) cell.el.classList.add('active', item.grid.entries[0].dir);
+  await sayCrossWord(dctx, item, item.grid.entries[0].word);
+  for (const cell of view.cellsOf(0)) {
+    cell.letterEl.textContent = cell.letter;
+    play('tap');
+    await t.pause(450);
+  }
+  view.lock(0);
+  t.endQuestion();
+  play('ding');
+  await t.say(`Yes! ${item.grid.entries[0].word}!`);
+  await t.pause(900);
+}
+
 // ---------- Olly làm mẫu (3) + giới thiệu từ chức năng (2.4) ----------
 
 /** Thẻ chữ to + câu giới thiệu từ Quest (put / under); ghi "đã giới thiệu". */
@@ -472,7 +706,9 @@ async function demoItem(dctx) {
   const { lp, pool } = await questContent(app);
   const ids = new Set(round.items.map((x) => x.id));
   const items = MAKERS[lesson.key](round.level, seeded(round.items.length + round.level), pool, lp);
-  const it = items.find((x) => !ids.has(x.id) && (lesson.key !== 'q1' || x.actions.length === 1)) ?? items[0];
+  const it = lesson.key === 'q4'
+    ? items[0] ?? round.items[0] // mục đầu của một lưới khác (lưới sinh ngẫu nhiên)
+    : items.find((x) => !ids.has(x.id) && (lesson.key !== 'q1' || x.actions.length === 1)) ?? items[0];
   return decorate(lesson.key, it, pool, await libraryImages(app.db));
 }
 
@@ -542,6 +778,8 @@ async function demoSteps(dctx) {
     await demoQ1(dctx, await demoItem(dctx));
   } else if (lesson.key === 'q3') {
     await demoQ3(dctx, await demoItem(dctx));
+  } else if (lesson.key === 'q4') {
+    await demoQ4(dctx, await demoItem(dctx));
   } else {
     await demoQ2(dctx, await demoItem(dctx));
   }
