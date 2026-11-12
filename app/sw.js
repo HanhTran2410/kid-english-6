@@ -40,6 +40,7 @@ const ASSETS = [
   'js/screens/parent/quest.js',
   'js/quest/content.js',
   'js/quest/quest.js',
+  'js/quest/riddles.js',
   'js/screens/parent/math.js',
   'js/math/math.js',
   'js/math/views.js',

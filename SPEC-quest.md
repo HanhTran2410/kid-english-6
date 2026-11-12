@@ -258,6 +258,15 @@ Không ghép tự do mọi đồ với mọi chỗ. Chỉ dùng cặp trong bả
 - **Đáp án duy nhất theo nghĩa:** mỗi lựa chọn nhiễu phải **không** có `trait` của câu gợi ý 2, và nếu cùng `kind` thì không khớp cả câu 1. Câu đố / bộ lựa chọn không qua kiểm tra → loại (QU-19). Ví dụ gợi ý *"It can swim."* thì *frog* không được làm nhiễu cho *fish* (ếch cũng bơi được: `traits` của *frog* có `swims`).
 - **Đọc được:** lúc chọn mục, dùng cặp gợi ý đầu tiên qua 2.3; không cặp nào qua → không dùng từ đó (bé học thêm nhóm thì từ tự xuất hiện).
 - Mỗi từ có hình **phải có** câu đố (test); viết đủ 67 từ ở đợt Q-b, bố mẹ duyệt cả bảng trước khi phát hành.
+- **Bảng đã soạn (2026-11-12, sửa theo review lần 1, bố mẹ đã duyệt lần 2):** dữ liệu ở `app/js/quest/riddles.js`, bảng duyệt [QUEST-RIDDLES.md](QUEST-RIDDLES.md) sinh bằng `node scripts/riddles-sheet.mjs` (kiểm tra luôn: đủ 67 từ, đáp án có đặc điểm câu 2, nhóm đọc được của từng cặp và câu tổng kết). Khác bản thảo ở trên:
+  - `traits` ghi theo **đặc điểm → mọi từ đúng** (bảng `TRAITS`, kể cả "có thể đúng": chó cũng bơi được) — dễ rà hơn ghi rải từng từ; `traitsOf(word)` suy ra.
+  - Thêm loại `vehicle`, `body`, `number`, `colour`, `action`. **Không mượn nhiễu loại khác** (review bảng, P0-4): mức 2–3 chỉ nhiễu cùng loại; thiếu → mức 3 còn 3 lựa chọn, vẫn thiếu → từ đó chỉ chơi ở mức thấp hơn (`choicesAt`). Mức 1 (hình, nhiễu khác loại) luôn đủ.
+  - Số viết bằng chữ số (*"It is 5 and 5."*): Olly đọc, bé không đánh vần.
+  - Nhóm đọc được của cặp gợi ý và câu tổng kết **luôn tính** bằng `canRead` (`readFrom`), không ghi tay. Câu tổng kết bé chưa đọc được → Olly đọc, bé nghe (không tính "bé đọc câu").
+  - Từ tách được bằng chữ đã học nhưng đọc theo âm sai (*home, gold, spider, words, chair, hair*…) nằm trong `NOT_DECODABLE` — test chặn; bảng duyệt in cách tách âm của mọi từ (197 từ) để bố mẹ soát thêm. *of* không dùng (không phải tricky word đã học).
+  - Đáp án duy nhất: nhiễu phải **sai câu 2** (bảng `TRAITS` ghi mọi từ câu đó đúng, kể cả "có thể đúng") → không lựa chọn nào khác khớp cả hai câu; lựa chọn chỉ lấy từ 67 từ có hình bé đã học, nên không có đáp án ngoài bộ (vd. *sofa*).
+  - Kiểm tra dữ liệu: `tests/unit/riddles.test.js` (RD-01 → 07, 09, 10, 13, 18). RD-08, 14, 15, 17 test ở bộ sinh Quest 3 (đợt Q-b); RD-11, 12, 16 do bố mẹ duyệt.
+  - Bé xong nhóm 1–3 thì có 21 / 67 từ dùng được; xong nhóm 1 → chưa có (thẻ mờ).
 
 ## 7. Quest 4 — ✏️ Mini Crossword
 
