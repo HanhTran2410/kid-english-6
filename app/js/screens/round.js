@@ -6,7 +6,8 @@
 //     makeItems(app, lesson, level, weak) → mục, itemRef(lesson, item), sentenceOf(lesson, item) → { en, vi },
 //     runItem(ctx, item) → { result, line }, showSolved(ctx, item) → line, demoSteps(dctx, { short }),
 //     tùy chọn: available(app, lesson) → false = chưa đủ nội dung (thẻ mờ, không mở lượt; SPEC-quest 2.5),
-//     emptyLine { en, vi } (câu Olly nói khi đó), onStart(ctx) (gắn thêm việc khi mở màn bài) }
+//     emptyLine { en, vi } (câu Olly nói khi đó), onStart(ctx) (gắn thêm việc khi mở màn bài),
+//     readable(lesson, item) → false = bé chưa đọc được câu của mục, bỏ phần bé đọc (Olly đã đọc khi khen) }
 
 import { h, toast } from '../ui.js';
 import { play } from '../speech/sfx.js';
@@ -167,7 +168,7 @@ async function runLesson(ctx, params) {
       const out = await cfg.runItem(ctx, item);
       round.results[round.index] = out.result;
       round.wrong = 0;
-      round.phase = round.readAt.includes(round.index) ? 'read' : 'next';
+      round.phase = round.readAt.includes(round.index) && (cfg.readable?.(lesson, item) ?? true) ? 'read' : 'next';
       line = out.line;
       recordKind(app.db, cfg.itemRef(lesson, item), out.result, item.kind).catch(() => {});
     }
@@ -244,8 +245,8 @@ export function waitPick(ctx, targets) {
  */
 export async function chooseLoop(ctx, view) {
   const { app, t, round } = ctx;
-  const { options, correct, question, speak, explain, onWrong1, onPick } = view;
-  await t.ask(question, { speak });
+  const { options, correct, question, meaning, speak, explain, onWrong1, onPick } = view;
+  await t.ask(question, { speak, meaning });
   for (;;) {
     if (round.wrong >= 2) correct.classList.add('hint');
     const picked = await waitPick(ctx, round.wrong >= 2 ? [correct] : options);

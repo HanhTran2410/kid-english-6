@@ -16,6 +16,9 @@ const KIND_VI = {
   'q1:two': 'câu hai việc',
   'q2:short': 'câu ngắn (≤ 4 từ)',
   'q2:long': 'câu dài',
+  'q3:pic': 'đoán từ — chọn hình',
+  'q3:word': 'đoán từ — đọc từ',
+  'q3:look-alike': 'đoán từ — có từ giống chữ',
 };
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
 

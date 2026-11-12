@@ -55,6 +55,15 @@ async function doQ2(page, item) {
   }
 }
 
+/** Quest 3: chạm lựa chọn tới khi app nhận (chạm lúc Olly đang nói bị bỏ qua — SPEC-quest 8.2). */
+async function tapChoice(page, word, accepted) {
+  await expect.poll(async () => {
+    await page.locator(`.qt-choice[data-word="${word}"]`).click({ timeout: 300 }).catch(() => {});
+    return accepted();
+  }, { timeout: 15_000 }).toBe(true);
+}
+const cls = (page, word, c) => async () => (await page.locator(`.qt-choice[data-word="${word}"]`).getAttribute('class')).includes(c);
+
 async function playRound(page, key) {
   for (let guard = 0; guard < 600; guard++) {
     if (await page.locator('.done-panel').isVisible()) return;
@@ -64,6 +73,7 @@ async function playRound(page, key) {
     else if (r && r.phase === 'item' && r.results[r.index] == null) {
       const item = r.items[r.index];
       if (key === 'q1') await doQ1(page, item);
+      else if (key === 'q3') await page.locator(`.qt-choice[data-word="${item.word}"]`).click({ timeout: 500 }).catch(() => {});
       else await doQ2(page, item);
     }
     await page.waitForTimeout(80);
@@ -75,10 +85,12 @@ test('QU-02: chưa đọc xong bài nào → Quest 1 mờ, mở vào "Let\'s rea
   await fakeSpeech(page);
   await startApp(page);
   await page.getByRole('button', { name: 'Thử thách' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(2);
+  await expect(page.locator('.lesson-card')).toHaveCount(3);
   await expect(page.locator('.lesson-card.next')).toHaveAttribute('data-lesson', 'quest-q1');
   await expect(page.locator('.lesson-card[data-lesson="quest-q1"]')).toHaveClass(/dim/);
   await expect(page.locator('.lesson-card[data-lesson="quest-q2"]')).not.toHaveClass(/dim/);
+  // Quest 3: nhóm 1 chưa có câu đố bé đọc được (RD-14).
+  await expect(page.locator('.lesson-card[data-lesson="quest-q3"]')).toHaveClass(/dim/);
   await page.getByRole('button', { name: 'Read and Do' }).click();
   await expect.poll(() => spoken(page)).toContain("Let's read more first!");
   await expect(page.locator('#app')).toHaveAttribute('data-empty', '1');
@@ -214,6 +226,57 @@ test('QU-06: ra nền giữa mục Quest 1 rồi quay lại → đúng mục, l�
   expect(after.items).toEqual(before.items);
   await doQ1(page, after.items[0]);
   await expect.poll(async () => (await round(page)).results[0]).toBe('helped');
+});
+
+test('QU-19 + QU-20: Quest 3 mức 1 — 3 hình, 2 câu gợi ý; sai 1 → mờ tại chỗ + âm đầu phát từ file → helped; câu tổng kết; hết lượt 2⭐ (7/8 đúng ngay)', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await readDone(page, [1, 2, 3]);
+  await openQuest(page, 'Guess the Word');
+  await toItems(page);
+  const r = await round(page);
+  expect(r.items).toHaveLength(8);
+  const item = r.items[0];
+  expect(item.show).toBe(1);
+  await expect(page.locator('.qt-choice.pic')).toHaveCount(3);
+  await expect.poll(() => spoken(page)).toContain('What is it?');
+  await expect.poll(() => spoken(page)).toContain(item.en.join(' '));
+  const order = await page.locator('.qt-choice').evaluateAll((els) => els.map((e) => e.dataset.word));
+  expect(order).toEqual(item.options);
+  const wrong = item.options.find((w) => w !== item.word);
+  await tapChoice(page, wrong, cls(page, wrong, 'tried'));
+  await expect.poll(() => spoken(page)).toContain('It starts with…');
+  // Âm đầu phát từ file âm rời (không đọc tên chữ bằng giọng máy).
+  await expect(page.locator('.stage')).toHaveAttribute('data-last-sound', item.first.sound);
+  expect(await page.locator('.qt-choice').evaluateAll((els) => els.map((e) => e.dataset.word))).toEqual(order);
+  await tapChoice(page, item.word, async () => (await round(page)).results[0] != null);
+  expect((await round(page)).results[0]).toBe('helped');
+  await expect.poll(() => spoken(page)).toContain(item.sum);
+  await playRound(page, 'q3');
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '2 sao');
+  expect((await progress(page, `quest-q3/guess/${item.word}`)).helped).toBe(1);
+});
+
+test('Quest 3 mức 2 — chữ, không hình; làm mẫu có hình nhỏ; sai 1 → chữ đầu mọi lựa chọn sáng; sai 2 → đáp án sáng → missed', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await readDone(page, [1, 2, 3, 4, 5, 6, 7]);
+  await page.evaluate(() => window.kidEnglish6.db.put('progress', { key: 'lesson:quest-q3/L1', lessonId: 'quest-q3', part: 'L1', plays: 1, completedAt: 1, bestStars: 3, lastStars: 3, lastAt: 1 }));
+  await openQuest(page, 'Guess the Word');
+  await page.getByRole('button', { name: 'Mức 2' }).click();
+  await expect(page.locator('.qt-mini').first()).toBeVisible();
+  await toItems(page);
+  const item = (await round(page)).items[0];
+  expect(item.show).toBe(2);
+  await expect(page.locator('.qt-choice')).toHaveCount(3);
+  await expect(page.locator('.qt-choice.pic, .qt-mini')).toHaveCount(0);
+  const wrongs = item.options.filter((w) => w !== item.word);
+  await tapChoice(page, wrongs[0], cls(page, wrongs[0], 'tried'));
+  await expect(page.locator('.qt-first.lit')).toHaveCount(3);
+  await tapChoice(page, wrongs[1], cls(page, wrongs[1], 'tried'));
+  await expect(page.locator(`.qt-choice[data-word="${item.word}"]`)).toHaveClass(/hint/);
+  await tapChoice(page, item.word, async () => (await round(page)).results[0] != null);
+  expect((await round(page)).results[0]).toBe('missed');
 });
 
 test('QU-07: iPhone dọc — đồ / ô đích / thẻ ≥ 64 px, không tràn ngang', async ({ page }) => {

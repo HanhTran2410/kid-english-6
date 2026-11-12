@@ -1,8 +1,10 @@
 // 🧩 Quest (SPEC-quest.md) — hàm thuần: danh sách trò, Quest 1 Read and Do (bảng cặp đồ – chỗ đặt, sinh câu chỉ dẫn,
 // chấm theo 3 trường thing / place / where, câu hai việc), Quest 2 Build a Sentence (tách thẻ từ, chấm theo chuỗi chữ),
-// câu đọc, khóa tiến độ, giải thích tiếng Việt.
+// Quest 3 Guess the Word (câu đố viết sẵn, nhiễu sai câu gợi ý 2), câu đọc, khóa tiến độ, giải thích tiếng Việt.
 
 import { canRead, fillTo, shuffle, lookAlike, QUEST_WORDS } from './content.js';
+import { RIDDLE_BY_WORD, distractorsFor, choicesAt } from './riddles.js';
+import { toGraphemes, learnedGraphemes, soundOfGrapheme } from '../phonics.js';
 
 export const QUEST_ITEMS = 8;
 
@@ -10,6 +12,7 @@ export const QUEST_ITEMS = 8;
 export const BUILTIN_QUESTS = [
   { id: 'quest-q1', key: 'q1', emoji: '🧸', title: 'Read and Do', titleVi: 'Đọc rồi làm', batch: 'a' },
   { id: 'quest-q2', key: 'q2', emoji: '🧱', title: 'Build a Sentence', titleVi: 'Xếp câu', batch: 'a' },
+  { id: 'quest-q3', key: 'q3', emoji: '🔍', title: 'Guess the Word', titleVi: 'Đoán từ', batch: 'b' },
 ];
 export const QUEST_BY_ID = new Map(BUILTIN_QUESTS.map((q) => [q.id, q]));
 
@@ -232,25 +235,94 @@ export function q2Prefix(placed, words) {
   return out;
 }
 
+// ---------- Quest 3 — Guess the Word ----------
+
+const ALL_GRAPHEMES = learnedGraphemes(7);
+/** Âm đầu của từ (gợi ý sau lần sai 1, phát từ file — 6.1) và chữ đầu (để làm sáng chữ đầu mọi lựa chọn). */
+export function firstSoundOf(word) {
+  const g = toGraphemes(word, ALL_GRAPHEMES)?.[0] ?? word[0];
+  return { grapheme: g, sound: soundOfGrapheme(g) };
+}
+
+/**
+ * Cặp gợi ý dùng được của câu đố ở mức `level` với kho `words`: bé đọc được cả 2 câu (2.3) và đủ nhiễu ở mức đó
+ * (6.2 — mức 2–3 chỉ nhiễu cùng loại).
+ */
+function usablePairs(riddle, words, lp, level) {
+  return riddle.clues.filter((c) => canRead(c.en.join(' '), lp).ok && choicesAt(riddle, c, words, level) > 0);
+}
+
+/**
+ * 8 mục Quest 3 (6). Mức không đủ 3 từ dùng được → lùi mức hiển thị (`show`) cho cả lượt; mức 1 cũng không đủ → [] (kho
+ * rỗng, 2.5). Từ lặp lại trong lượt thì đổi cặp gợi ý nếu có (RD-15); vị trí đáp án chia đều (RD-17).
+ */
+export function makeQ3(level, rand, pool, lp) {
+  const words = pool.words.map((w) => w.en).filter((w) => RIDDLE_BY_WORD.has(w));
+  let show = level;
+  let cands = [];
+  for (; show >= 1; show--) {
+    cands = words.filter((w) => usablePairs(RIDDLE_BY_WORD.get(w), words, lp, show).length);
+    if (cands.length >= 3) break;
+  }
+  if (show < 1) return [];
+  const seq = fillTo(shuffle(rand, cands), QUEST_ITEMS, rand);
+  const usedPair = new Map();
+  const out = seq.map((word) => {
+    const r = RIDDLE_BY_WORD.get(word);
+    const pairs = usablePairs(r, words, lp, show);
+    const seen = usedPair.get(word) ?? [];
+    const fresh = pairs.filter((c) => !seen.includes(c));
+    const clue = shuffle(rand, fresh.length ? fresh : pairs)[0];
+    usedPair.set(word, [...seen, clue]);
+    const count = choicesAt(r, clue, words, show);
+    // Nhiễu khác chữ đầu với nhau; mức 3 ưu tiên từ giống chữ (cat / rat).
+    const pool3 = shuffle(rand, distractorsFor(r, clue, words, show));
+    if (show === 3) pool3.sort((a, b) => Number(lookAlike(b, word)) - Number(lookAlike(a, word)));
+    const picks = [];
+    for (const d of pool3) if (picks.length < count - 1 && !picks.some((p) => p[0] === d[0])) picks.push(d);
+    const alike = show === 3 && picks.some((d) => lookAlike(d, word));
+    return {
+      id: word, word, en: clue.en, vi: clue.vi, trait: clue.trait, show, distractors: picks,
+      sum: r.sum, sumVi: r.sumVi, sumReadable: canRead(r.sum, lp).ok, first: firstSoundOf(word),
+      kind: show === 1 ? 'q3:pic' : alike ? 'q3:look-alike' : 'q3:word',
+    };
+  });
+  // Vị trí đáp án chia đều trong lượt (không để bé đoán theo chỗ): rút lần lượt từ túi vị trí theo số lựa chọn.
+  const bags = new Map();
+  for (const it of out) {
+    const size = it.distractors.length + 1;
+    if (!bags.get(size)?.length) bags.set(size, shuffle(rand, [...Array(size).keys()]));
+    it.options = [...it.distractors];
+    it.options.splice(bags.get(size).shift(), 0, it.word);
+  }
+  return out;
+}
+
 // ---------- Chung ----------
 
 /** Kiểu câu theo mức (để bố mẹ xem kiểu hay sai, 10.1). */
 export function questKindsAt(key, level) {
   if (key === 'q1') return level === 3 ? ['q1:in', 'q1:on', 'q1:under', 'q1:two'] : ['q1:in', 'q1:on'];
   if (key === 'q2') return ['q2:short', 'q2:long'];
+  if (key === 'q3') return level === 1 ? ['q3:pic'] : ['q3:word', 'q3:look-alike'];
   return [];
 }
 
-/** Câu đọc của mục: Quest 1 = câu chỉ dẫn; Quest 2 = câu vừa xếp. */
-export const questSentence = (key, item) => (key === 'q1' ? { en: item.text, vi: item.vi } : { en: item.en, vi: item.vi });
+/** Câu đọc của mục: Quest 1 = câu chỉ dẫn; Quest 2 = câu vừa xếp; Quest 3 = câu tổng kết. */
+export function questSentence(key, item) {
+  if (key === 'q1') return { en: item.text, vi: item.vi };
+  if (key === 'q3') return { en: item.sum, vi: item.sumVi };
+  return { en: item.en, vi: item.vi };
+}
 
 /** Khóa tiến độ (10.1): ID ổn định của nội dung. */
 export function questRef(lesson, item) {
-  return { lessonId: lesson.id, activity: lesson.key === 'q1' ? 'do' : 'build', itemId: item.id };
+  return { lessonId: lesson.id, activity: { q1: 'do', q2: 'build', q3: 'guess' }[lesson.key], itemId: item.id };
 }
 
 /** Giải thích tiếng Việt khi sai 2 lần. Quest 1 theo đúng lỗi; Quest 2 dịch câu + thứ tự từ. */
 export function questExplainVi(key, item, { action = null, error = null, byWord = null } = {}) {
+  if (key === 'q3') return `Gợi ý: ${item.vi.join(' ')} Đáp án là "${item.word}" (${byWord?.get(item.word)?.vi ?? item.word}).`;
   if (key === 'q2') return `Câu "${item.en}" nghĩa là: ${item.vi} Câu tiếng Anh bắt đầu bằng ai / cái gì, rồi tới việc làm. Thứ tự đúng: ${item.words.join(' – ')}.`;
   const vi = (w) => byWord?.get(w)?.vi ?? w;
   const a = action ?? item.actions[0];

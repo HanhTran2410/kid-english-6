@@ -8,9 +8,10 @@ import { GROUPS } from '../../app/js/phonics.js';
 import { learnedPhonics, canRead, questPool, fillTo, lookAlike, QUEST_WORDS, wordsOf } from '../../app/js/quest/content.js';
 import {
   BUILTIN_QUESTS, PAIRS, PLACES, makeQ1, makeQ2, judgeQ1, q1WrongLine, q1Text, sentenceWords, q2Wrong, q2Prefix,
-  questKindsAt, questRef, questExplainVi, QUEST_ITEMS,
+  questKindsAt, questRef, questExplainVi, QUEST_ITEMS, makeQ3, firstSoundOf, questSentence,
 } from '../../app/js/quest/quest.js';
 import { seeded } from '../../app/js/math/math.js';
+import { TRAITS, RIDDLE_BY_WORD } from '../../app/js/quest/riddles.js';
 import { QUESTIONS, translateQuestion } from '../../app/js/captions.js';
 
 const RUNS = 300;
@@ -20,8 +21,8 @@ const setup = (groups) => {
 };
 const ALL = [1, 2, 3, 4, 5, 6, 7];
 
-test('2 trò của đợt Q-a, khóa quest-q*', () => {
-  assert.deepEqual(BUILTIN_QUESTS.map((q) => q.id), ['quest-q1', 'quest-q2']);
+test('3 trò (đợt Q-a + Q-b), khóa quest-q*', () => {
+  assert.deepEqual(BUILTIN_QUESTS.map((q) => q.id), ['quest-q1', 'quest-q2', 'quest-q3']);
 });
 
 test('learnedPhonics (2.2): chỉ gộp grapheme / tricky của ĐÚNG các nhóm đã xong (QU-09)', () => {
@@ -171,4 +172,70 @@ test('khóa tiến độ, kiểu câu, phụ đề câu hỏi Quest', () => {
   for (const q of ['readAndDo', 'makeSentence']) assert.ok(translateQuestion(QUESTIONS[q]()), q);
   assert.ok(translateQuestion('Put the cat in the box.'));
   assert.ok(translateQuestion('Put the cat in the box and the hat on the bed.'));
+});
+
+test('Quest 3 (6, RD-08 / 14 / 15 / 17, QU-19): 8 mục, nhiễu đã học + sai câu 2 + khác chữ đầu; kho < 3 từ → []', () => {
+  assert.deepEqual(makeQ3(1, seeded(1), setup([1]).pool, setup([1]).lp), []);
+  assert.deepEqual(makeQ3(1, seeded(1), setup([1, 2]).pool, setup([1, 2]).lp), []);
+  for (const groups of [[1, 2, 3], [1, 2, 3, 4], ALL, [3, 5]]) {
+    const { lp, pool } = setup(groups);
+    const learned = new Set(pool.words.map((w) => w.en));
+    for (const level of [1, 2, 3]) {
+      const positions = [];
+      for (let run = 0; run < 60; run++) {
+        const items = makeQ3(level, seeded(run * 7 + level), pool, lp);
+        if (!items.length) continue;
+        assert.equal(items.length, QUEST_ITEMS);
+        items.forEach((it, i) => {
+          if (i) assert.notEqual(it.word, items[i - 1].word, 'không hai mục liền giống nhau');
+          assert.ok(it.show <= level);
+          assert.ok(canRead(it.en.join(' '), lp).ok, `${it.word}: gợi ý đọc được`);
+          assert.ok(learned.has(it.word));
+          assert.equal(it.options.filter((w) => w === it.word).length, 1);
+          if (it.show < 3) assert.equal(it.options.length, 3);
+          assert.ok(it.options.length >= 3 && it.options.length <= 4);
+          assert.equal(new Set(it.options.map((w) => w[0])).size, it.options.length, 'khác chữ đầu');
+          const kind = RIDDLE_BY_WORD.get(it.word).kind;
+          for (const d of it.distractors) {
+            assert.ok(learned.has(d), `RD-08: ${d} chưa học`);
+            assert.ok(!TRAITS[it.trait][1].includes(d), `QU-19: ${d} cũng đúng "${it.en[1]}"`);
+            assert.equal(RIDDLE_BY_WORD.get(d).kind === kind, it.show > 1);
+          }
+          assert.equal(it.sumReadable, canRead(it.sum, lp).ok);
+          positions.push(it.options.indexOf(it.word));
+        });
+        // RD-15: từ lặp lại trong lượt dùng cặp gợi ý khác nếu từ đó có nhiều cặp đọc được.
+        const byWord = new Map();
+        for (const it of items) byWord.set(it.word, [...(byWord.get(it.word) ?? []), it.en.join(' ')]);
+        for (const [w, clues] of byWord) {
+          const readable = RIDDLE_BY_WORD.get(w).clues.filter((c) => canRead(c.en.join(' '), lp).ok).length;
+          if (clues.length === 2 && readable >= 2 && items[0].show === 1) assert.notEqual(clues[0], clues[1], w);
+        }
+      }
+      // RD-17: đáp án không dồn vào một vị trí.
+      if (positions.length) {
+        const n = Math.max(...positions) + 1;
+        for (let p = 0; p < Math.min(n, 3); p++) assert.ok(positions.filter((x) => x === p).length > positions.length / 6, `vị trí ${p}`);
+      }
+    }
+  }
+});
+
+test('Quest 3: âm đầu theo chữ ghép (ch, sh, th, qu), kiểu câu, khóa, câu đọc là câu tổng kết', () => {
+  assert.deepEqual(firstSoundOf('chick'), { grapheme: 'ch', sound: 'ch' });
+  assert.deepEqual(firstSoundOf('ship').grapheme, 'sh');
+  assert.deepEqual(firstSoundOf('queen').grapheme, 'qu');
+  assert.deepEqual(firstSoundOf('cat'), { grapheme: 'c', sound: 'k' });
+  assert.deepEqual(questKindsAt('q3', 1), ['q3:pic']);
+  assert.deepEqual(questKindsAt('q3', 3), ['q3:word', 'q3:look-alike']);
+  assert.deepEqual(questRef(BUILTIN_QUESTS[2], { id: 'fish' }), { lessonId: 'quest-q3', activity: 'guess', itemId: 'fish' });
+  const { lp, pool } = setup(ALL);
+  const it = makeQ3(3, seeded(3), pool, lp)[0];
+  assert.deepEqual(questSentence('q3', it), { en: it.sum, vi: it.sumVi });
+  assert.match(questExplainVi('q3', it), new RegExp(`"${it.word}"`));
+  for (const q of ['whatIsIt', 'startsWith']) assert.ok(translateQuestion(QUESTIONS[q]()), q);
+  // Mức 3 có từ giống chữ khi kho có (cat / rat, tap / map).
+  const kinds = new Set();
+  for (let run = 0; run < 80; run++) for (const x of makeQ3(3, seeded(run), pool, lp)) kinds.add(x.kind);
+  assert.ok(kinds.has('q3:look-alike') && kinds.has('q3:word'));
 });

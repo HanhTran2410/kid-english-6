@@ -1,10 +1,12 @@
 // Khu 🧩 Quest / Thử thách (SPEC-quest.md): Quest 1 Read and Do (cầm đồ → ô đích hình mờ → chấm 3 trường thing /
-// place / where, câu hai việc giữ việc đúng), Quest 2 Build a Sentence (thẻ từ, chấm theo chuỗi chữ, giữ thẻ đúng chỗ).
+// place / where, câu hai việc giữ việc đúng), Quest 2 Build a Sentence (thẻ từ, chấm theo chuỗi chữ, giữ thẻ đúng chỗ),
+// Quest 3 Guess the Word (2 câu gợi ý → chạm hình / từ; sai 1 → âm đầu phát từ file; lựa chọn giữ nguyên chỗ).
 // Khung lượt chơi (chọn mức, làm mẫu, 8 mục, đọc câu, sao, ra nền quay lại) ở screens/round.js. Nội dung chỉ từ bài Read
 // bé đã đọc xong (quest/content.js).
 
 import { h } from '../ui.js';
 import { play } from '../speech/sfx.js';
+import { playPhoneme } from '../speech/phoneme.js';
 import { QUESTIONS } from '../captions.js';
 import { needsVietnameseHelp } from '../settings.js';
 import { RESULT, getLessonProgress } from '../progress.js';
@@ -13,16 +15,17 @@ import { libraryImages, wordKey } from '../picture-library.js';
 import { mediaBlob } from '../db.js';
 import { seeded } from '../math/math.js';
 import { sentenceLine } from '../math/views.js';
-import { roundListScreen, roundLessonScreen, showVi, shake, waitPick, ollyTap } from './round.js';
+import { roundListScreen, roundLessonScreen, showVi, shake, waitPick, ollyTap, chooseLoop } from './round.js';
 import { learnedPhonics, questPool } from '../quest/content.js';
 import {
-  BUILTIN_QUESTS, QUEST_BY_ID, makeQ1, makeQ2, judgeQ1, q1WrongLine, q1HintWords, q2Wrong, q2Prefix, questKindsAt,
-  questSentence, questRef, questExplainVi,
+  BUILTIN_QUESTS, QUEST_BY_ID, makeQ1, makeQ2, makeQ3, judgeQ1, q1WrongLine, q1HintWords, q2Wrong, q2Prefix,
+  questKindsAt, questSentence, questRef, questExplainVi, firstSoundOf,
 } from '../quest/quest.js';
 
 const LEVEL_VI = {
   q1: ['Olly đọc câu', 'Bé tự đọc', 'Thêm under, hai việc'],
   q2: ['Câu ngắn, Olly đọc', 'Bé tự đọc', 'Tự xếp cả câu'],
+  q3: ['Chọn hình', 'Đọc 3 từ', '4 từ, có từ giống chữ'],
 };
 /** Vị trí đặt được của từng chỗ (SPEC-quest 4.4); under chỉ từ mức 3. */
 const PLACE_WHERE = { box: ['in', 'on'], bag: ['in'], cup: ['in'], bed: ['on', 'under'] };
@@ -41,7 +44,20 @@ async function questContent(app) {
   return { lp, pool: questPool(BUILTIN_LESSONS, lp) };
 }
 
-const MAKERS = { q1: makeQ1, q2: makeQ2 };
+const MAKERS = { q1: makeQ1, q2: makeQ2, q3: makeQ3 };
+const RUNNERS = { q1: (ctx, item) => runQ1(ctx, item), q2: (ctx, item) => runQ2(ctx, item), q3: (ctx, item) => runQ3(ctx, item) };
+
+/** Hình + nghĩa của mục (lưu trong mục để quay lại từ nền vẫn có). */
+function decorate(key, it, pool, lib) {
+  if (key === 'q1') {
+    it.pics = picsOf([...it.shelf, ...it.places], pool, lib);
+    it.viOf = Object.fromEntries([...it.shelf, ...it.places].map((w) => [w, pool.byWord.get(w)?.vi ?? w]));
+  } else if (key === 'q3') {
+    it.pics = picsOf(it.options, pool, lib);
+    it.viOf = pool.byWord.get(it.word)?.vi ?? it.word;
+  }
+  return it;
+}
 
 /** Hình của từ: ảnh trong 🖼️ Kho ảnh nếu có, không thì emoji (lưu sẵn trong mục để quay lại từ nền vẫn có). */
 function picsOf(words, pool, lib) {
@@ -76,18 +92,17 @@ const QUEST_CONFIG = {
     const { lp, pool } = await questContent(app);
     const items = MAKERS[lesson.key](level, Math.random, pool, lp);
     const lib = await libraryImages(app.db);
-    // Hình của mọi từ trên màn mục (đồ, chỗ đặt, thẻ nhiễu) — lưu trong mục.
-    for (const it of items) {
-      if (lesson.key !== 'q1') continue;
-      it.pics = picsOf([...it.shelf, ...it.places], pool, lib);
-      it.viOf = Object.fromEntries([...it.shelf, ...it.places].map((w) => [w, pool.byWord.get(w)?.vi ?? w]));
-    }
-    return items;
+    return items.map((it) => decorate(lesson.key, it, pool, lib));
   },
   itemRef: questRef,
   sentenceOf: (lesson, item) => questSentence(lesson.key, item),
-  runItem: (ctx, item) => (ctx.lesson.key === 'q1' ? runQ1(ctx, item) : runQ2(ctx, item)),
-  showSolved: (ctx, item) => (ctx.lesson.key === 'q1' ? buildQ1(ctx, item, { solved: true }).line : solvedQ2(ctx, item)),
+  runItem: (ctx, item) => RUNNERS[ctx.lesson.key](ctx, item),
+  showSolved(ctx, item) {
+    if (ctx.lesson.key === 'q1') return buildQ1(ctx, item, { solved: true }).line;
+    return ctx.lesson.key === 'q3' ? solvedQ3(ctx, item) : solvedQ2(ctx, item);
+  },
+  // Quest 3: câu tổng kết bé chưa đọc được → không có phần bé đọc (Olly đã đọc khi khen).
+  readable: (lesson, item) => lesson.key !== 'q3' || item.sumReadable,
   demoSteps: (dctx, opts) => demoSteps(dctx, opts),
   // 🔊 không tính là trợ giúp; đếm số lần bấm để bố mẹ xem (SPEC-quest 10.2).
   onStart(ctx) {
@@ -367,6 +382,75 @@ async function runQ2(ctx, item) {
   return { result, line };
 }
 
+// ---------- Quest 3 — Guess the Word (SPEC-quest 6) ----------
+
+/**
+ * Màn một mục Quest 3: 2 câu gợi ý + lựa chọn (giữ nguyên chỗ suốt mục). Mức 1: hình; mức 2–3: chữ, chữ đầu bọc riêng
+ * để sáng như nhau sau lần sai 1. `withPics`: làm mẫu mức 2 — chữ kèm hình nhỏ.
+ */
+function buildQ3(ctx, item, { withPics = false } = {}) {
+  const { stage, app } = ctx;
+  const line = sentenceLine({ en: item.en.join(' '), vi: item.show === 1 ? item.vi.join(' ') : null }, showVi(app));
+  line.el.classList.replace('mt-sentence', 'qt-clue');
+  const options = item.options.map((w) => {
+    const g = firstSoundOf(w).grapheme;
+    const body = item.show === 1
+      ? [picEl(item.pics?.[w])]
+      : [h('span.qt-word', {}, h('span.qt-first', { text: g }), h('span', { text: w.slice(g.length) })),
+        withPics ? h('span.qt-mini', {}, picEl(item.pics?.[w])) : null];
+    return h(`button.qt-choice${item.show === 1 ? '.pic' : ''}`, { type: 'button', 'aria-label': w, dataset: { word: w } }, ...body);
+  });
+  stage.replaceChildren(line.el, h(`div.qt-choices.n${options.length}`, {}, ...options));
+  return { line, options, correct: options[item.options.indexOf(item.word)] };
+}
+
+/** Câu tổng kết dưới lựa chọn (câu ở lại để bé đọc). */
+function sumLine(ctx, item) {
+  const line = sentenceLine({ en: item.sum, vi: item.sumVi }, showVi(ctx.app));
+  line.el.classList.add('qt-sum');
+  ctx.stage.append(line.el);
+  return line;
+}
+
+function solvedQ3(ctx, item) {
+  buildQ3(ctx, item).correct.classList.add('right');
+  return sumLine(ctx, item);
+}
+
+async function runQ3(ctx, item) {
+  const { t, stage, signal, round } = ctx;
+  const view = buildQ3(ctx, item);
+  const clues = item.en.join(' ');
+  const speak = async () => {
+    await t.say(QUESTIONS.whatIsIt());
+    await t.karaoke(clues, view.line.words);
+  };
+  const firsts = () => stage.querySelectorAll('.qt-first').forEach((el) => el.classList.add('lit'));
+  // Lựa chọn đã chạm sai mờ đi, vẫn ở chỗ cũ, không chạm lại được — giữ cả khi ra nền rồi quay lại (6.1).
+  const tried = round.q3Tried ?? (round.q3Tried = []);
+  for (const o of view.options) if (tried.includes(o.dataset.word)) o.classList.add('tried');
+  if (round.wrong >= 1) firsts();
+  const result = await chooseLoop(ctx, {
+    options: view.options, correct: view.correct, question: clues, meaning: item.vi.join(' '), speak,
+    explain: questExplainVi('q3', item, { byWord: new Map([[item.word, { vi: item.viOf }]]) }),
+    onWrong(picked) {
+      picked.classList.add('tried');
+      tried.push(picked.dataset.word);
+    },
+    async onWrong1() {
+      // Âm đầu: phát từ file âm rời, không đọc tên chữ; chữ đầu của MỌI lựa chọn sáng như nhau (6.1).
+      firsts();
+      await t.say(QUESTIONS.startsWith());
+      await playPhoneme(item.first.sound, { stage, signal }).catch(() => {});
+      await t.pause(400);
+    },
+  });
+  round.q3Tried = null;
+  const line = sumLine(ctx, item);
+  await praise(ctx, line, questSentence('q3', item), result);
+  return { result, line };
+}
+
 // ---------- Olly làm mẫu (3) + giới thiệu từ chức năng (2.4) ----------
 
 /** Thẻ chữ to + câu giới thiệu từ Quest (put / under); ghi "đã giới thiệu". */
@@ -389,8 +473,7 @@ async function demoItem(dctx) {
   const ids = new Set(round.items.map((x) => x.id));
   const items = MAKERS[lesson.key](round.level, seeded(round.items.length + round.level), pool, lp);
   const it = items.find((x) => !ids.has(x.id) && (lesson.key !== 'q1' || x.actions.length === 1)) ?? items[0];
-  if (lesson.key === 'q1') it.pics = picsOf([...it.shelf, ...it.places], pool, await libraryImages(app.db));
-  return it;
+  return decorate(lesson.key, it, pool, await libraryImages(app.db));
 }
 
 async function demoQ1(dctx, item) {
@@ -432,6 +515,23 @@ async function demoQ2(dctx, item) {
   await t.pause(900);
 }
 
+async function demoQ3(dctx, item) {
+  const { t } = dctx;
+  // Mức 2: chữ kèm hình nhỏ ở phần làm mẫu, khi bé chơi thì chỉ có chữ (6.2).
+  const view = buildQ3(dctx, item, { withPics: item.show === 2 });
+  const clues = item.en.join(' ');
+  const speak = async () => {
+    await t.say(QUESTIONS.whatIsIt());
+    await t.karaoke(clues, view.line.words);
+  };
+  await t.ask(clues, { meaning: item.vi.join(' '), speak });
+  await ollyTap(t, view.correct);
+  t.endQuestion();
+  const line = sumLine(dctx, item);
+  await praise(dctx, line, questSentence('q3', item), null);
+  await t.pause(900);
+}
+
 /** Làm mẫu 1 lượt (Quest ngắn, bản rút gọn cũng 1 lượt — ⏭ vẫn có khi đã có sao). */
 async function demoSteps(dctx) {
   const { lesson, round, app } = dctx;
@@ -440,6 +540,8 @@ async function demoSteps(dctx) {
     if (!(await wordSeen(app.db, 'put'))) await introduceWord(dctx, 'put');
     if (round.level === 3 && !(await wordSeen(app.db, 'under'))) await introduceWord(dctx, 'under');
     await demoQ1(dctx, await demoItem(dctx));
+  } else if (lesson.key === 'q3') {
+    await demoQ3(dctx, await demoItem(dctx));
   } else {
     await demoQ2(dctx, await demoItem(dctx));
   }

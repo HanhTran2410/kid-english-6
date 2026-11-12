@@ -463,3 +463,14 @@ Câu mới:
 - Quest 2: mức 2–3 chỉ nói *"Make the sentence!"*, 🔊 đọc thêm cả câu (không tính trợ giúp). Xong câu: hàng thẻ thay bằng câu karaoke.
 - Từ chức năng: bản ghi `quest/word/put`, `quest/word/under`; 🔊: `quest/listen/q1`, `quest/listen/q2` (số lần bấm).
 - Chưa làm ở 0.10.0: Quest 3, Quest 4 (QU-19 → QU-23, QU-26); QU-08 giảm chuyển động có CSS, chưa có test riêng.
+
+## 15. Ghi chú khi làm Q-b — Quest 3 (0.10.1)
+- Sinh mục: `makeQ3` (`js/quest/quest.js`) dùng `riddles.js` (bảng đã duyệt). Từ dùng được ở mức L = từ bé đã học có ≥ 1 cặp gợi ý đọc được **và** đủ nhiễu ở mức L (`choicesAt`). Mức được chọn không đủ 3 từ → cả lượt lùi xuống mức hiển thị thấp hơn (`item.show`); mức 1 cũng không đủ → kho rỗng (thẻ mờ, RD-14). Bé xong nhóm 1 hoặc 1–2: Quest 3 mờ.
+- Mỗi mục chọn ngẫu nhiên một cặp đọc được; từ lặp lại trong lượt thì đổi cặp nếu có (RD-15). Nhiễu: từ đã học, sai câu 2, khác chữ đầu với đáp án và với nhau; mức 3 ưu tiên từ giống chữ (*cat / rat*, *tap / map*) → `kind` `q3:look-alike`. Vị trí đáp án rút từ túi vị trí → chia đều (RD-17).
+- Âm đầu: grapheme đầu theo bảng đầy đủ (*ch*ick, *sh*ip, *qu*een), phát bằng `playPhoneme` (file âm rời, QU-20). Sau sai 1, chữ đầu của **mọi** lựa chọn sáng (mức 2–3).
+- Lựa chọn chạm sai: `.tried` (mờ, không chạm lại được), lưu ở `round.q3Tried` → ra nền rồi quay lại vẫn mờ.
+- Câu tổng kết: Olly đọc (karaoke) khi khen; phần **bé đọc** chỉ có khi bé đọc được câu đó (`cfg.readable` mới trong `round.js`, mục khác không đổi).
+- Mức 2: phần làm mẫu chữ kèm hình nhỏ; khi bé chơi chỉ có chữ.
+- Câu gợi ý của Quest 3 cỡ chữ riêng (`.quest .qt-clue .sword`) — câu 2 vế dài bị `sentence.small` thu nhỏ quá.
+- Test: unit `makeQ3` (RD-08, 14, 15, 17, QU-19, âm đầu ch / sh / qu), UI Quest 3 mức 1 (hình, sai 1 → mờ + âm đầu từ file → helped, câu tổng kết, sao) và mức 2 (chữ, hình nhỏ ở làm mẫu, chữ đầu sáng, sai 2 → missed).
+- Chưa làm: Quest 4 (QU-21 → QU-23, QU-26).
