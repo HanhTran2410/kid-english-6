@@ -99,6 +99,9 @@ export function translateQuestion(en, meaning = '') {
     }],
     // Toán phần 2 (SPEC-math2 7): câu đố T8 đã có dòng dịch viết sẵn (meaning).
     [/ How many more \w+ does \w+ have\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
+    [/ How many \w+ are there altogether\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
+    [/ How many \w+ are left\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
+    [/^What is (\d+) (plus|minus|take away) (\d+)\?$/, (a, op, b) => `${a} ${op === 'plus' ? 'cộng' : 'trừ'} ${b} bằng mấy? Bé chạm số đúng trong khay.`],
     [/^The ladybug has (\d+) spots\. How many spots are hidden\?$/, (x) => `Bọ rùa có ${x} chấm. Cánh úp đang che mấy chấm? Bé chạm số đúng trong khay.`],
     [/^Read it and do it!$/, () => 'Bé đọc câu rồi làm theo: chạm đồ vật, rồi chạm chỗ đặt.'],
     [/^Make the sentence!$/, () => 'Bé chạm các thẻ từ theo đúng thứ tự để thành câu.'],

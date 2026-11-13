@@ -1,4 +1,5 @@
-// 🔢 Toán phần 2 — đợt Math-d (SPEC-math2.md mục 11): T8 How many more (MATH-02 / 03), T9 Number bonds (MATH-04 / 05),
+// 🔢 Toán phần 2 — Math-d / Math-e (SPEC-math2.md mục 11): T8 How many more (MATH-02 / 03), T9 Number bonds (MATH-04 / 05),
+// T10 Add it up (MATH-19), T11 Take away (MATH-09), dòng gợi ý trên thẻ bài,
 // thẻ sai mờ tại chỗ và giữ khi ra nền (MATH-17), bố cục iPhone dọc 375 × 667 (khung 10 ô ≥ 48 px, khay trong màn).
 import { test, expect } from '@playwright/test';
 import { fakeSpeech, startApp, spoken } from './helpers.js';
@@ -200,6 +201,151 @@ test('iPhone dọc 375 × 667: T8 và T9 không tràn ngang, khay nằm trong m�
     if (title === 'Number bonds') {
       for (const cell of await page.locator('.mt-cell').all()) expect((await cell.boundingBox()).width).toBeGreaterThanOrEqual(48);
     }
+    await page.getByRole('button', { name: 'Về' }).click();
+    await page.getByRole('button', { name: 'Về' }).click().catch(() => {});
+  }
+});
+
+// ---------- Math-e: T10 Add it up, T11 Take away ----------
+
+/** Chạm đúng các mục trước mục `index` (bỏ qua phần đọc) để tới mục đó. */
+async function playTo(page, index) {
+  await expect.poll(async () => {
+    const cur = await round(page);
+    if (cur.index < index) {
+      const skip = page.getByRole('button', { name: 'Bỏ qua phần đọc' });
+      if (await skip.isVisible()) await skip.click().catch(() => {});
+      else if (cur.results[cur.index] == null) await page.locator(`.mt-ans[data-n="${cur.items[cur.index].answer}"]`).click({ timeout: 300 }).catch(() => {});
+    }
+    return cur.index;
+  }, { timeout: 30000 }).toBe(index);
+}
+
+test('danh sách: T10, T11 có dòng gợi ý "học Tách – gộp số trước" khi chưa có sao ở T9 (không khóa)', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await expect(page.locator('.lesson-card')).toHaveCount(11);
+  for (const id of ['math-t10', 'math-t11']) await expect(page.locator(`.lesson-card[data-lesson="${id}"] .lesson-note`)).toHaveText('Gợi ý: học 🐞 Tách – gộp số trước');
+  await expect(page.locator('.lesson-card[data-lesson="math-t9"] .lesson-note')).toHaveCount(0);
+  await page.evaluate(() => window.kidEnglish6.db.put('progress', { key: 'lesson:math-t9', lessonId: 'math-t9', bestStars: 2, plays: 1, completedAt: 1 }));
+  await page.getByRole('button', { name: 'Về' }).click();
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await expect(page.locator('.lesson-card[data-lesson="math-t10"] .lesson-note')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Add it up' }).click();
+  await expect.poll(() => spoken(page)).toContain('Three plus two is five.');
+});
+
+test('T10 mức 1: làm mẫu 3 + 2 đếm hết; câu chuyện + khung có đồ (xanh = a, cam = b) + phép tính; sai → "Let\'s count them all!", Olly đếm; hết lượt', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await page.getByRole('button', { name: 'Add it up' }).click();
+  await expect.poll(() => spoken(page)).toContain('3 ducks are in the pond. 2 more ducks come. How many ducks are there altogether?');
+  await expect.poll(() => spoken(page)).toContain('Three plus two is five.');
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  await expect(page.locator('.mt-sumq .sword').first()).toBeVisible();
+  await expect(page.locator('.mt-frame.pics .mt-cell.blue')).toHaveCount(item.a);
+  await expect(page.locator('.mt-frame.pics .mt-cell.orange')).toHaveCount(item.b);
+  await expect(page.locator('.mt-eq')).toHaveAttribute('aria-label', `${item.a} + ${item.b}`);
+  await expect(page.locator('.mt-ans')).toHaveCount(3);
+  const before = (await spoken(page)).length;
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await expect.poll(async () => (await spoken(page)).slice(before)).toEqual(expect.arrayContaining(["Let's count them all!", ...['one', 'two', 'three', 'four', 'five'].slice(0, item.answer)]));
+  await tapUntil(page, item.answer, (cur) => cur.results[0] != null);
+  await playRound(page);
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '2 sao');
+  expect((await page.evaluate((k) => window.kidEnglish6.db.get('progress', k), `math-t10/add/${item.a}-${item.b}`)).helped).toBe(1);
+});
+
+test('MATH-19: T10 mức 2 sai → sáng số ban đầu (a), "Start at {a}. Count on!"; mức 3 chỉ phép tính, sáng số lớn hơn', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openAt(page, 'Add it up', 2);
+  await expect.poll(() => spoken(page)).toContain('Start at five. Count on!');
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  let item = (await round(page)).items[0];
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await expect(page.locator('.mt-eqn.lit')).toHaveText(String(item.a));
+  await expect(page.locator('.mt-cell.lit')).toHaveCount(item.a);
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  await expect.poll(() => spoken(page)).toContain(`Start at ${words[item.a]}. Count on!`);
+
+  await page.getByRole('button', { name: 'Về' }).click(); // về danh sách Toán
+  await page.getByRole('button', { name: 'Add it up' }).click();
+  await page.locator('.level-btn[data-level="3"]').click();
+  await expect.poll(() => spoken(page)).toContain('Same answer!');
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const r = await round(page);
+  // Mục đầu tiên không có số 0 và hai số khác nhau.
+  const k = r.items.findIndex((x) => x.a !== x.b && x.a > 0 && x.b > 0);
+  await playTo(page, k);
+  item = r.items[k];
+  await expect(page.locator('.mt-sumq')).toHaveCount(0);
+  await expect(page.locator('.mt-framebox')).toBeHidden();
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await expect(page.locator('.mt-framebox')).toBeVisible();
+  await expect(page.locator('.mt-eqn.lit')).toHaveText(String(Math.max(item.a, item.b)));
+  await expect(page.locator('.mt-cell.lit')).toHaveCount(Math.max(item.a, item.b));
+});
+
+test('T11 mức 1: làm mẫu 5 − 2; đồ bị bớt ở nguyên ô, bị gạch; sai → "Count the ones that are left!"; hết lượt', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await page.getByRole('button', { name: 'Take away' }).click();
+  await expect.poll(() => spoken(page)).toContain('5 birds are on the tree. 2 birds fly away. How many birds are left?');
+  await expect.poll(() => spoken(page)).toContain('Five take away two is three.');
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  await expect(page.locator('.mt-cell.blue')).toHaveCount(item.a);
+  await expect(page.locator('.mt-cell.crossed')).toHaveCount(item.b);
+  // Đồ bị gạch là các ô cuối của số bị trừ.
+  const crossedAt = await page.locator('.mt-cell.crossed').evaluateAll((els) => els.map((e) => Number(e.dataset.i)));
+  expect(crossedAt).toEqual(Array.from({ length: item.b }, (_, i) => item.a - item.b + i));
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await expect.poll(() => spoken(page)).toContain('Count the ones that are left!');
+  await tapUntil(page, item.answer, (cur) => cur.results[0] != null);
+  await playRound(page);
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '2 sao');
+});
+
+test('MATH-09: T11 mức 3 trừ hết — khung giữ đủ a đồ, tất cả bị gạch; "Look! None are left."; câu đọc là phép tính', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openAt(page, 'Take away', 3);
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const r = await round(page);
+  const k = r.items.findIndex((x) => x.b === x.a);
+  await playTo(page, k);
+  const item = r.items[k];
+  await page.getByRole('button', { name: 'Xem khung 10 ô' }).click();
+  await expect(page.locator('.mt-cell.blue')).toHaveCount(item.a);
+  await expect(page.locator('.mt-cell.crossed')).toHaveCount(item.a);
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await expect.poll(() => spoken(page)).toContain('Look! None are left.');
+  await tapUntil(page, 0, (cur) => cur.results[k] != null);
+  const words = ['zero', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+  await expect.poll(() => spoken(page)).toContain(`${words[item.a][0].toUpperCase()}${words[item.a].slice(1)} minus ${words[item.a]} equals zero.`);
+});
+
+test('iPhone dọc 375 × 667: T10, T11 — khay trong màn, ô khung ≥ 48 px, không tràn ngang', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await fakeSpeech(page);
+  await startApp(page);
+  for (const title of ['Add it up', 'Take away']) {
+    await page.getByRole('button', { name: 'Toán' }).click();
+    await page.getByRole('button', { name: title }).click();
+    await page.getByRole('button', { name: 'Đến lượt con' }).click();
+    await expect(page.locator('.mt-ans').first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    for (const card of await page.locator('.mt-ans').all()) {
+      const box = await card.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(64);
+      expect(box.y + box.height).toBeLessThanOrEqual(667);
+    }
+    for (const cell of await page.locator('.mt-cell').all()) expect((await cell.boundingBox()).width).toBeGreaterThanOrEqual(48);
     await page.getByRole('button', { name: 'Về' }).click();
     await page.getByRole('button', { name: 'Về' }).click().catch(() => {});
   }

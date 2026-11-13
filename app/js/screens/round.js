@@ -7,7 +7,8 @@
 //     runItem(ctx, item) → { result, line }, showSolved(ctx, item) → line, demoSteps(dctx, { short }),
 //     tùy chọn: available(app, lesson) → false = chưa đủ nội dung (thẻ mờ, không mở lượt; SPEC-quest 2.5),
 //     emptyLine { en, vi } (câu Olly nói khi đó), onStart(ctx) (gắn thêm việc khi mở màn bài),
-//     readable(lesson, item) → false = bé chưa đọc được câu của mục, bỏ phần bé đọc (Olly đã đọc khi khen) }
+//     readable(lesson, item) → false = bé chưa đọc được câu của mục, bỏ phần bé đọc (Olly đã đọc khi khen),
+//     cardNote(lesson, totalOf) → dòng gợi ý nhỏ trên thẻ bài (totalOf(id) = tiến độ bài khác), null = không có }
 //   runItem có thể trả { results: [...] } để chấm nhiều mục liền nhau trong một lần chơi (Quest 4: một lưới nhiều từ).
 
 import { h, toast } from '../ui.js';
@@ -79,6 +80,8 @@ export function roundListScreen(app, cfg) {
     const levels = await Promise.all(lessons.map((l) => levelProgress(app.db, l.id)));
     const next = lessons.findIndex((_, i) => !totals[i].completedAt);
     const ready = await Promise.all(lessons.map((l) => (cfg.available ? cfg.available(app, l) : true)));
+    const totalOf = (id) => totals[lessons.findIndex((x) => x.id === id)];
+    const noteOf = (l) => cfg.cardNote?.(l, totalOf) ?? null;
     lessons.forEach((l, i) => {
       // Sao của mức cao nhất đã chơi, kèm nhãn "Mức N" (6.3).
       const played = [3, 2, 1].find((L) => levels[i][L].plays);
@@ -94,7 +97,8 @@ export function roundListScreen(app, cfg) {
       h('span.lesson-vi', { text: l.titleVi }),
       h('span.lesson-stars', { text: starText(played ? levels[i][played].bestStars : 0) }),
       played ? h('span.mt-level-chip', { text: `Mức ${played}` }) : null,
-      i === next ? h('span.next-badge', { text: '⭐ Tiếp theo' }) : null));
+      i === next ? h('span.next-badge', { text: '⭐ Tiếp theo' }) : null,
+      noteOf(l) ? h('span.lesson-note', { text: noteOf(l) }) : null));
     });
   })().catch((err) => {
     console.error(err);

@@ -1,4 +1,4 @@
-// Khu 🔢 Math / Toán (SPEC-math.md, SPEC-math2.md): các kiểu mục của 9 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
+// Khu 🔢 Math / Toán (SPEC-math.md, SPEC-math2.md): các kiểu mục của 11 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
 // câu đố) và phần Olly làm mẫu. Khung lượt chơi (chọn mức, 8 mục, đọc câu, sao, ra nền quay lại) ở screens/round.js.
 
 import { h } from '../ui.js';
@@ -17,8 +17,8 @@ import {
 import {
   numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl, orderBoard, numberLine, personCard,
 } from '../math/views.js';
-import { t8Item, t9Item } from '../math/sums.js';
-import { buildT8, buildT9, demoSums } from './math2.js';
+import { t8Item, t9Item, opItem } from '../math/sums.js';
+import { buildT8, buildT9, buildOp, demoSums } from './math2.js';
 
 
 /** Mô tả mức trên nút chọn mức. */
@@ -32,6 +32,8 @@ const LEVEL_VI = {
   t7: ['Có hình đồ vật', 'Đọc rồi chọn', 'Số tới 20'],
   t8: ['Tới 6, có dây nối', 'Tới 10', 'Hai hàng lệch'],
   t9: ['Tới 5, có khung 10 ô', 'Tới 10', 'Đôi bạn của 10'],
+  t10: ['Tới 5, đếm hết', 'Tới 10, đếm tiếp', 'Chỉ phép tính'],
+  t11: ['Tới 5', 'Tới 10', 'Chỉ phép tính'],
 };
 
 /** Tia số: 11 số; iPhone dọc chỉ đủ chỗ cho 7 ô ≥ 48 px (SPEC-math 8.2). */
@@ -57,6 +59,8 @@ const MATH_CONFIG = {
   runItem: (ctx, item) => runItem(ctx, item),
   showSolved: (ctx, item) => showSolved(ctx, item),
   demoSteps: (dctx, opts) => demoSteps(dctx, opts),
+  // Phép cộng / trừ / toán có lời văn: gợi ý học Tách – gộp số trước khi bé chưa có sao ở T9 — giọng gợi ý, không khóa.
+  cardNote: (lesson, totalOf) => (['t10', 't11', 't12'].includes(lesson.key) && !(totalOf('math-t9')?.bestStars > 0) ? 'Gợi ý: học 🐞 Tách – gộp số trước' : null),
 };
 
 export const mathScreen = (app) => roundListScreen(app, MATH_CONFIG);
@@ -87,6 +91,7 @@ function buildView(ctx, item) {
   if (key === 't7') return buildPuzzle(ctx, item);
   if (key === 't8') return buildT8(ctx, item);
   if (key === 't9') return buildT9(ctx, item);
+  if (key === 't10' || key === 't11') return buildOp(ctx, item);
   return buildCompare(ctx, item, key === 't6' ? 'tens' : 'blocks');
 }
 
@@ -605,6 +610,15 @@ async function demoSteps(dctx, { short }) {
     const L = round.level;
     steps.push(() => demoSums(dctx, t9Item({ total: 5, known: 3, hidden: 'right' }, L, Math.random, 0)));
     steps.push(() => demoSums(dctx, t9Item(L === 1 ? { total: 4, known: 1, hidden: 'left' } : { total: 7, known: 4, hidden: 'left' }, L, Math.random, 2)));
+  } else if (lesson.key === 't10') {
+    // Mức 1 đếm hết (3 + 2, bộ số chung); mức 2 đếm tiếp từ số ban đầu (5 + 2); mức 3 bắt đầu từ số lớn hơn (2 + 5).
+    const L = round.level;
+    const [a, b] = L === 1 ? [3, 2] : L === 2 ? [5, 2] : [2, 5];
+    steps.push(() => demoSums(dctx, opItem({ op: '+', a, b, thing: 'ducks' }, L, Math.random, 1)));
+  } else if (lesson.key === 't11') {
+    const L = round.level;
+    const [a, b] = L === 3 ? [7, 3] : [5, 2];
+    steps.push(() => demoSums(dctx, opItem({ op: '−', a, b, thing: 'birds' }, L, Math.random, 1)));
   } else if (round.level === 1) {
     steps.push(() => demoMake(dctx, 34));
   } else {

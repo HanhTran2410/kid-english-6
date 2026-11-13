@@ -35,6 +35,14 @@ const KIND_VI = {
   't9:big': 'tách số 6–9',
   't9:ten': 'đôi bạn của 10',
   't9:zero': 'tách có phần 0',
+  't10:to5': 'cộng tới 5',
+  't10:to10': 'cộng tới 10',
+  't10:turnaround': 'cộng đổi chỗ (2 + 5 / 5 + 2)',
+  't10:zero': 'cộng với 0',
+  't11:to5': 'trừ tới 5',
+  't11:to10': 'trừ tới 10',
+  't11:zero': 'trừ 0',
+  't11:all': 'trừ hết (kết quả 0)',
 };
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);

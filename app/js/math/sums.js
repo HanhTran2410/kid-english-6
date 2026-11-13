@@ -1,5 +1,6 @@
 // 🔢 Toán phần 2 (SPEC-math2.md): phần dùng chung — khay đáp án `answerOptions` + vị trí đáp án (2.2), câu đọc
-// `mathSentence` (2.3), `problemKey` (2.4) — và bộ sinh T8 How many more (3.1), T9 Number bonds (3.2). Hàm thuần, không DOM.
+// `mathSentence` (2.3), `problemKey` (2.4) — và bộ sinh T8 How many more (3.1), T9 Number bonds (3.2), T10 Add it up (3.3),
+// T11 Take away (3.4). Hàm thuần, không DOM.
 // Chỉ khai báo hàm ở mức module (math.js import lại file này: vòng import chỉ an toàn với function declaration).
 
 import {
@@ -232,9 +233,193 @@ export function makeT9(level, rand, { weak = null, recent = [] } = {}) {
   return generate(rand, build, check, weak);
 }
 
+// ---------- T10 Add it up / T11 Take away (3.3, 3.4) ----------
+
+/**
+ * Đồ của câu chuyện T10 / T11 (mức 1–2): chỗ ở, việc "thêm" và "bớt" (số nhiều / số ít), tiếng Việt.
+ * `vi` là từ chỉ loại + tên ("con vịt"); câu tiếng Việt bỏ từ chỉ loại khi đã nhắc ("bay đi 2 con").
+ */
+export const SUM_THINGS = {
+  ducks: { emoji: '🦆', one: 'duck', vi: 'con vịt', place: ['in the pond', 'trong ao'], add: ['come', 'comes', 'đến'], take: ['swim away', 'swims away', 'bơi đi'] },
+  birds: { emoji: '🐦', one: 'bird', vi: 'con chim', place: ['on the tree', 'trên cây'], add: ['fly in', 'flies in', 'bay đến'], take: ['fly away', 'flies away', 'bay đi'] },
+  fish: { emoji: '🐟', one: 'fish', vi: 'con cá', place: ['in the tank', 'trong bể'], add: ['swim in', 'swims in', 'bơi vào'], take: ['swim away', 'swims away', 'bơi đi'] },
+  apples: { emoji: '🍎', one: 'apple', vi: 'quả táo', place: ['in the basket', 'trong giỏ'], add: ['are put in', 'is put in', 'được bỏ thêm vào'], take: ['are eaten', 'is eaten', 'bị ăn mất'] },
+  cookies: { emoji: '🍪', one: 'cookie', vi: 'cái bánh quy', place: ['on the plate', 'trên đĩa'], add: ['are put on', 'is put on', 'được bày thêm'], take: ['are eaten', 'is eaten', 'bị ăn mất'] },
+};
+
+const OP_WORD = (op, level) => (op === '+' ? 'plus' : level === 3 ? 'minus' : 'take away');
+
+/** Câu Olly hỏi: mức 1–2 câu chuyện (karaoke), mức 3 chỉ phép tính. */
+export function opText(item) {
+  const { op, a, b, level } = item;
+  if (!item.story) {
+    return { en: `What is ${a} ${OP_WORD(op, level)} ${b}?`, vi: `${a} ${op === '+' ? 'cộng' : 'trừ'} ${b} bằng mấy?` };
+  }
+  const t = SUM_THINGS[item.thing];
+  const n = (k) => `${k} ${k === 1 ? t.one : item.thing}`;
+  const is = (k) => (k === 1 ? 'is' : 'are');
+  const [place, placeVi] = t.place;
+  if (op === '+') {
+    return {
+      en: `${n(a)} ${is(a)} ${place}. ${b} more ${b === 1 ? t.one : item.thing} ${t.add[b === 1 ? 1 : 0]}. How many ${item.thing} are there altogether?`,
+      vi: `Có ${a} ${t.vi} ${placeVi}. Thêm ${b} ${t.vi} nữa ${t.add[2]}. Hỏi có tất cả bao nhiêu ${t.vi}?`,
+    };
+  }
+  return {
+    en: `${n(a)} ${is(a)} ${place}. ${n(b)} ${t.take[b === 1 ? 1 : 0]}. How many ${item.thing} are left?`,
+    vi: `Có ${a} ${t.vi} ${placeVi}. ${b} ${t.vi} ${t.take[2]}. Còn lại bao nhiêu ${t.vi}?`,
+  };
+}
+
+/** Một mục T10 / T11. Mức 1–2 có câu chuyện (`thing`), mức 3 chỉ phép tính. */
+export function opItem({ op, a, b, thing = null }, level, rand, at) {
+  const answer = op === '+' ? a + b : a - b;
+  const key = op === '+' ? 't10' : 't11';
+  const story = level < 3;
+  // Bẫy (mức 2–3): cộng — a − b (nếu ≥ 0), số hạng lớn hơn; trừ — a + b (cộng nhầm), số trừ.
+  const traps = level === 1 ? [] : op === '+' ? [a - b, Math.max(a, b)] : [a + b, b];
+  const options = placeOptions(rand, answer, answerOptions(answer, traps, trayCount(level)), at);
+  const zero = a === 0 || b === 0;
+  // Chiến lược khi sai (3.3): mức 1 đếm hết; mức 2 đếm tiếp từ số ban đầu; mức 3 từ số lớn hơn; có 0 → không đếm tiếp.
+  const hint = op === '−' ? 'count-left' : zero ? 'no-more' : level === 1 ? 'count-all' : level === 2 ? 'count-on-start' : 'count-on-bigger';
+  const start = op === '−' ? null : hint === 'count-on-bigger' || zero ? Math.max(a, b) : a;
+  const size = op === '+' ? answer : a;
+  const kind = op === '+'
+    ? (zero ? 't10:zero' : size <= 5 ? 't10:to5' : 't10:to10')
+    : (b === 0 ? 't11:zero' : b === a ? 't11:all' : size <= 5 ? 't11:to5' : 't11:to10');
+  return {
+    key, level, op, a, b, answer, thing: story ? thing : null, story, hint, start, options, at, kind, side: null,
+    pair: `${op === '+' ? 'add' : 'sub'}:${a}-${b}`,
+  };
+}
+
+export function makeT10(level, rand, { weak = null, recent = [] } = {}) {
+  const avoid = new Set(recent);
+  const max = level === 1 ? 5 : 10;
+  const base = level === 1
+    ? Array(MATH_ITEMS).fill('t10:to5')
+    : level === 2
+      ? ['t10:to5', 't10:to5', 't10:to10', 't10:to10', 't10:to10', 't10:to10', 't10:to10', 't10:to10']
+      : ['t10:turnaround', 't10:turnaround', 't10:zero', 't10:to5', 't10:to10', 't10:to10', 't10:to10', 't10:to10'];
+  const things = Object.keys(SUM_THINGS);
+  const build = (w) => {
+    const kinds = kindPlan(rand, base, w);
+    if (kinds.filter((k) => k === 't10:turnaround').length !== (level === 3 ? 2 : 0)) return null;
+    const slots = answerSlots(rand, MATH_ITEMS, trayCount(level));
+    const used = new Set();
+    let turn = null; // cặp đổi chỗ: mục đầu chọn số, mục sau lấy ngược lại
+    const items = kinds.map((kind, i) => {
+      for (let tries = 0; tries < 60; tries++) {
+        let a;
+        let b;
+        if (kind === 't10:turnaround') {
+          if (turn) [b, a] = turn;
+          else {
+            a = randInt(rand, 1, 8);
+            b = randInt(rand, 1, 10 - a);
+            if (a === b) continue;
+          }
+        } else if (kind === 't10:zero') {
+          const n = randInt(rand, 1, 10);
+          [a, b] = rand() < 0.5 ? [n, 0] : [0, n];
+        } else {
+          const sum = kind === 't10:to5' ? randInt(rand, 2, 5) : randInt(rand, 6, max);
+          a = randInt(rand, 1, sum - 1);
+          b = sum - a;
+        }
+        const key = `add:${a}-${b}`;
+        if (used.has(key) || (tries < 40 && !(kind === 't10:turnaround' && turn) && avoid.has(key))) continue;
+        used.add(key);
+        if (kind === 't10:turnaround') turn = turn ? null : [a, b];
+        const it = opItem({ op: '+', a, b, thing: pick(rand, things) }, level, rand, slots[i]);
+        if (kind === 't10:turnaround') it.kind = kind;
+        return it;
+      }
+      return null;
+    });
+    return items.every(Boolean) ? items : null;
+  };
+  const check = (items) => {
+    if (new Set(items.map((x) => x.pair)).size !== items.length) return false;
+    if (!items.every((x) => x.answer <= max && (x.a > 0 || x.b > 0) && (level === 3 || (x.a > 0 && x.b > 0)))) return false;
+    if (level < 3) return true;
+    const turns = items.map((x, i) => (x.kind === 't10:turnaround' ? i : -1)).filter((i) => i >= 0);
+    return turns.length === 2 && turns[1] - turns[0] > 1 && items.some((x) => x.kind === 't10:zero');
+  };
+  return generate(rand, build, check, weak);
+}
+
+export function makeT11(level, rand, { weak = null, recent = [] } = {}) {
+  const avoid = new Set(recent);
+  const max = level === 1 ? 5 : 10;
+  const base = level === 1
+    ? Array(MATH_ITEMS).fill('t11:to5')
+    : level === 2
+      ? ['t11:to5', 't11:to5', 't11:to10', 't11:to10', 't11:to10', 't11:to10', 't11:to10', 't11:to10']
+      : ['t11:zero', 't11:all', 't11:to5', 't11:to5', 't11:to10', 't11:to10', 't11:to10', 't11:to10'];
+  const things = Object.keys(SUM_THINGS);
+  const build = (w) => {
+    const kinds = kindPlan(rand, base, w);
+    const slots = answerSlots(rand, MATH_ITEMS, trayCount(level));
+    const used = new Set();
+    const items = kinds.map((kind, i) => {
+      for (let tries = 0; tries < 60; tries++) {
+        const a = kind === 't11:to5' ? randInt(rand, 2, 5) : kind === 't11:to10' ? randInt(rand, 6, max) : randInt(rand, kind === 't11:zero' ? 1 : 2, 10);
+        const b = kind === 't11:zero' ? 0 : kind === 't11:all' ? a : randInt(rand, 1, a - 1);
+        const key = `sub:${a}-${b}`;
+        if (used.has(key) || (tries < 40 && avoid.has(key))) continue;
+        used.add(key);
+        return opItem({ op: '−', a, b, thing: pick(rand, things) }, level, rand, slots[i]);
+      }
+      return null;
+    });
+    return items.every(Boolean) ? items : null;
+  };
+  const check = (items) => {
+    if (new Set(items.map((x) => x.pair)).size !== items.length) return false;
+    if (!items.every((x) => x.a <= max && x.b <= x.a && (level === 3 || (x.b >= 1 && x.answer >= 1)))) return false;
+    return level < 3 || (items.some((x) => x.b === 0) && items.some((x) => x.b === x.a));
+  };
+  return generate(rand, build, check, weak);
+}
+
+/** Câu Olly gợi ý khi sai lần 1 (T10 / T11, 3.3, 3.4). */
+export function opHintLine(item) {
+  if (item.op === '+') {
+    if (item.hint === 'count-all') return "Let's count them all!";
+    if (item.hint === 'no-more') return `Start at ${numberWord(item.start)}. No more to add!`;
+    return `Start at ${numberWord(item.start)}. Count on!`;
+  }
+  const things = item.story ? item.thing : null;
+  if (item.answer === 0) return things ? `Look! No ${things} are left.` : 'Look! None are left.';
+  if (item.b === 0) return 'Nothing is taken away!';
+  return 'Count the ones that are left!';
+}
+
 // ---------- Tiếng Việt khi sai 2 lần ----------
 
 export function explainSums(item) {
+  if (item.op) {
+    const { op, a, b, answer } = item;
+    const calc = `${a} ${op === '+' ? 'cộng' : 'trừ'} ${b} bằng ${answer}.`;
+    if (op === '+') {
+      if (a === 0 || b === 0) return `Cộng với 0 thì không thêm gì: ${calc}`;
+      if (item.story) {
+        const t = SUM_THINGS[item.thing].vi;
+        return `Có ${a} ${t}, thêm ${b} ${t.split(' ')[0]} nữa. Gộp lại: ${calc}`;
+      }
+      const small = Math.min(a, b);
+      const on = Array.from({ length: small }, (_, i) => item.start + 1 + i).join(', ');
+      return `Bắt đầu từ số lớn hơn là ${item.start}, đếm tiếp ${on}: ${calc}`;
+    }
+    if (b === 0) return `Trừ 0 thì không bớt gì: ${calc}`;
+    if (b === a) return `Bớt đi hết ${a} thì không còn gì: ${calc}`;
+    if (item.story) {
+      const t = SUM_THINGS[item.thing];
+      return `Có ${a} ${t.vi}, ${b} ${t.vi.split(' ')[0]} ${t.take[2]}. Đếm phần còn lại: ${calc}`;
+    }
+    return `Có ${a}, gạch đi ${b} ô, đếm các ô còn lại: ${calc}`;
+  }
   if (item.key === 't8') {
     const { more, less, thing, answer } = item;
     const t = T7_THINGS[thing].vi;

@@ -2,7 +2,7 @@
 // (mục 7 — `makeItems(level, rand, opts)` → 8 mục, `rand` cố định được trong test), luật cân bằng đáp án, mở mức (6.2),
 // kiểu câu hay sai (6.4), chọn mục có phần bé đọc câu (3.3).
 
-import { makeT8, makeT9, mathSentence, explainSums } from './sums.js';
+import { makeT8, makeT9, makeT10, makeT11, mathSentence, explainSums } from './sums.js';
 
 export const MATH_ITEMS = 8;
 export const MAX_LEVEL = 3;
@@ -19,6 +19,8 @@ export const BUILTIN_MATH = [
   // Toán phần 2 (SPEC-math2.md)
   { id: 'math-t8', key: 't8', emoji: '🍎', title: 'How many more?', titleVi: 'Hơn bao nhiêu', batch: 'd' },
   { id: 'math-t9', key: 't9', emoji: '🐞', title: 'Number bonds', titleVi: 'Tách – gộp số', batch: 'd' },
+  { id: 'math-t10', key: 't10', emoji: '➕', title: 'Add it up', titleVi: 'Phép cộng', batch: 'e' },
+  { id: 'math-t11', key: 't11', emoji: '➖', title: 'Take away', titleVi: 'Phép trừ', batch: 'e' },
 ];
 export const MATH_BY_ID = new Map(BUILTIN_MATH.map((l) => [l.id, l]));
 export const isMathLesson = (lessonId) => String(lessonId ?? '').startsWith('math-');
@@ -121,6 +123,8 @@ export function kindsAt(key, level) {
   if (key === 't5') return level === 1 ? ['t5:after', 't5:before'] : level === 2 ? ['t5:after', 't5:before', 't5:between'] : ['t5:after', 't5:before', 't5:between', 't5:more', 't5:less'];
   if (key === 't7') return ['t7:more', 't7:fewer'];
   if (key === 't8') return level === 3 ? ['t8:scattered'] : ['t8:small-gap', 't8:big-gap'];
+  if (key === 't10') return level === 1 ? ['t10:to5'] : level === 2 ? ['t10:to5', 't10:to10'] : ['t10:to5', 't10:to10', 't10:turnaround', 't10:zero'];
+  if (key === 't11') return level === 1 ? ['t11:to5'] : level === 2 ? ['t11:to5', 't11:to10'] : ['t11:to5', 't11:to10', 't11:zero', 't11:all'];
   if (key === 't9') return level === 1 ? ['t9:small'] : level === 2 ? ['t9:small', 't9:big', 't9:ten'] : ['t9:small', 't9:big', 't9:ten', 't9:zero'];
   return [];
 }
@@ -651,15 +655,15 @@ function makeT7(level, rand, { weak = null, allow20 = false } = {}) {
 
 // ---------- Chung ----------
 
-const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t4: makeT4, t5: makeT5, t6: makeT6, t7: makeT7, t8: makeT8, t9: makeT9 };
-const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t4: sentenceT4, t5: sentenceT5, t6: sentenceT6, t7: sentenceT7, t8: mathSentence, t9: mathSentence };
+const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t4: makeT4, t5: makeT5, t6: makeT6, t7: makeT7, t8: makeT8, t9: makeT9, t10: makeT10, t11: makeT11 };
+const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t4: sentenceT4, t5: sentenceT5, t6: sentenceT6, t7: sentenceT7, t8: mathSentence, t9: mathSentence, t10: mathSentence, t11: mathSentence };
 
 /**
  * 8 mục của một lượt.
- * @param {string} key 't1' … 't9'
+ * @param {string} key 't1' … 't11'
  * @param {{ weak?: string|null, maxGroup?: number, lineLen?: number, allow20?: boolean, recent?: Iterable<string> }} [opts] `weak`: kiểu hay sai (6.4);
  *   `maxGroup`: số đồ tối đa / nhóm (T2); `lineLen`: số số trên tia (T5); `allow20`: câu đố số tới 20 (T7 mức 3);
- *   `recent`: `problemKey` bé gặp gần đây — T8, T9 ưu tiên key khác (SPEC-math2 2.4)
+ *   `recent`: `problemKey` bé gặp gần đây — T8 → T11 ưu tiên key khác (SPEC-math2 2.4)
  */
 export function makeItems(key, level, rand = Math.random, opts = {}) {
   const make = MAKERS[key];
@@ -708,7 +712,7 @@ export function unlockedLevel(bestByLevel, all = false) {
 
 /** Câu giải thích tiếng Việt khi sai 2 lần (4.1). */
 export function explainVi(key, item) {
-  if (key === 't8' || key === 't9') return explainSums(item);
+  if (['t8', 't9', 't10', 't11'].includes(key)) return explainSums(item);
   if (key === 't4') {
     const word = item.order === 'desc' ? 'lớn nhất' : 'nhỏ nhất';
     return `Bé tìm số ${word} trong các số còn lại rồi đặt vào chỗ tiếp theo. Thứ tự đúng: ${orderedT4(item).join(', ')}.`;

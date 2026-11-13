@@ -1,4 +1,4 @@
-// Hình của 🔢 Toán phần 2 (SPEC-math2 2.1, 2.2, 3.1, 3.2, 6): khay thẻ số, khung 10 ô, hai hàng đồ của T8 (thẳng cột /
+// Hình của 🔢 Toán phần 2 (SPEC-math2 2.1, 2.2, 3.1 → 3.4, 6): khay thẻ số, khung 10 ô, phép tính, hai hàng đồ của T8 (thẳng cột /
 // lệch, dây nối từng cặp), bọ rùa T9. Chỉ dựng DOM; luồng bài nằm ở screens/math2.js.
 
 import { h } from '../ui.js';
@@ -21,13 +21,15 @@ export function answerTray(options) {
 /**
  * Khung 2 × 5, lấp hàng trên trước, trái → phải. `cells`: kiểu từng ô theo thứ tự lấp ('blue' | 'orange' | 'dashed');
  * ô sau đó để trống. Ô có chấm chạm được để đếm (chạm lại không đếm lại); `onCount(k)` sau mỗi lần đếm.
+ * `emoji`: ô chứa đồ của câu chuyện thay cho chấm (nền ô xanh / cam theo nhóm).
  */
-export function tenFrame(cells, { onCount } = {}) {
+export function tenFrame(cells, { onCount, emoji = null } = {}) {
   let count = 0;
   const els = Array.from({ length: 10 }, (_, i) => {
     const kind = cells[i];
     if (!kind) return h('span.mt-cell.empty', { dataset: { i: String(i) } });
-    const el = h(`button.mt-cell.${kind}`, { type: 'button', 'aria-label': `Ô ${i + 1}`, dataset: { i: String(i), kind } }, h('span.mt-dot'));
+    const el = h(`button.mt-cell.${kind}`, { type: 'button', 'aria-label': `Ô ${i + 1}`, dataset: { i: String(i), kind } },
+      emoji ? h('span.mt-cpic', { text: emoji }) : h('span.mt-dot'));
     el.addEventListener('click', () => {
       if (el.classList.contains('counted')) return;
       el.classList.add('counted');
@@ -36,7 +38,7 @@ export function tenFrame(cells, { onCount } = {}) {
     });
     return el;
   });
-  const el = h('div.mt-frame', { dataset: { filled: String(cells.length) } }, ...els);
+  const el = h(`div.mt-frame${emoji ? '.pics' : ''}`, { dataset: { filled: String(cells.length) } }, ...els);
   return {
     el,
     cells: els,
@@ -46,9 +48,32 @@ export function tenFrame(cells, { onCount } = {}) {
       els[i].classList.add(kind);
       els[i].dataset.kind = kind;
     },
+    /** Đồ bị bớt (trừ, 2.1): ở nguyên ô, mờ + gạch chéo; `nudge`: nhích đi rồi về (giảm chuyển động: CSS bỏ). */
+    cross(i, nudge = false) {
+      els[i].classList.add('crossed');
+      if (nudge) els[i].classList.add('nudge');
+    },
     clearCount() {
       count = 0;
       els.forEach((c) => c.classList.remove('counted'));
+    },
+  };
+}
+
+// ---------- Phép tính dưới khung (T10, T11) ----------
+
+/** `3 + 2 = ?` — từng số là một ô để làm sáng (số bắt đầu đếm tiếp); `solve()` thay ? bằng kết quả. */
+export function equation(a, op, b, answer) {
+  const A = h('span.mt-eqn', { text: String(a) });
+  const B = h('span.mt-eqn', { text: String(b) });
+  const R = h('span.mt-eqn.mt-eqq', { text: '?' });
+  return {
+    el: h('div.mt-eq', { 'aria-label': `${a} ${op} ${b}` }, A, h('span.mt-eqop', { text: op }), B, h('span.mt-eqop', { text: '=' }), R),
+    a: A,
+    b: B,
+    solve() {
+      R.textContent = String(answer);
+      R.classList.add('solved');
     },
   };
 }
