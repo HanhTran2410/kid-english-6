@@ -81,9 +81,10 @@ test('màn chính: 5 khu, Math mở được; lưới 3 + 2 không cuộn; iPhon
   }
   await page.setViewportSize({ width: 1180, height: 820 });
   await math.click();
-  await expect(page.locator('.lesson-card')).toHaveCount(7);
+  await expect(page.locator('.lesson-card')).toHaveCount(9);
   await expect(page.locator('.lesson-card').nth(3)).toHaveAttribute('data-lesson', 'math-t4');
-  await expect(page.locator('.lesson-card').last()).toHaveAttribute('data-lesson', 'math-t7');
+  await expect(page.locator('.lesson-card').nth(6)).toHaveAttribute('data-lesson', 'math-t7');
+  await expect(page.locator('.lesson-card').last()).toHaveAttribute('data-lesson', 'math-t9');
   await expect(page.locator('.lesson-card.next')).toHaveAttribute('data-lesson', 'math-t1');
   await expect.poll(() => spoken(page)).toContain("Let's play with numbers!");
 });

@@ -97,6 +97,9 @@ export function translateQuestion(en, meaning = '') {
       const t = T7_THINGS[thing]?.vi ?? thing;
       return `${vi(a)} có ${x} ${t}. ${vi(b)} có ${y} ${t}. Ai có ${ask === 'more' ? 'nhiều' : 'ít'} hơn? Bé chạm vào người đúng.`;
     }],
+    // Toán phần 2 (SPEC-math2 7): câu đố T8 đã có dòng dịch viết sẵn (meaning).
+    [/ How many more \w+ does \w+ have\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
+    [/^The ladybug has (\d+) spots\. How many spots are hidden\?$/, (x) => `Bọ rùa có ${x} chấm. Cánh úp đang che mấy chấm? Bé chạm số đúng trong khay.`],
     [/^Read it and do it!$/, () => 'Bé đọc câu rồi làm theo: chạm đồ vật, rồi chạm chỗ đặt.'],
     [/^Make the sentence!$/, () => 'Bé chạm các thẻ từ theo đúng thứ tự để thành câu.'],
     [/^What is it\?$/, () => `Đó là gì? Bé đọc 2 câu gợi ý${m} rồi chạm đáp án đúng.`],

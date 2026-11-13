@@ -28,6 +28,13 @@ const KIND_VI = {
   't5:less': 'kém một',
   't7:more': 'câu đố "ai nhiều hơn"',
   't7:fewer': 'câu đố "ai ít hơn"',
+  't8:small-gap': 'hơn bao nhiêu (chênh 1–2)',
+  't8:big-gap': 'hơn bao nhiêu (chênh 3–5)',
+  't8:scattered': 'hơn bao nhiêu (hai hàng lệch)',
+  't9:small': 'tách số tới 5',
+  't9:big': 'tách số 6–9',
+  't9:ten': 'đôi bạn của 10',
+  't9:zero': 'tách có phần 0',
 };
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);

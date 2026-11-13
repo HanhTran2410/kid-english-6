@@ -857,3 +857,74 @@ circle.wr-ok { fill: #2f9e44; }
   .cw-clue { min-height: 56px; }
 }
 @media (prefers-reduced-motion: reduce) { .qt-thing, .qt-thing.placed { transition: none; animation: none; } .qt-target.hint { animation: none; } }
+
+/* 🔢 Toán phần 2 (SPEC-math2 2.1, 2.2, 3.1, 3.2, 6): khay thẻ số, khung 10 ô, hai hàng T8, bọ rùa T9 */
+.mt-anstray { flex-wrap: wrap; }
+.mt-ans { display: grid; place-items: center; min-width: 88px; min-height: 88px; padding: 6px 14px; border-radius: 26px; background: var(--card); box-shadow: var(--shadow); }
+.mt-ans .mt-num { font-size: clamp(44px, 8vmin, 64px); }
+.mt-ans.tried { opacity: 0.35; pointer-events: none; }
+.mt-frame { --fc: 48px; display: grid; grid-template-columns: repeat(5, var(--fc)); gap: 6px; padding: 8px; border-radius: 14px; background: var(--ink); }
+.mt-cell { display: grid; place-items: center; width: var(--fc); height: var(--fc); padding: 0; border-radius: 8px; background: #fff; }
+.mt-cell .mt-dot { width: 68%; height: 68%; border-radius: 50%; }
+.mt-cell.blue .mt-dot { background: #1c7ed6; }
+.mt-cell.orange .mt-dot { background: #f76707; }
+.mt-cell.dashed { outline: 3px dashed #f76707; outline-offset: -7px; }
+.mt-cell.dashed .mt-dot { display: none; }
+.mt-cell.counted, .mt-cell.lit { background: #fff3bf; }
+.mt-cell.glow { background: #ffe8dd; animation: pulse 0.9s ease-in-out infinite; }
+.mt-framebox[hidden] { display: none; }
+.mt-rows { --cell: 48px; position: relative; display: grid; gap: 22px; width: min(100%, 760px); padding: 12px; border-radius: 26px; background: var(--card); box-shadow: var(--shadow); }
+.mt-trow { display: grid; grid-template-columns: 92px minmax(0, 1fr) 44px; align-items: center; gap: 8px; }
+.mt-twho { display: grid; justify-items: center; }
+.mt-tface { font-family: var(--emoji); font-size: 40px; line-height: 1; }
+.mt-tname { font-size: 18px; font-weight: 800; font-family: var(--read-font); }
+.mt-tthings { display: flex; gap: 4px; min-width: 0; }
+/* Mức 3: hàng dưới lệch nửa ô và khe khác hàng trên — không thẳng cột. */
+.mt-rows.scattered .mt-trow[data-row="bottom"] .mt-tthings { gap: 1px; padding-left: calc(var(--cell) / 2); }
+.mt-tthing { display: grid; place-items: center; flex: 0 0 var(--cell); width: var(--cell); height: var(--cell); padding: 0; border-radius: 12px; background: transparent; font-family: var(--emoji); font-size: calc(var(--cell) * 0.62); line-height: 1; }
+.mt-tthing.counted { background: #fff3bf; }
+.mt-tthing.edge { outline: 3px dashed var(--coral); outline-offset: -3px; }
+.mt-tthing.extra { outline: 4px solid var(--coral); outline-offset: -3px; background: #ffe8dd; }
+.mt-tcount { font-size: 30px; font-weight: 800; text-align: center; }
+/* Câu đố T8 dài 2 dòng + hai hàng + khay + câu đọc: chữ câu đố nhỏ hơn câu đọc để vừa iPad ngang. */
+.mt-sumq .sword { padding: 2px 6px; font-size: clamp(26px, 4.6vmin, 42px); }
+.mt-sumq .sentence-vi { margin: 0; }
+.mt-lines line { stroke: var(--lilac); stroke-width: 4; stroke-linecap: round; }
+.mt-bugrow { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: clamp(16px, 4vw, 40px); }
+.mt-bug { display: grid; justify-items: center; }
+.mt-bughead { position: relative; z-index: 1; display: grid; place-items: center; width: 84px; height: 62px; margin-bottom: -12px; border-radius: 42px 42px 18px 18px; background: var(--ink); }
+.mt-bugtotal { color: #fff; font-size: 40px; font-weight: 800; line-height: 1; }
+.mt-bugbody { display: flex; gap: 6px; }
+.mt-wing { display: grid; place-items: center; width: clamp(104px, 19vmin, 140px); height: clamp(140px, 25vmin, 184px); padding: 10px; border: 4px solid var(--ink); background: #ff8787; }
+.mt-wing.w-left { border-radius: 80% 12% 12% 80% / 55% 12% 12% 55%; }
+.mt-wing.w-right { border-radius: 12% 80% 80% 12% / 12% 55% 55% 12%; }
+.mt-wdots { display: grid; grid-template-columns: repeat(3, 22px); gap: 6px; }
+.mt-wdot { width: 22px; height: 22px; border-radius: 50%; border: 3px solid #fff; }
+.mt-wdot.blue { background: #1c7ed6; }
+.mt-wdot.orange { background: #f76707; }
+.mt-wzero, .mt-wq { font-size: 64px; font-weight: 800; line-height: 1; color: #fff; }
+.mt-wq { display: none; }
+.mt-wing.closed { background: #c92a2a; }
+.mt-wing.closed .mt-wdots, .mt-wing.closed .mt-wzero { display: none; }
+.mt-wing.closed .mt-wq { display: block; }
+@media (min-width: 900px) and (min-height: 700px) { .mt-frame { --fc: 64px; } }
+/* Màn nhỏ (6): xếp dọc; hàng đồ T8 dùng cả chiều rộng (tên + số ở trên), ô khung không nhỏ hơn 48 px. */
+@media (max-width: 600px) {
+  .mt-rows { --cell: 28px; gap: 22px; padding: 10px; }
+  .mt-trow { grid-template-columns: 1fr auto; gap: 4px; }
+  .mt-twho { grid-auto-flow: column; justify-content: start; align-items: center; gap: 6px; }
+  .mt-tface { font-size: 28px; }
+  .mt-tthings { grid-column: 1 / -1; grid-row: 2; }
+  .mt-tcount { grid-column: 2; grid-row: 1; font-size: 24px; }
+  /* Hàng dưới: tên + số nằm dưới đồ để hai hàng đồ sát nhau, dây nối không cắt qua tên. */
+  .mt-trow[data-row="bottom"] .mt-tthings { grid-row: 1; }
+  .mt-trow[data-row="bottom"] .mt-twho, .mt-trow[data-row="bottom"] .mt-tcount { grid-row: 2; }
+  .mt-puzzle .sentence { gap: 0 6px; }
+  .mt-puzzle .sword, .mt-sumq .sword { padding: 0 3px; font-size: 22px; line-height: 1.25; }
+  .mt-puzzle .sentence-vi { font-size: 15px; }
+  .mt-ans { min-width: 72px; min-height: 72px; }
+  .mt-wing { width: 96px; height: 124px; }
+  .mt-wdots { grid-template-columns: repeat(3, 18px); gap: 4px; }
+  .mt-wdot { width: 18px; height: 18px; }
+}
+@media (prefers-reduced-motion: reduce) { .mt-cell.glow { animation: none; } }

@@ -1,4 +1,4 @@
-// Khu 🔢 Math / Toán (SPEC-math.md): các kiểu mục của 7 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
+// Khu 🔢 Math / Toán (SPEC-math.md, SPEC-math2.md): các kiểu mục của 9 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
 // câu đố) và phần Olly làm mẫu. Khung lượt chơi (chọn mức, 8 mục, đọc câu, sao, ra nền quay lại) ở screens/round.js.
 
 import { h } from '../ui.js';
@@ -17,6 +17,8 @@ import {
 import {
   numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl, orderBoard, numberLine, personCard,
 } from '../math/views.js';
+import { t8Item, t9Item } from '../math/sums.js';
+import { buildT8, buildT9, demoSums } from './math2.js';
 
 
 /** Mô tả mức trên nút chọn mức. */
@@ -28,6 +30,8 @@ const LEVEL_VI = {
   t4: ['Số tới 10', 'Số tới 20', 'Lớn → nhỏ'],
   t5: ['Trước – sau', 'Thêm ở giữa', 'Hơn một – kém một'],
   t7: ['Có hình đồ vật', 'Đọc rồi chọn', 'Số tới 20'],
+  t8: ['Tới 6, có dây nối', 'Tới 10', 'Hai hàng lệch'],
+  t9: ['Tới 5, có khung 10 ô', 'Tới 10', 'Đôi bạn của 10'],
 };
 
 /** Tia số: 11 số; iPhone dọc chỉ đủ chỗ cho 7 ô ≥ 48 px (SPEC-math 8.2). */
@@ -45,7 +49,7 @@ const MATH_CONFIG = {
   kindsAt: (lesson, level) => kindsAt(lesson.key, level),
   async makeItems(app, lesson, level, weak) {
     const maxGroup = window.innerWidth < 600 ? 8 : 10;
-    const opts = { weak, maxGroup, lineLen: lineLen(), allow20: lesson.key === 't7' && await allow20(app.db) };
+    const opts = { weak, maxGroup, lineLen: lineLen(), allow20: lesson.key === 't7' && await allow20(app.db), recent: await recentKeys(app.db, lesson) };
     return makeItems(lesson.key, level, Math.random, opts);
   },
   itemRef,
@@ -64,6 +68,12 @@ async function allow20(db) {
   return Object.values(t5).some((p) => p.bestStars >= 2);
 }
 
+/** `problemKey` bé gặp gần đây ở bài (16 mục gần nhất) — bộ sinh phần 2 ưu tiên key khác (SPEC-math2 2.4). */
+async function recentKeys(db, lesson) {
+  const records = await db.getAllByIndex('progress', 'lessonId', lesson.id);
+  return records.filter((r) => r.activity !== 'read' && r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 16).map((r) => `${r.activity}:${r.itemId}`);
+}
+
 // ---------- Các kiểu mục ----------
 
 /** Dựng màn của một mục; trả về các phần để chọn / làm mẫu / hiện đã giải. */
@@ -75,6 +85,8 @@ function buildView(ctx, item) {
   if (key === 't4') return buildOrder(ctx, item);
   if (key === 't5') return buildLine(ctx, item);
   if (key === 't7') return buildPuzzle(ctx, item);
+  if (key === 't8') return buildT8(ctx, item);
+  if (key === 't9') return buildT9(ctx, item);
   return buildCompare(ctx, item, key === 't6' ? 'tens' : 'blocks');
 }
 
@@ -402,6 +414,9 @@ function showSolved(ctx, item) {
     view.board.lock(true);
   } else if (view.order) {
     view.solve();
+  } else if (view.reveal) {
+    view.correct.classList.add('right');
+    view.reveal().catch(() => {});
   } else {
     view.correct.classList.add('right');
     if (ctx.lesson.key === 't3') view.place(item.sign);
@@ -581,6 +596,15 @@ async function demoSteps(dctx, { short }) {
   } else if (lesson.key === 't7') {
     steps.push(() => demoPuzzle(dctx, t7Item(T7_BY_ID.get('p1'), 'more')));
     steps.push(() => demoPuzzle(dctx, t7Item(T7_BY_ID.get('p2'), 'fewer')));
+  } else if (lesson.key === 't8') {
+    // Lượt đầu dùng bộ số chung 5 – 3 – 2 (SPEC-math2 2.5); lượt sau người nhiều hơn ở hàng dưới.
+    const L = round.level;
+    steps.push(() => demoSums(dctx, t8Item({ more: ['Tom', 5], less: ['Anna', 3], thing: 'apples', top: 'more' }, L, Math.random, 1)));
+    steps.push(() => demoSums(dctx, t8Item({ more: ['Dad', 6], less: ['Mum', 4], thing: 'cookies', top: 'less' }, L, Math.random, 2)));
+  } else if (lesson.key === 't9') {
+    const L = round.level;
+    steps.push(() => demoSums(dctx, t9Item({ total: 5, known: 3, hidden: 'right' }, L, Math.random, 0)));
+    steps.push(() => demoSums(dctx, t9Item(L === 1 ? { total: 4, known: 1, hidden: 'left' } : { total: 7, known: 4, hidden: 'left' }, L, Math.random, 2)));
   } else if (round.level === 1) {
     steps.push(() => demoMake(dctx, 34));
   } else {

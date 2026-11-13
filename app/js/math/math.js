@@ -2,6 +2,8 @@
 // (mục 7 — `makeItems(level, rand, opts)` → 8 mục, `rand` cố định được trong test), luật cân bằng đáp án, mở mức (6.2),
 // kiểu câu hay sai (6.4), chọn mục có phần bé đọc câu (3.3).
 
+import { makeT8, makeT9, mathSentence, explainSums } from './sums.js';
+
 export const MATH_ITEMS = 8;
 export const MAX_LEVEL = 3;
 
@@ -14,6 +16,9 @@ export const BUILTIN_MATH = [
   { id: 'math-t5', key: 't5', emoji: '🐸', title: 'Number line', titleVi: 'Tia số', batch: 'b' },
   { id: 'math-t6', key: 't6', emoji: '🧱', title: 'Tens and ones', titleVi: 'Chục và đơn vị', batch: 'a' },
   { id: 'math-t7', key: 't7', emoji: '📖', title: 'Read and compare', titleVi: 'Đọc và so sánh', batch: 'c' },
+  // Toán phần 2 (SPEC-math2.md)
+  { id: 'math-t8', key: 't8', emoji: '🍎', title: 'How many more?', titleVi: 'Hơn bao nhiêu', batch: 'd' },
+  { id: 'math-t9', key: 't9', emoji: '🐞', title: 'Number bonds', titleVi: 'Tách – gộp số', batch: 'd' },
 ];
 export const MATH_BY_ID = new Map(BUILTIN_MATH.map((l) => [l.id, l]));
 export const isMathLesson = (lessonId) => String(lessonId ?? '').startsWith('math-');
@@ -34,7 +39,7 @@ export function numberWord(n) {
 const cap = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const tensOf = (n) => Math.floor(n / 10);
 export const onesOf = (n) => n % 10;
-const plural = (n, one, many) => `${numberWord(n)} ${n === 1 ? one : many}`;
+export const plural = (n, one, many) => `${numberWord(n)} ${n === 1 ? one : many}`;
 
 // ---------- Đồ vật của T2 (mục 4.2): cặp to / nhỏ, mỗi đồ có hình ----------
 
@@ -67,9 +72,9 @@ export function seeded(seed) {
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
 }
-const randInt = (rand, lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
-const pick = (rand, arr) => arr[Math.floor(rand() * arr.length)];
-function shuffle(rand, arr) {
+export const randInt = (rand, lo, hi) => lo + Math.floor(rand() * (hi - lo + 1));
+export const pick = (rand, arr) => arr[Math.floor(rand() * arr.length)];
+export function shuffle(rand, arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {
     const j = Math.floor(rand() * (i + 1));
@@ -115,6 +120,8 @@ export function kindsAt(key, level) {
   if (key === 't4') return level === 3 ? ['t4:desc'] : ['t4:asc'];
   if (key === 't5') return level === 1 ? ['t5:after', 't5:before'] : level === 2 ? ['t5:after', 't5:before', 't5:between'] : ['t5:after', 't5:before', 't5:between', 't5:more', 't5:less'];
   if (key === 't7') return ['t7:more', 't7:fewer'];
+  if (key === 't8') return level === 3 ? ['t8:scattered'] : ['t8:small-gap', 't8:big-gap'];
+  if (key === 't9') return level === 1 ? ['t9:small'] : level === 2 ? ['t9:small', 't9:big', 't9:ten'] : ['t9:small', 't9:big', 't9:ten', 't9:zero'];
   return [];
 }
 
@@ -174,19 +181,20 @@ export function roundProblems(items) {
     run = sides[i] && sides[i] === sides[i - 1] ? run + 1 : 1;
     if (run > 3) errs.push('quá 3 mục liền cùng một bên');
   }
+  const pos = (x) => x.at ?? sideOf(x);
   const pairs = new Map();
   items.forEach((it, i) => {
     pairs.set(it.pair, (pairs.get(it.pair) ?? 0) + 1);
     if (i > 0 && it.pair === items[i - 1].pair) errs.push('lặp ngay mục trước');
     // Bài chỉ có một kiểu câu và không có bên đáp án (T6 tạo số, T4 xếp hàng): không xét.
-    if (i > 0 && !SINGLE_KINDS.has(it.kind) && it.kind === items[i - 1].kind && it.ask === items[i - 1].ask && sides[i] === sides[i - 1]) errs.push('hai mục liền giống kiểu câu + vị trí đáp án');
+    if (i > 0 && !SINGLE_KINDS.has(it.kind) && it.kind === items[i - 1].kind && it.ask === items[i - 1].ask && pos(it) === pos(items[i - 1])) errs.push('hai mục liền giống kiểu câu + vị trí đáp án');
   });
   for (const [p, n] of pairs) if (n > 2) errs.push(`cặp ${p} lặp quá 2 lần`);
   return errs;
 }
 
 /** Dãy kiểu câu cho 8 mục: chia đều, kiểu hay sai thêm tối đa 1 mục. */
-function kindPlan(rand, base, weak) {
+export function kindPlan(rand, base, weak) {
   const plan = [...base];
   if (weak && plan.includes(weak)) {
     // Đổi một mục của kiểu đang nhiều nhất (khác `weak`) sang `weak`.
@@ -199,7 +207,7 @@ function kindPlan(rand, base, weak) {
 }
 
 /** Sinh tới khi đúng luật; `weak` không đủ chỗ thì bỏ ưu tiên, không phá luật (mục 7). */
-function generate(rand, build, check, weak) {
+export function generate(rand, build, check, weak) {
   for (const w of weak ? [weak, null] : [null]) {
     for (let attempt = 0; attempt < 400; attempt++) {
       const items = build(w);
@@ -643,14 +651,15 @@ function makeT7(level, rand, { weak = null, allow20 = false } = {}) {
 
 // ---------- Chung ----------
 
-const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t4: makeT4, t5: makeT5, t6: makeT6, t7: makeT7 };
-const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t4: sentenceT4, t5: sentenceT5, t6: sentenceT6, t7: sentenceT7 };
+const MAKERS = { t1: makeT1, t2: makeT2, t3: makeT3, t4: makeT4, t5: makeT5, t6: makeT6, t7: makeT7, t8: makeT8, t9: makeT9 };
+const SENTENCES = { t1: sentenceT1, t2: sentenceT2, t3: sentenceT3, t4: sentenceT4, t5: sentenceT5, t6: sentenceT6, t7: sentenceT7, t8: mathSentence, t9: mathSentence };
 
 /**
  * 8 mục của một lượt.
- * @param {string} key 't1' … 't7'
- * @param {{ weak?: string|null, maxGroup?: number, lineLen?: number, allow20?: boolean }} [opts] `weak`: kiểu hay sai (6.4);
- *   `maxGroup`: số đồ tối đa / nhóm (T2); `lineLen`: số số trên tia (T5); `allow20`: câu đố số tới 20 (T7 mức 3)
+ * @param {string} key 't1' … 't9'
+ * @param {{ weak?: string|null, maxGroup?: number, lineLen?: number, allow20?: boolean, recent?: Iterable<string> }} [opts] `weak`: kiểu hay sai (6.4);
+ *   `maxGroup`: số đồ tối đa / nhóm (T2); `lineLen`: số số trên tia (T5); `allow20`: câu đố số tới 20 (T7 mức 3);
+ *   `recent`: `problemKey` bé gặp gần đây — T8, T9 ưu tiên key khác (SPEC-math2 2.4)
  */
 export function makeItems(key, level, rand = Math.random, opts = {}) {
   const make = MAKERS[key];
@@ -667,6 +676,11 @@ export function itemRef(lesson, item) {
   if (key === 't4') return { lessonId: lesson.id, activity: `order-${item.order}`, itemId: orderedT4(item).join('-') };
   if (key === 't5') return { lessonId: lesson.id, activity: item.ask, itemId: item.m != null ? `${item.n}-${item.m}` : String(item.n) };
   if (key === 't7') return { lessonId: lesson.id, activity: item.ask, itemId: item.id };
+  // Toán phần 2: khóa = problemKey (`more:5-3` → math-t8/more/5-3).
+  if (item.pair?.includes(':')) {
+    const [activity, itemId] = item.pair.split(':');
+    return { lessonId: lesson.id, activity, itemId };
+  }
   const activity = { t1: 'compare', t2: item.ask, t3: 'sign', t6: item.make != null ? 'make' : 'compare' }[key];
   const itemId = item.make != null ? String(item.make) : key === 't2' ? `${item.left.n}-${item.right.n}` : `${item.a}-${item.b}`;
   return { lessonId: lesson.id, activity, itemId };
@@ -694,6 +708,7 @@ export function unlockedLevel(bestByLevel, all = false) {
 
 /** Câu giải thích tiếng Việt khi sai 2 lần (4.1). */
 export function explainVi(key, item) {
+  if (key === 't8' || key === 't9') return explainSums(item);
   if (key === 't4') {
     const word = item.order === 'desc' ? 'lớn nhất' : 'nhỏ nhất';
     return `Bé tìm số ${word} trong các số còn lại rồi đặt vào chỗ tiếp theo. Thứ tự đúng: ${orderedT4(item).join(', ')}.`;

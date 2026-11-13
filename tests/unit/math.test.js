@@ -30,9 +30,9 @@ test('đọc số thành chữ tới 100', () => {
   assert.throws(() => numberWord(101));
 });
 
-test('bài Math-a / b / c: T1 → T7 theo thứ tự (khóa math-t*)', () => {
-  assert.deepEqual(BUILTIN_MATH.map((l) => l.key), ['t1', 't2', 't3', 't4', 't5', 't6', 't7']);
-  assert.deepEqual(BUILTIN_MATH.map((l) => l.batch), ['a', 'a', 'a', 'b', 'b', 'a', 'c']);
+test('bài Math-a → d: T1 → T9 theo thứ tự (khóa math-t*)', () => {
+  assert.deepEqual(BUILTIN_MATH.map((l) => l.key), ['t1', 't2', 't3', 't4', 't5', 't6', 't7', 't8', 't9']);
+  assert.deepEqual(BUILTIN_MATH.map((l) => l.batch), ['a', 'a', 'a', 'b', 'b', 'a', 'c', 'd', 'd']);
   for (const l of BUILTIN_MATH) assert.equal(l.id, `math-${l.key}`);
 });
 
