@@ -5,6 +5,7 @@
 // Nhóm đọc được của cặp gợi ý / câu tổng kết luôn TÍNH bằng canRead (không ghi tay).
 
 import { canRead, learnedPhonics } from './content.js';
+import { toGraphemes, learnedGraphemes, soundOfGrapheme } from '../phonics.js';
 
 /**
  * Loại từ (chọn nhiễu theo mức 6.2). Mức 2–3 chỉ lấy nhiễu CÙNG loại, không mượn loại khác: thiếu nhiễu thì mức 3 bớt
@@ -18,7 +19,7 @@ export const KINDS = {
 /** Đặc điểm → [nghĩa tiếng Việt, mọi từ mà câu gợi ý đó đúng]. */
 export const TRAITS = {
   insect: ['là côn trùng', ['ant', 'bee', 'bug']],
-  'no-wings-insect': ['côn trùng không có cánh', ['ant', 'bug']],
+  'long-green': ['dài và xanh lá', ['bug', 'frog']],
   sting: ['biết đốt', ['bee', 'ant']],
   wings: ['có cánh', ['bee', 'hen', 'chick', 'jet', 'ant']],
   'sound-buzz': ['kêu vo ve', ['bee']],
@@ -28,7 +29,7 @@ export const TRAITS = {
   'eggs-from': ['cho trứng', ['hen', 'shop', 'farm']],
   'milk-from': ['cho sữa', ['goat', 'shop', 'farm']],
   horns: ['có sừng', ['goat']],
-  pink: ['màu hồng', ['pig']],
+  'in-mud': ['đầm mình trong bùn', ['pig', 'frog', 'dog', 'rat', 'hen', 'goat', 'snail']],
   'sound-oink': ['kêu ụt ịt', ['pig']],
   'sound-woof': ['sủa gâu gâu', ['dog']],
   'sound-cheep': ['kêu chiếp chiếp', ['chick']],
@@ -40,10 +41,11 @@ export const TRAITS = {
   'sharp-teeth': ['răng sắc', ['shark', 'dog', 'fox', 'cat', 'rat']],
   'no-legs': ['không có chân', ['snail', 'fish', 'shark']],
   shell: ['có vỏ', ['snail']],
-  'will-be-hen': ['lớn lên thành gà mái', ['chick']],
+  'mum-hen': ['mẹ là gà mái', ['chick']],
   swim: ['biết bơi', ['fish', 'shark', 'frog', 'dog']],
   'grown-man': ['đàn ông, không phải trẻ con', ['man', 'king']],
   rich: ['giàu', ['king', 'queen']],
+  'next-to-king': ['ngồi cạnh nhà vua', ['queen']],
   sibling: ['chị em gái', ['sister']],
   'jam-in': ['có mứt bên trong', ['pie']],
   popcorn: ['nổ thành bỏng ngô', ['corn']],
@@ -54,7 +56,7 @@ export const TRAITS = {
   n10: ['bằng 10', ['ten']],
   n6: ['bằng 6', ['six']],
   n3: ['bằng 3', ['three']],
-  'red-colour': ['màu của mứt, tương cà', ['red']],
+  'red-colour': ['màu của tương cà', ['red']],
   'in-bed': ['làm trên giường', ['nap', 'sit']],
   'on-mat': ['làm trên thảm', ['sit', 'nap']],
   'stick-in': ['cắm vào bản đồ', ['pin']],
@@ -105,8 +107,7 @@ const R = (word, kind, sum, sumVi, ...pairs) => ({
 export const RIDDLES = [
   // Nhóm 1
   R('ant', 'animal', 'It is an ant. An ant can dig.', 'Đó là con kiến. Con kiến biết đào đất.',
-    ['It is an insect.', 'Nó là côn trùng.', 'It can dig.', 'Nó biết đào đất.', 'dig'],
-    ['It is an insect.', 'Nó là côn trùng.', 'It has no wings.', 'Nó không có cánh.', 'no-wings-insect']),
+    ['It is an insect.', 'Nó là côn trùng.', 'It can dig.', 'Nó biết đào đất.', 'dig']),
   R('pin', 'thing', 'It is a pin. A pin can stick in a map.', 'Đó là cái ghim. Cái ghim ghim được lên bản đồ.',
     ['It is not big.', 'Nó không to.', 'It can stick in a map.', 'Nó ghim được lên bản đồ.', 'stick-in'],
     ['It is thin.', 'Nó mảnh.', 'Its tip is sharp.', 'Đầu của nó nhọn.', 'sharp-tip']),
@@ -137,9 +138,8 @@ export const RIDDLES = [
     ['It has big gaps.', 'Nó có lỗ to.', 'It is in a goal.', 'Nó nằm trong khung thành.', 'in-goal']),
   R('ten', 'number', 'It is 10. 5 and 5 is 10.', 'Đó là số 10. 5 với 5 là 10.',
     ['It is 9 and 1.', 'Nó là 9 với 1.', 'It is 5 and 5.', 'Nó là 5 với 5.', 'n10']),
-  R('red', 'colour', 'It is red. Jam is red.', 'Đó là màu đỏ. Mứt màu đỏ.',
-    ['It is not pink.', 'Nó không phải màu hồng.', 'Jam is it.', 'Mứt có màu này.', 'red-colour'],
-    ['Jam is it.', 'Mứt có màu này.', 'Ketchup is it.', 'Tương cà có màu này.', 'red-colour']),
+  R('red', 'colour', 'It is red. Ketchup is red.', 'Đó là màu đỏ. Tương cà màu đỏ.',
+    ['It is not pink.', 'Nó không phải màu hồng.', 'Ketchup is it.', 'Tương cà có màu này.', 'red-colour']),
   R('rat', 'animal', 'It is a rat. A cat can get a rat.', 'Đó là con chuột. Mèo bắt được chuột.',
     ['It is an animal.', 'Nó là con vật.', 'A cat can get it.', 'Mèo bắt được nó.', 'cat-gets'],
     ['It is an animal.', 'Nó là con vật.', 'It has a long thin tail.', 'Nó có cái đuôi dài và mảnh.', 'long-thin-tail']),
@@ -149,8 +149,8 @@ export const RIDDLES = [
   R('dog', 'animal', 'It is a dog. A dog can dig.', 'Đó là con chó. Con chó biết đào đất.',
     ['It is a pet.', 'Nó là con vật nuôi.', 'It can dig.', 'Nó biết đào đất.', 'dig'],
     ['It is a pet.', 'Nó là con vật nuôi.', 'Woof, woof!', 'Gâu gâu!', 'sound-woof']),
-  R('pig', 'animal', 'It is a pig. A pig is pink.', 'Đó là con lợn. Con lợn màu hồng.',
-    ['It is an animal.', 'Nó là con vật.', 'It is pink.', 'Nó màu hồng.', 'pink'],
+  R('pig', 'animal', 'It is a pig. A pig sits in mud.', 'Đó là con lợn. Con lợn đầm mình trong bùn.',
+    ['It is an animal.', 'Nó là con vật.', 'It sits in mud.', 'Nó đầm mình trong bùn.', 'in-mud'],
     ['It is an animal.', 'Nó là con vật.', 'Oink, oink!', 'Ụt ịt, ụt ịt!', 'sound-oink']),
   R('bag', 'thing', 'It is a bag. A bag has a strap.', 'Đó là cái túi. Cái túi có quai.',
     ['Mum can fill it.', 'Mẹ bỏ đồ đầy vào nó.', 'It has a strap.', 'Nó có quai.', 'strap']),
@@ -165,8 +165,8 @@ export const RIDDLES = [
     ['It is soft.', 'Nó mềm.', 'We sleep in it.', 'Mình ngủ trong nó.', 'nap-on']),
   R('leg', 'body', 'It is a leg. He can run on his legs.', 'Đó là cái chân. Bạn ấy chạy bằng chân.',
     ['A man has it.', 'Ai cũng có nó.', 'He can run on it.', 'Chú ấy chạy bằng nó.', 'run-on']),
-  R('bug', 'animal', 'It is a bug. A bug is an insect.', 'Đó là con sâu. Con sâu là côn trùng.',
-    ['It is an insect.', 'Nó là côn trùng.', 'It has no wings.', 'Nó không có cánh.', 'no-wings-insect']),
+  R('bug', 'animal', 'It is a bug. It is long and green.', 'Đó là con sâu. Nó dài và xanh lá.',
+    ['It is an insect.', 'Nó là côn trùng.', 'It is long and green.', 'Nó dài và màu xanh lá.', 'long-green']),
   R('frog', 'animal', 'It is a frog. A frog can hop.', 'Đó là con ếch. Con ếch nhảy được.',
     ['It is an animal.', 'Nó là con vật.', 'Ribbit, ribbit!', 'Ộp ộp, ộp ộp!', 'sound-ribbit'],
     ['It is an animal.', 'Nó là con vật.', 'It can hop.', 'Nó nhảy được.', 'hop']),
@@ -223,11 +223,11 @@ export const RIDDLES = [
     ['Fill it up.', 'Bỏ đồ đầy vào nó.', 'Then shut the lid.', 'Rồi đóng nắp lại.', 'shut-lid']),
   R('six', 'number', 'It is 6. 3 and 3 is 6.', 'Đó là số 6. 3 với 3 là 6.',
     ['It is 5 and 1.', 'Nó là 5 với 1.', 'It is 3 and 3.', 'Nó là 3 với 3.', 'n6']),
-  R('chick', 'animal', 'It is a chick. A chick will be a hen.', 'Đó là gà con. Gà con lớn lên thành gà mái.',
+  R('chick', 'animal', 'It is a chick. Its mum is a hen.', 'Đó là gà con. Mẹ của nó là gà mái.',
     ['It is an animal.', 'Nó là con vật.', 'Cheep, cheep!', 'Chiếp chiếp!', 'sound-cheep'],
-    ['It is an animal.', 'Nó là con vật.', 'It will be a hen.', 'Nó sẽ lớn thành gà mái.', 'will-be-hen']),
+    ['It is an animal.', 'Nó là con vật.', 'Its mum is a hen.', 'Mẹ của nó là gà mái.', 'mum-hen']),
   R('chips', 'food', 'They are chips. Chips are food.', 'Đó là khoai tây chiên. Khoai tây chiên là đồ ăn.',
-    ['They are hot.', 'Chúng nóng.', 'You dip them in ketchup.', 'Mình chấm chúng vào tương cà.', 'ketchup']),
+    ['They are long and thin.', 'Chúng dài và mảnh.', 'You dip them in ketchup.', 'Mình chấm chúng vào tương cà.', 'ketchup']),
   R('ship', 'vehicle', 'It is a ship. A ship can float.', 'Đó là con tàu. Con tàu nổi trên nước.',
     ['It is big.', 'Nó to.', 'It can float.', 'Nó nổi trên nước.', 'float']),
   R('fish', 'animal', 'It is a fish. A fish can swim.', 'Đó là con cá. Con cá biết bơi.',
@@ -240,11 +240,11 @@ export const RIDDLES = [
   R('three', 'number', 'It is 3. 2 and 1 is 3.', 'Đó là số 3. 2 với 1 là 3.',
     ['It is 1 and 1 and 1.', 'Nó là 1 với 1 với 1.', 'It is 2 and 1.', 'Nó là 2 với 1.', 'n3']),
   // Nhóm 7
-  R('queen', 'person', 'She is a queen. A queen is rich.', 'Đó là nữ hoàng. Nữ hoàng giàu có.',
-    ['She is not a kid.', 'Bà ấy không phải trẻ con.', 'She is rich.', 'Bà ấy giàu có.', 'rich']),
+  R('queen', 'person', 'She is a queen. She sits next to the king.', 'Đó là nữ hoàng. Bà ấy ngồi cạnh nhà vua.',
+    ['She is not a kid.', 'Bà ấy không phải trẻ con.', 'She sits next to the king.', 'Bà ấy ngồi cạnh nhà vua.', 'next-to-king']),
   R('cloud', 'nature', 'It is a cloud. We get rain from a cloud.', 'Đó là đám mây. Mây cho mình mưa.',
     ['It is up, up, up.', 'Nó ở trên cao, cao, cao.', 'We get rain from it.', 'Mình có mưa từ nó.', 'rain-from']),
-  R('mouth', 'body', 'It is a mouth. We sing with a mouth.', 'Đó là cái miệng. Mình hát bằng miệng.',
+  R('mouth', 'body', 'It is a mouth. We sing with our mouths.', 'Đó là cái miệng. Mình hát bằng miệng.',
     ['It is on you.', 'Nó ở trên người con.', 'You sing with it.', 'Con hát bằng nó.', 'sing-with']),
   R('coin', 'thing', 'It is a coin. A coin is cash.', 'Đó là đồng xu. Đồng xu là tiền.',
     ['It is flat and round.', 'Nó phẳng và tròn.', 'It is cash.', 'Nó là tiền.', 'cash']),
@@ -288,22 +288,30 @@ export function readFrom(text, from = 1) {
   return Infinity;
 }
 
+const ALL_G = learnedGraphemes(7);
+
+/** Âm đầu của từ (không phải chữ đầu): c / k / ck / qu cùng /k/; ch, sh, th khác c, s, t. */
+export function onsetOf(word) {
+  const g = toGraphemes(word, ALL_G)?.[0] ?? word[0];
+  return g === 'qu' ? 'k' : soundOfGrapheme(g);
+}
+
 /** Số lựa chọn theo mức (6.2); mức 3 thiếu nhiễu cùng loại thì bớt còn 3. */
 export const CHOICES = { 1: 3, 2: 3, 3: 4 };
 
 /**
- * Nhiễu hợp lệ cho một cặp gợi ý trong `words` (từ bé đã học): khác đáp án, câu 2 KHÔNG đúng với nó, khác chữ đầu
- * với đáp án; mức 1 khác loại, mức 2–3 cùng loại (không mượn loại khác).
+ * Nhiễu hợp lệ cho một cặp gợi ý trong `words` (từ bé đã học): khác đáp án, câu 2 KHÔNG đúng với nó, khác ÂM đầu
+ * với đáp án (`onsetOf`: cat / king cùng /k/); mức 1 khác loại, mức 2–3 cùng loại (không mượn loại khác).
  */
 export function distractorsFor(riddle, clue, words, level) {
   const fits = TRAITS[clue.trait]?.[1] ?? [];
-  return words.filter((w) => w !== riddle.word && !fits.includes(w) && w[0] !== riddle.word[0]
+  return words.filter((w) => w !== riddle.word && !fits.includes(w) && onsetOf(w) !== onsetOf(riddle.word)
     && KIND_OF.has(w) && (level === 1 ? KIND_OF.get(w) !== riddle.kind : KIND_OF.get(w) === riddle.kind));
 }
 
-/** Số lựa chọn dùng được ở mức (0: không dùng cặp này ở mức đó). Nhiễu khác chữ đầu với nhau. */
+/** Số lựa chọn dùng được ở mức (0: không dùng cặp này ở mức đó). Nhiễu khác âm đầu với nhau. */
 export function choicesAt(riddle, clue, words, level) {
-  const firsts = new Set(distractorsFor(riddle, clue, words, level).map((w) => w[0])).size;
+  const firsts = new Set(distractorsFor(riddle, clue, words, level).map(onsetOf)).size;
   const want = CHOICES[level];
   if (firsts >= want - 1) return want;
   return level === 3 && firsts >= 2 ? 3 : 0;

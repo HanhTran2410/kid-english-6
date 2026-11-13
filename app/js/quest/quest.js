@@ -3,7 +3,7 @@
 // Quest 3 Guess the Word (câu đố viết sẵn, nhiễu sai câu gợi ý 2), câu đọc, khóa tiến độ, giải thích tiếng Việt.
 
 import { canRead, fillTo, shuffle, lookAlike, QUEST_WORDS } from './content.js';
-import { RIDDLE_BY_WORD, distractorsFor, choicesAt } from './riddles.js';
+import { RIDDLE_BY_WORD, distractorsFor, choicesAt, onsetOf } from './riddles.js';
 import { toGraphemes, learnedGraphemes, soundOfGrapheme } from '../phonics.js';
 
 export const QUEST_ITEMS = 8;
@@ -276,11 +276,11 @@ export function makeQ3(level, rand, pool, lp) {
     const clue = shuffle(rand, fresh.length ? fresh : pairs)[0];
     usedPair.set(word, [...seen, clue]);
     const count = choicesAt(r, clue, words, show);
-    // Nhiễu khác chữ đầu với nhau; mức 3 ưu tiên từ giống chữ (cat / rat).
+    // Nhiễu khác âm đầu với nhau; mức 3 ưu tiên từ giống chữ (cat / rat).
     const pool3 = shuffle(rand, distractorsFor(r, clue, words, show));
     if (show === 3) pool3.sort((a, b) => Number(lookAlike(b, word)) - Number(lookAlike(a, word)));
     const picks = [];
-    for (const d of pool3) if (picks.length < count - 1 && !picks.some((p) => p[0] === d[0])) picks.push(d);
+    for (const d of pool3) if (picks.length < count - 1 && !picks.some((p) => onsetOf(p) === onsetOf(d))) picks.push(d);
     const alike = show === 3 && picks.some((d) => lookAlike(d, word));
     return {
       id: word, word, en: clue.en, vi: clue.vi, trait: clue.trait, show, distractors: picks,

@@ -11,7 +11,7 @@ import {
   questKindsAt, questRef, questExplainVi, QUEST_ITEMS, makeQ3, firstSoundOf, questSentence,
 } from '../../app/js/quest/quest.js';
 import { seeded } from '../../app/js/math/math.js';
-import { TRAITS, RIDDLE_BY_WORD } from '../../app/js/quest/riddles.js';
+import { TRAITS, RIDDLE_BY_WORD, onsetOf } from '../../app/js/quest/riddles.js';
 import { QUESTIONS, translateQuestion } from '../../app/js/captions.js';
 
 const RUNS = 300;
@@ -174,7 +174,7 @@ test('khóa tiến độ, kiểu câu, phụ đề câu hỏi Quest', () => {
   assert.ok(translateQuestion('Put the cat in the box and the hat on the bed.'));
 });
 
-test('Quest 3 (6, RD-08 / 14 / 15 / 17, QU-19): 8 mục, nhiễu đã học + sai câu 2 + khác chữ đầu; kho < 3 từ → []', () => {
+test('Quest 3 (6, RD-08 / 14 / 15 / 17, QU-19): 8 mục, nhiễu đã học + sai câu 2 + khác âm đầu; kho < 3 từ → []', () => {
   assert.deepEqual(makeQ3(1, seeded(1), setup([1]).pool, setup([1]).lp), []);
   assert.deepEqual(makeQ3(1, seeded(1), setup([1, 2]).pool, setup([1, 2]).lp), []);
   for (const groups of [[1, 2, 3], [1, 2, 3, 4], ALL, [3, 5]]) {
@@ -194,7 +194,7 @@ test('Quest 3 (6, RD-08 / 14 / 15 / 17, QU-19): 8 mục, nhiễu đã học + sa
           assert.equal(it.options.filter((w) => w === it.word).length, 1);
           if (it.show < 3) assert.equal(it.options.length, 3);
           assert.ok(it.options.length >= 3 && it.options.length <= 4);
-          assert.equal(new Set(it.options.map((w) => w[0])).size, it.options.length, 'khác chữ đầu');
+          assert.equal(new Set(it.options.map(onsetOf)).size, it.options.length, 'khác âm đầu');
           const kind = RIDDLE_BY_WORD.get(it.word).kind;
           for (const d of it.distractors) {
             assert.ok(learned.has(d), `RD-08: ${d} chưa học`);

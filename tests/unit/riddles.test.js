@@ -6,9 +6,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { BUILTIN_LESSONS } from '../../app/js/data/builtin-lessons.js';
-import { wordsOf } from '../../app/js/quest/content.js';
+import { wordsOf, learnedPhonics, canRead, wordSupport } from '../../app/js/quest/content.js';
 import {
-  RIDDLES, TRAITS, KINDS, NOT_DECODABLE, readFrom, distractorsFor, choicesAt, traitsOf,
+  RIDDLES, TRAITS, KINDS, NOT_DECODABLE, readFrom, distractorsFor, choicesAt, traitsOf, onsetOf,
 } from '../../app/js/quest/riddles.js';
 
 const pictured = new Map();
@@ -71,7 +71,7 @@ test('RD-06 / 07: câu 2 đúng với đáp án; mọi nhiễu đều sai câu 2
       for (const lv of [1, 2, 3]) {
         for (const d of distractorsFor(r, c, ALL, lv)) {
           assert.ok(!TRAITS[c.trait][1].includes(d), `${r.word}: nhiễu ${d} cũng đúng "${c.en[1]}"`);
-          assert.notEqual(d[0], r.word[0], `${r.word}: nhiễu ${d} cùng chữ đầu`);
+          assert.notEqual(onsetOf(d), onsetOf(r.word), `${r.word}: nhiễu ${d} cùng âm đầu`);
         }
       }
     }
@@ -101,4 +101,27 @@ test('RD-09 / 18: mức 1 nhiễu khác loại; mức 2–3 chỉ cùng loại, 
   assert.equal(choicesAt(frog, frog.clues[0], ALL, 3), 4);
   // Kho chỉ có từ bé đã học: nhiễu không lấy ngoài kho.
   assert.deepEqual(distractorsFor(frog, frog.clues[0], ['frog', 'cat', 'dog'], 2), ['cat', 'dog']);
+});
+
+test('review 2026-11-13 (Q3-02 / 03 / 09 / 10): a, an là tricky word nhóm 1; nhiễu khác ÂM đầu (c / k / qu); câu đố đã sửa', () => {
+  // a, an: không đọc theo âm chữ — chưa xong nhóm 1 thì không đọc được, xong nhóm 1 thì đọc được như tricky word.
+  assert.ok(learnedPhonics([1]).tricky.has('a') && learnedPhonics([1]).tricky.has('an'));
+  assert.equal(canRead('a cat', learnedPhonics([2])).ok, false);
+  assert.equal(onsetOf('cat'), onsetOf('king'));
+  assert.equal(onsetOf('cat'), onsetOf('queen'));
+  assert.notEqual(onsetOf('ship'), onsetOf('sun'));
+  assert.notEqual(onsetOf('chick'), onsetOf('cat'));
+  const all = RIDDLES.flatMap((r) => [...r.clues.flatMap((c) => c.en), r.sum]).join(' ');
+  for (const bad of ['will be a hen', 'is pink', 'Jam is', 'no wings', 'are hot', 'She is rich']) assert.ok(!all.includes(bad), bad);
+});
+
+test('2.3a: từ cần hỗ trợ — ghép được nhưng 2+ âm tiết; tricky / không đọc theo âm thì không ghép được', () => {
+  assert.deepEqual(wordSupport('animal'), { word: 'animal', phonicsDecodable: true, needsSupport: true, supportType: ['syllable_breakdown', 'audio'] });
+  for (const w of ['cat', 'fish', 'moon', 'chick']) assert.deepEqual([wordSupport(w).phonicsDecodable, wordSupport(w).needsSupport], [true, false], w);
+  for (const w of ['the', 'put', 'a']) assert.deepEqual([wordSupport(w).phonicsDecodable, wordSupport(w).needsSupport], [false, false], w);
+  // 11 từ ⚠ của bảng câu đố (bố mẹ quyết 2026-11-13: giữ, vẫn tính đọc được).
+  const vocab = new Set(RIDDLES.flatMap((r) => [...r.clues.flatMap((c) => c.en), r.sum]).flatMap(wordsOf));
+  assert.deepEqual([...vocab].filter((w) => wordSupport(w).needsSupport).sort(),
+    ['animal', 'boxes', 'finger', 'hammer', 'insect', 'ketchup', 'letters', 'popcorn', 'raining', 'ribbit', 'sister']);
+  assert.ok(canRead('It is an animal.', learnedPhonics([1, 2, 3])).ok);
 });

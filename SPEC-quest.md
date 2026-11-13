@@ -67,6 +67,21 @@ canRead(text, learnedPhonics) → { ok: boolean, bad: string[] }
 
 Ví dụ với bé đã xong nhóm 1–3: *"It is in the sky."* — *sky* có *y* (nhóm 6) → loại; *"It is hot."* → đọc được. Vì vậy câu đố Quest 3 có **nhiều cặp gợi ý** theo mức chữ (6.3).
 
+### 2.3a. Ghép được ≠ đọc thành thạo: từ cần hỗ trợ (bố mẹ quyết 2026-11-13)
+Mỗi từ có mức đọc tính từ chữ (`wordSupport`, không ghi tay):
+
+| Loại | `phonicsDecodable` | `needsSupport` | Ý nghĩa |
+|---|---|---|---|
+| Từ ghép âm 1 âm tiết (*cat, moon*) | true | false | bé tự giải mã được bằng âm đã học — dùng được để xem bé đọc |
+| Từ ⚠ 2+ âm tiết (*animal, insect, ketchup, popcorn, hammer, sister…*) | true | true | ghép được nhưng có âm tiết đọc nhẹ — cần hỗ trợ (`supportType`: `syllable_breakdown`, `audio`) |
+| Tricky word / không đọc theo âm (*the, put, a*) | false | false | dạy riêng (2.2, 2.4) |
+
+- Từ ⚠ **vẫn tính đọc được** ở 2.3 → số từ Quest 3 dùng được giữ 21 / 39 / 67 (xong nhóm 3 / 5 / 7).
+- **Không dùng từ ⚠ để đánh giá** bé tự đọc; không đánh đồng "ghép được" với "đọc thành thạo".
+- Gặp từ ⚠: hỗ trợ bằng nghe đọc mẫu (🔊 đọc câu — đã có) và tách âm tiết (chạm từ → Olly đọc chậm từng âm tiết — **chưa làm**, để đợt sau).
+- **Không tự đánh dấu** bé đã biết đọc một từ vì bé chọn đúng đáp án: Quest chỉ ghi sao theo mục, không có trạng thái "từ đã biết". Sau này nếu thêm trạng thái đó thì bỏ qua từ ⚠ và tricky word.
+- *ribbit* là từ tượng thanh, không coi là ví dụ phonics điển hình.
+
 ### 2.4. Từ chức năng của Quest (`QUEST_WORDS`)
 - Quest 1 cần *put* (câu lệnh) và *under* (mức 3). Hai từ này **không đọc theo âm đã học** (*put* /pʊt/; *under* có *er* nhóm 7) nên coi như tricky word **riêng của Quest**:
   - Lần đầu chơi Quest 1 (và lần đầu tới câu *under*), Olly giới thiệu trước khi chơi: thẻ chữ to + *"This word is put. Put means: move it there."* + dòng tiếng Việt *"put = đặt"*.
@@ -474,6 +489,7 @@ Câu mới:
 - Câu gợi ý của Quest 3 cỡ chữ riêng (`.quest .qt-clue .sword`) — câu 2 vế dài bị `sentence.small` thu nhỏ quá.
 - Test: unit `makeQ3` (RD-08, 14, 15, 17, QU-19, âm đầu ch / sh / qu), UI Quest 3 mức 1 (hình, sai 1 → mờ + âm đầu từ file → helped, câu tổng kết, sao) và mức 2 (chữ, hình nhỏ ở làm mẫu, chữ đầu sáng, sai 2 → missed).
 - Chưa làm: Quest 4 (QU-21 → QU-23, QU-26).
+- **Sửa theo review bảng câu đố 2026-11-13** (bố mẹ duyệt lại 2026-11-13; thêm *They are long and thin.* cho chips, *bug* giữ 🐛 / con sâu): nhiễu khác **âm đầu** (`onsetOf`: c / k / qu cùng /k/), không còn so chữ đầu; *a, an* là tricky word nhóm 1 (`SIGHT_BY_GROUP`, chỉ trong Quest); sửa 8 câu đố không đúng phổ quát (*chick* → *Its mum is a hen.*, *pig* → *It sits in mud.*, *bug* → *It is long and green.*, *red* bỏ *jam*, *queen* → *She sits next to the king.*, *chips* → *They are food.*, *ant* bỏ cặp *no wings*, *mouth* → *We sing with our mouths.*). Bảng tách âm ghi oo ngắn / dài, s cuối /z/, ⚠ từ 2+ âm tiết (chờ bố mẹ quyết, có bảng số từ dùng được nếu bỏ).
 
 ## 16. Ghi chú khi làm Q-c — Quest 4 (0.10.2)
 - Bộ ghép `js/quest/crossword.js`: `buildCrossword` (7.5; từ trùng / dài hơn 6 / không chữ chung → `null`), `validCrossword` (mọi dãy ≥ 2 ô liền là một từ, liền mạch, ≤ 6 × 6), `makeQ4`. Bộ từ cho mỗi lần thử: từ sau phải có chữ chung với một từ đã chọn — không thì gần 20% lượt ở kho lớn không ghép được. Kho đủ 7 nhóm: ~0,5% lượt mức 3 vẫn không ghép được sau 20 bộ → màn sinh lại (tối đa 5 lần), không bao giờ hiện lưới sai.

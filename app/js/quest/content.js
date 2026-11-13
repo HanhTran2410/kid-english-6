@@ -11,11 +11,18 @@ const ALL_GRAPHEMES = learnedGraphemes(7);
 export const QUEST_WORDS = ['put', 'under'];
 
 /**
+ * Mạo từ đọc âm yếu (*a* /ə/, *an* /ən/), không đọc theo âm chữ: tính như tricky word, học cùng nhóm 1 (bé gặp ngay ở
+ * bài đọc đầu tiên). Chỉ dùng trong Quest — không thêm vào bộ thẻ tricky words của khu Read.
+ */
+export const SIGHT_BY_GROUP = { 1: ['a', 'an'] };
+
+/**
  * Từ tách được thành grapheme nhưng KHÔNG đọc theo âm (2.3): phải là tricky word đã học (hoặc từ Quest đã giới thiệu)
  * mới được dùng. Gồm mọi tricky word kiểu Jolly + vài từ hay gặp.
  */
 export const NOT_PHONETIC = new Set([
   ...Object.values(TRICKY_BY_GROUP).flat().map((w) => w.toLowerCase()),
+  ...Object.values(SIGHT_BY_GROUP).flat(),
   'put', 'of', 'what', 'who', 'two', 'any', 'many', 'want', 'were', 'once', 'love', 'move', 'push', 'pull', 'full',
 ]);
 
@@ -23,8 +30,23 @@ export const NOT_PHONETIC = new Set([
 export function learnedPhonics(completedGroups) {
   const groups = [...new Set(completedGroups)].sort((a, b) => a - b);
   const graphemes = new Set(GROUPS.filter((g) => groups.includes(g.group)).flatMap((g) => g.graphemes));
-  const tricky = new Set(groups.flatMap((g) => TRICKY_BY_GROUP[g] ?? []).map((w) => w.toLowerCase()));
+  const tricky = new Set(groups.flatMap((g) => [...(TRICKY_BY_GROUP[g] ?? []), ...(SIGHT_BY_GROUP[g] ?? [])]).map((w) => w.toLowerCase()));
   return { completedGroups: groups, graphemes, tricky };
+}
+
+/** Grapheme nguyên âm: mỗi cái là một âm tiết (đếm âm tiết của từ ghép âm). */
+const VOWEL_GRAPHEMES = new Set(['a', 'e', 'i', 'o', 'u', 'ai', 'oa', 'ie', 'ee', 'or', 'oo', 'ou', 'oi', 'ue', 'er', 'ar']);
+
+/**
+ * Mức đọc của một từ (2.3a): `phonicsDecodable` — ghép được theo âm (không phải tricky / không đọc theo âm);
+ * `needsSupport` — ghép được nhưng 2+ âm tiết (*animal*: âm tiết đọc nhẹ /ə/), vẫn tính đọc được nhưng cần hỗ trợ
+ * (tách âm tiết, nghe đọc) và không dùng để đánh giá bé tự đọc. Tính từ chữ, không ghi tay.
+ */
+export function wordSupport(word) {
+  const w = String(word).toLowerCase();
+  const parts = NOT_PHONETIC.has(w) ? null : toGraphemes(w, ALL_GRAPHEMES);
+  const needsSupport = !!parts && parts.filter((g) => VOWEL_GRAPHEMES.has(g)).length >= 2;
+  return { word: w, phonicsDecodable: !!parts, needsSupport, supportType: needsSupport ? ['syllable_breakdown', 'audio'] : [] };
 }
 
 /** Tách câu thành từ (chữ thường, bỏ dấu câu). */
