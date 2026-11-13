@@ -163,6 +163,13 @@ export function storyProblems(s) {
   const viNums = (s.vi.match(/\d+/g) ?? []).map(Number);
   if (viNums.join() !== [s.start, s.change].join()) out.push(`số trong câu tiếng Việt ${viNums.join(', ')} khác`);
   if (!s.text.includes(s.hint)) out.push(`hint "${s.hint}" không có trong câu`);
+  // Đúng vai trò, không chỉ đúng thứ tự: câu đầu nói owner có `start`, cụm hành động (hint) chứa `change`.
+  const first = s.text.split(/(?<=[.?!])\s+/)[0];
+  const numsIn = (t) => (t.match(/\d+/g) ?? []).map(Number).join();
+  if (numsIn(first) !== String(s.start) || !first.includes(s.owner)) out.push(`câu đầu "${first}" không nói ${s.owner} có ${s.start}`);
+  if (numsIn(s.hint) !== String(s.change)) out.push(`hint "${s.hint}" không chứa đúng số thay đổi ${s.change}`);
+  if (numsIn(s.hintVi) !== String(s.change)) out.push(`hintVi "${s.hintVi}" không chứa đúng số thay đổi ${s.change}`);
+  if (s.direction === 'decrease' && s.change > s.start) out.push('trừ: change > start');
   const question = s.text.split(/(?<=[.?!])\s+/).pop();
   if (!question.endsWith('?')) out.push('câu cuối không phải câu hỏi');
   if (!question.includes(s.owner)) out.push(`câu hỏi không nhắc ${s.owner}`);

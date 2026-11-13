@@ -52,3 +52,11 @@ test('câu hỏi gợi ý khi sai dấu: theo người / chỗ và đồ vật, 
   assert.equal(storyAsk(STORY_BY_ID.get('s14')).en, 'Are there more or fewer ducks in the pond now?');
   assert.equal(storyAsk(STORY_BY_ID.get('s13')).vi, 'Bây giờ Tom có nhiều táo hơn hay ít táo hơn?');
 });
+
+test('MATH-13 (draft3): số đúng vai trò — đổi chỗ số ban đầu / số thay đổi, hint sai số → báo lỗi', () => {
+  const ok = STORY_BY_ID.get('s01'); // Tom has 2 apples. Anna gives him 3 more.
+  const swapped = { ...ok, text: ok.text.replace('has 2', 'has X').replace('him 3', 'him 2').replace('has X', 'has 3'), hint: 'Anna gives him 2 more' };
+  assert.ok(storyProblems(swapped).length, 'số đổi vai trò');
+  assert.ok(storyProblems({ ...ok, hintVi: 'Anna cho Tom thêm quả' }).length);
+  assert.ok(storyProblems({ ...ok, text: ok.text.replace('Tom has 2', 'Anna has 2') }).length, 'câu đầu không nói owner');
+});
