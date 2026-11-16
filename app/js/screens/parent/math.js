@@ -43,6 +43,9 @@ const KIND_VI = {
   't11:to10': 'trừ tới 10',
   't11:zero': 'trừ 0',
   't11:all': 'trừ hết (kết quả 0)',
+  't12:add': 'câu đố cộng',
+  't12:sub': 'câu đố trừ',
+  't12:wrong-op': 'chọn phép cộng / trừ',
 };
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);

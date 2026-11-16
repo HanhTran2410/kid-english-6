@@ -101,6 +101,9 @@ export function translateQuestion(en, meaning = '') {
     [/ How many more \w+ does \w+ have\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
     [/ How many \w+ are there altogether\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
     [/ How many \w+ are left\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
+    // T12: bước 1 chọn dấu, bước 2 hỏi lại câu hỏi cuối của câu đố.
+    [/ Add or take away\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chọn phép cộng (+) hay phép trừ (−).`],
+    [/^How many [\w ]+\?$/, () => `${meaning ? `${meaning} ` : ''}Bé chạm số đúng trong khay.`],
     [/^What is (\d+) (plus|minus|take away) (\d+)\?$/, (a, op, b) => `${a} ${op === 'plus' ? 'cộng' : 'trừ'} ${b} bằng mấy? Bé chạm số đúng trong khay.`],
     [/^The ladybug has (\d+) spots\. How many spots are hidden\?$/, (x) => `Bọ rùa có ${x} chấm. Cánh úp đang che mấy chấm? Bé chạm số đúng trong khay.`],
     [/^Read it and do it!$/, () => 'Bé đọc câu rồi làm theo: chạm đồ vật, rồi chạm chỗ đặt.'],

@@ -929,6 +929,18 @@ circle.wr-ok { fill: #2f9e44; }
 .mt-wing.closed { background: #c92a2a; }
 .mt-wing.closed .mt-wdots, .mt-wing.closed .mt-wzero { display: none; }
 .mt-wing.closed .mt-wq { display: block; }
+/* T12: thẻ dấu bước 1, cụm hint sáng, dòng gợi ý nhiều hơn / ít hơn. */
+.mt-optray { gap: clamp(16px, 4vw, 40px); }
+.mt-opcard { display: grid; justify-items: center; min-width: 140px; min-height: 96px; padding: 6px 18px; border-radius: 26px; background: var(--card); box-shadow: var(--shadow); }
+.mt-opsign { font-size: clamp(48px, 9vmin, 72px); font-weight: 800; line-height: 1; }
+.mt-opword { font-size: 20px; font-weight: 800; font-family: var(--read-font); color: var(--ink-soft); }
+.mt-opcard[data-op="+"] .mt-opsign { color: #f76707; }
+.mt-opcard[data-op="−"] .mt-opsign { color: var(--red); }
+.mt-sumq .sword.hintlit { background: #fff3bf; box-shadow: inset 0 -4px 0 var(--yellow); border-radius: 8px; }
+.mt-storyhelp { display: grid; justify-items: center; gap: 2px; margin: 0; text-align: center; }
+.mt-storyhelp[hidden] { display: none; }
+.mt-storyhelp-en { font-size: clamp(22px, 3.6vmin, 30px); font-weight: 800; font-family: var(--read-font); }
+.mt-storyhelp-vi { font-size: 16px; color: var(--ink-soft); }
 /* Ô 64 px chỉ khi màn đủ cao (iPad dọc); iPad ngang giữ 48 px để câu chuyện + khung + phép tính + khay + câu đọc vừa màn. */
 @media (min-width: 700px) and (min-height: 1000px) { .mt-frame { --fc: 64px; } }
 /* Màn nhỏ (6): xếp dọc; hàng đồ T8 dùng cả chiều rộng (tên + số ở trên), ô khung không nhỏ hơn 48 px. */
@@ -949,6 +961,9 @@ circle.wr-ok { fill: #2f9e44; }
   .mt-ans .mt-num { font-size: 40px; }
   .mt-eq { gap: 6px; font-size: 36px; }
   .mt-sumq .sentence-vi { font-size: 14px; }
+  .mt-opcard { min-width: 120px; min-height: 80px; }
+  .mt-storyhelp-en { font-size: 18px; }
+  .mt-storyhelp-vi { font-size: 14px; }
   /* Tới phần đọc câu phép tính: câu chuyện đã xong việc → ẩn để câu đọc + ✅ vừa màn. */
   .mt-sumq:has(~ .mt-sentence) { display: none; }
   .mt-sentence .sentence.small .sword { padding: 0 3px; line-height: 1.25; }

@@ -3,8 +3,9 @@
 import { writeFileSync } from 'node:fs';
 import { BUILTIN_MATH, makeItems, seeded, sentenceOf, explainVi, T7_PEOPLE, T7_THINGS } from '../app/js/math/math.js';
 import { moreText, bondText, bondSides, opText, opHintLine, SUM_THINGS } from '../app/js/math/sums.js';
+import { STORY_BY_ID, TRICKS, storyAsk, storySumVi } from '../app/js/math/stories.js';
 
-const LESSONS = BUILTIN_MATH.filter((l) => ['d', 'e'].includes(l.batch));
+const LESSONS = BUILTIN_MATH.filter((l) => ['d', 'e', 'f'].includes(l.batch));
 const SEED = 1;
 
 const tray = (x) => x.options.map((n, i) => (i === x.at ? `**${n}**` : String(n))).join(' · ');
@@ -15,6 +16,12 @@ function picture(x) {
     const [top, bottom] = x.top === 'more' ? [x.more, x.less] : [x.less, x.more];
     const how = x.level === 1 ? 'thẳng cột, có dây nối, phần hơn có viền' : x.level === 2 ? 'thẳng cột, dây nối khi sai' : 'hai hàng lệch, sai → về cột';
     return `${row(top, x.thing)}<br>${row(bottom, x.thing)}<br>*${how}*`;
+  }
+  if (x.key === 't12') {
+    const s = STORY_BY_ID.get(x.id);
+    const pic = T7_THINGS[x.thing].emoji;
+    const cells = x.op === '+' ? `${pic.repeat(x.a)} + ${'🟠'.repeat(x.b)}` : `${pic.repeat(x.a - x.b)}${'❌'.repeat(x.b)}`;
+    return `${x.id}${x.trick ? ` · đánh lừa: ${TRICKS[x.trick]}` : ''}<br>Bước 1: **${x.op === '+' ? '+ add' : '− take away'}**; sai lần 1: sáng *"${s.hint}"* → *${storyAsk(s).en}*<br>Bước 2: ${x.a} ${x.op} ${x.b} = ?<br>${cells}<br>*${x.level === 1 ? 'khung có đồ hiện sẵn' : 'khung khi sai'}* · sai lần 1: *${opHintLine(x)}*`;
   }
   if (x.op) {
     const pic = x.story ? SUM_THINGS[x.thing].emoji : '🔵';
@@ -28,12 +35,19 @@ function picture(x) {
   return `🐞 ${x.total}: ${wing('left', l)} \\| ${wing('right', r)}<br>*${frame}*`;
 }
 
-const question = (x) => (x.key === 't8' ? moreText(x) : x.key === 't9' ? bondText(x) : opText(x));
+const question = (x) => {
+  if (x.key === 't12') {
+    const s = STORY_BY_ID.get(x.id);
+    return { en: `${s.text} Add or take away?`, vi: s.vi };
+  }
+  return x.key === 't8' ? moreText(x) : x.key === 't9' ? bondText(x) : opText(x);
+};
+const explain = (key, x) => (key === 't12' ? `Bước 1: ${explainVi(key, x)}<br>Bước 2: ${storySumVi(x)}` : explainVi(key, x));
 
-let md = `# 🔢 Toán phần 2 — bảng bài mẫu cố định (Math-d: T8, T9 · Math-e: T10, T11)
+let md = `# 🔢 Toán phần 2 — bảng bài mẫu cố định (Math-d: T8, T9 · Math-e: T10, T11 · Math-f: T12)
 
 > Sinh tự động bằng \`node scripts/math2-samples.mjs\` (\`rand\` cố định = seeded(${SEED})) — **không sửa tay**. Bố mẹ xem bằng mắt: câu Olly, hình, khay, câu đọc, tiếng Việt (SPEC-math2.md 8.1).
-> Khay: thẻ theo đúng thứ tự trên màn, **đáp án in đậm**. Mức 1: 3 thẻ, không bẫy; mức 2–3: 4 thẻ, bẫy có nghĩa trước (T8: số đồ của từng người; T9: tổng, phần đã thấy; T10: a − b, số hạng lớn hơn; T11: a + b, số trừ).
+> Khay: thẻ theo đúng thứ tự trên màn, **đáp án in đậm**. Mức 1: 3 thẻ, không bẫy; mức 2–3: 4 thẻ, bẫy có nghĩa trước (T8: số đồ của từng người; T9: tổng, phần đã thấy; T10: a − b, số hạng lớn hơn; T11: a + b, số trừ; T12: kết quả ngược dấu, số ban đầu, số thay đổi).
 > T10 / T11 hình: xanh = nhóm có sẵn, 🟠 = nhóm thêm vào, ❌ = đồ bị bớt (vẫn ở nguyên ô, bị gạch).
 `;
 
@@ -45,7 +59,7 @@ for (const lesson of LESSONS) {
     items.forEach((x, i) => {
       const q = question(x);
       const s = sentenceOf(lesson.key, x);
-      md += `| ${i + 1} | ${q.en}<br>*${q.vi}* | ${picture(x)} | ${tray(x)} | ${s.en}<br>*${s.vi}* | ${explainVi(lesson.key, x)} | \`${x.kind}\` |\n`;
+      md += `| ${i + 1} | ${q.en}<br>*${q.vi}* | ${picture(x)} | ${tray(x)} | ${s.en}<br>*${s.vi}* | ${explain(lesson.key, x)} | \`${x.kind}\` |\n`;
     });
   }
 }

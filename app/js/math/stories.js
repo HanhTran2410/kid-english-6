@@ -1,8 +1,11 @@
 // 📖 T12 Story sums — câu đố viết sẵn (SPEC-math2.md 3.5). Phép tính và đáp án **suy ra** từ dữ liệu câu chuyện
 // (owner được thêm hay mất), không đọc từ chữ; `hint` chỉ là cụm Olly chỉ ra khi bé chọn sai dấu.
-// Bảng duyệt: node scripts/stories-sheet.mjs → MATH-STORIES.md.
+// Bảng duyệt: node scripts/stories-sheet.mjs → MATH-STORIES.md. Bộ sinh lượt `makeT12` + câu tiếng Việt khi sai ở cuối file.
+// math.js import lại file này: ở mức module chỉ dùng hằng tự khai báo (không dùng hàm / hằng import) — vòng import an toàn.
 
-import { T7_THINGS } from './math.js';
+import { MATH_ITEMS, shuffle, generate, T7_THINGS } from './math.js';
+import { answerOptions, trayCount, answerSlots, placeOptions } from './sums.js';
+import { RESULT } from '../progress.js';
 
 /** Loại câu "từ khóa đánh lừa" (chỉ mức 3). */
 export const TRICKS = {
@@ -180,4 +183,84 @@ export function storyProblems(s) {
   if (s.start < 2 || s.change < 2) out.push('số < 2 (danh từ số nhiều)');
   if (s.trick && !TRICKS[s.trick]) out.push(`trick ${s.trick} lạ`);
   return out;
+}
+
+// ---------- Bộ sinh lượt T12 (3.5) ----------
+
+/** Một mục T12 từ câu đố: phép tính suy ra; gợi ý bước 2 như T10 / T11 — cộng mức 1 đếm hết, mức 2–3 đếm tiếp từ số ban đầu. */
+export function storyItem(s, level, rand, at) {
+  const { op, a, b, answer } = storyMath(s);
+  // Bẫy (mức 2–3) theo thứ tự: kết quả của phép tính ngược dấu, số ban đầu, số thay đổi (MATH-20).
+  const traps = level === 1 ? [] : [op === '+' ? a - b : a + b, a, b];
+  const options = placeOptions(rand, answer, answerOptions(answer, traps, trayCount(level)), at);
+  return {
+    key: 't12', level, id: s.id, op, a, b, answer, thing: s.thing, story: true, trick: s.trick,
+    hint: op === '−' ? 'count-left' : level === 1 ? 'count-all' : 'count-on-start', start: op === '−' ? null : a,
+    options, at, kind: op === '+' ? 't12:add' : 't12:sub', side: null, pair: `story:${s.id}`,
+  };
+}
+
+/**
+ * 8 mục T12: 4 cộng + 4 trừ. Mức 1 dùng cả 8 câu mức 1; mức 2 chọn 4 + 4 trong kho mức ≤ 2; mức 3 mỗi phép 2 câu đánh lừa
+ * + 2 câu thường. Ưu tiên câu chưa gặp gần đây (`recent`: problemKey `story:s01`). Luôn 4 / 4 nên không dùng kiểu hay sai.
+ */
+export function makeT12(level, rand, { recent = [] } = {}) {
+  const seen = new Set([...recent].map((k) => String(k).split(':').pop()));
+  const pool = (op, ok) => STORIES.filter((s) => storyMath(s).op === op && ok(storyLevel(s)));
+  const fresh = (list, n) => {
+    const mixed = shuffle(rand, list);
+    return [...mixed.filter((s) => !seen.has(s.id)), ...mixed.filter((s) => seen.has(s.id))].slice(0, n);
+  };
+  const ofOp = (op) => (level === 1
+    ? pool(op, (L) => L === 1)
+    : level === 2
+      ? fresh(pool(op, (L) => L <= 2), 4)
+      : [...fresh(pool(op, (L) => L === 3), 2), ...fresh(pool(op, (L) => L <= 2), 2)]);
+  const build = () => {
+    const slots = answerSlots(rand, MATH_ITEMS, trayCount(level));
+    return shuffle(rand, [...ofOp('+'), ...ofOp('−')]).map((s, i) => storyItem(s, level, rand, slots[i]));
+  };
+  // Không hai mục liền nhau cùng phép tính và cùng kết quả (5).
+  const check = (items) => items.length === MATH_ITEMS && items.every((x, i) => i === 0 || x.op !== items[i - 1].op || x.answer !== items[i - 1].answer);
+  return generate(rand, build, check, null);
+}
+
+/** Kết quả cả mục từ hai bước (3.5, MATH-14): một bước sai 2 lần → missed; có sai rồi sửa → helped. */
+export function storyResult(opWrong, sumResult) {
+  if (opWrong >= 2 || sumResult === RESULT.MISSED) return RESULT.MISSED;
+  return opWrong === 0 && sumResult === RESULT.INDEPENDENT ? RESULT.INDEPENDENT : RESULT.HELPED;
+}
+
+// ---------- Tiếng Việt khi sai 2 lần ----------
+
+const capVi = (text) => text.charAt(0).toUpperCase() + text.slice(1);
+
+/** Câu không hợp mẫu "số … của … nhiều lên / ít đi". */
+const OP_VI_OVERRIDE = {
+  s09: 'số bánh quy mẹ nướng nhiều lên',
+  s10: 'số sách Tom đã đọc nhiều lên',
+  s18: 'số sao mình nhìn thấy ít đi',
+};
+
+/** Bước 1 (chọn dấu): "Anna cho Tom thêm 3 quả, nên số táo của Tom nhiều lên: làm phép cộng. 2 cộng 3 bằng 5." */
+export function storyOpVi(s) {
+  const { op, a, b, answer } = storyMath(s);
+  const add = op === '+';
+  const n = T7_THINGS[s.thing].vi.split(' ').slice(1).join(' ');
+  const place = STORY_PLACES[s.owner];
+  const whose = place ? `số ${n} ${place[1]}` : `số ${n} của ${OWNER_VI[s.owner]}`;
+  const lead = OP_VI_OVERRIDE[s.id] ?? `${whose} ${add ? 'nhiều lên' : 'ít đi'}`;
+  const word = add ? 'cộng' : 'trừ';
+  return `${capVi(s.hintVi)}, nên ${lead}: làm phép ${word}. ${a} ${word} ${b} bằng ${answer}.`;
+}
+
+/** Bước 2 (chọn kết quả), theo cách gợi ý của mục. */
+export function storySumVi(item) {
+  const { op, a, b, answer } = item;
+  const calc = `${a} ${op === '+' ? 'cộng' : 'trừ'} ${b} bằng ${answer}.`;
+  const t = T7_THINGS[item.thing].vi;
+  if (op === '−') return `Có ${a} ${t}, bớt đi ${b}. Đếm phần còn lại: ${calc}`;
+  if (item.hint === 'count-all') return `Có ${a} ${t}, thêm ${b}. Đếm hết: ${calc}`;
+  const on = Array.from({ length: b }, (_, i) => a + 1 + i).join(', ');
+  return `Bắt đầu từ ${a}, đếm tiếp ${on}: ${calc}`;
 }

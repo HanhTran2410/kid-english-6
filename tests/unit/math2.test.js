@@ -1,5 +1,6 @@
 // 🔢 Toán phần 2 (SPEC-math2.md mục 11): khay đáp án, vị trí đáp án, câu đọc `mathSentence`, `problemKey`, bộ sinh
-// T8 How many more / T9 Number bonds / T10 Add it up / T11 Take away (500 lượt × mức), phân bố 40–60 %, MATH-01 → 10, 15, 16, 19.
+// T8 How many more / T9 Number bonds / T10 Add it up / T11 Take away / T12 Story sums (500 lượt × mức), phân bố 40–60 %,
+// MATH-01 → 10, 14 → 16, 19, 20.
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -9,6 +10,9 @@ import {
   opItem, opText, opHintLine,
 } from '../../app/js/math/sums.js';
 import { translateQuestion } from '../../app/js/captions.js';
+import { STORIES, STORY_BY_ID, storyMath, storyLevel, storyItem, storyOpVi, storySumVi, storyResult } from '../../app/js/math/stories.js';
+import { RESULT } from '../../app/js/progress.js';
+import { displayWords } from '../../app/js/karaoke.js';
 
 const RUNS = 500;
 const rounds = (key, level, opts = {}) => Array.from({ length: RUNS }, (_, i) => makeItems(key, level, seeded(i + 1), opts));
@@ -279,4 +283,89 @@ test('phân bố T10 mức 3 (ngưỡng 40–60 %): số lớn hơn ở vị tr�
   const all = rounds('t10', 3).flat().filter((x) => x.a !== x.b && x.a > 0 && x.b > 0);
   const s = share(all, (x) => x.a > x.b);
   assert.ok(s >= 0.4 && s <= 0.6, String(s));
+});
+
+// ---------- T12 Story sums ----------
+
+test('T12 bộ sinh 500 lượt × mức: 4 cộng + 4 trừ, không lặp câu, mức 1 đủ 8 câu mức 1, mức 3 mỗi phép 2 câu đánh lừa + 2 câu thường', () => {
+  const level1 = STORIES.filter((s) => storyLevel(s) === 1).map((s) => s.id).sort();
+  for (const level of [1, 2, 3]) {
+    for (const items of rounds('t12', level)) {
+      assert.equal(items.length, MATH_ITEMS);
+      assert.equal(items.filter((x) => x.op === '+').length, 4);
+      assert.equal(new Set(items.map((x) => x.id)).size, 8);
+      checkSlots(items);
+      items.forEach((x, i) => {
+        checkTray(x);
+        const s = STORY_BY_ID.get(x.id);
+        assert.deepEqual({ op: x.op, a: x.a, b: x.b, answer: x.answer }, storyMath(s));
+        assert.equal(x.kind, x.op === '+' ? 't12:add' : 't12:sub');
+        assert.equal(x.pair, `story:${x.id}`);
+        assert.ok(storyLevel(s) <= level, x.id);
+        if (i > 0) assert.ok(x.op !== items[i - 1].op || x.answer !== items[i - 1].answer, 'hai mục liền cùng phép + cùng kết quả');
+      });
+      if (level === 1) assert.deepEqual(items.map((x) => x.id).sort(), level1);
+      if (level === 3) {
+        for (const op of ['+', '−']) assert.equal(items.filter((x) => x.op === op && x.trick).length, 2, op);
+      }
+    }
+  }
+});
+
+test('T12 mức 2: ưu tiên câu chưa gặp gần đây', () => {
+  const recent = ['story:s01', 'story:s02', 'story:s03', 'story:s04', 'story:s13', 'story:s14', 'story:s15', 'story:s16'];
+  for (let i = 1; i <= 50; i++) {
+    const ids = makeItems('t12', 2, seeded(i), { recent }).map((x) => x.id);
+    assert.ok(ids.every((id) => !recent.includes(`story:${id}`)), ids.join());
+  }
+});
+
+test('MATH-20: T12 khay mức 2–3 — bẫy kết quả ngược dấu khi trong 0–10, số ban đầu, số thay đổi; không thẻ trùng', () => {
+  for (const s of STORIES) {
+    for (const level of [2, 3]) {
+      const x = storyItem(s, level, seeded(3), 0);
+      checkTray(x);
+      const flip = x.op === '+' ? x.a - x.b : x.a + x.b;
+      const traps = [flip, x.a, x.b].filter((n) => n >= 0 && n <= 10 && n !== x.answer);
+      for (const n of new Set(traps)) assert.ok(x.options.includes(n), `${s.id} thiếu bẫy ${n}`);
+    }
+    assert.equal(storyItem(s, 1, seeded(3), 0).options.length, 3);
+  }
+});
+
+test('MATH-14: chấm một mục T12 từ hai bước', () => {
+  const { INDEPENDENT: I, HELPED: H, MISSED: M } = RESULT;
+  assert.equal(storyResult(0, I), I);
+  assert.equal(storyResult(1, I), H);
+  assert.equal(storyResult(2, I), M);
+  assert.equal(storyResult(0, H), H);
+  assert.equal(storyResult(0, M), M);
+  assert.equal(storyResult(1, H), H);
+});
+
+test('T12 câu đọc, gợi ý, tiếng Việt: đọc phép tính suy ra; hint đầu từ; tiếng Việt đủ cho mọi câu', () => {
+  for (const s of STORIES) {
+    const i = s.text.indexOf(s.hint);
+    assert.ok(i === 0 || s.text[i - 1] === ' ', `${s.id}: hint không bắt đầu ở đầu từ`);
+    for (const level of [1, 2, 3]) {
+      const x = storyItem(s, level, seeded(1), 0);
+      assert.deepEqual(sentenceOf('t12', x), opSentence(x.op, x.a, x.b, x.answer, level));
+      assert.equal(x.hint, x.op === '−' ? 'count-left' : level === 1 ? 'count-all' : 'count-on-start');
+      assert.ok(opHintLine(x).length > 0);
+      assert.ok(storySumVi(x).endsWith(`bằng ${x.answer}.`), x.id);
+    }
+    const vi = storyOpVi(s);
+    assert.ok(vi.includes(storyMath(s).op === '+' ? 'làm phép cộng' : 'làm phép trừ'), vi);
+    assert.ok(!/undefined/.test(vi), vi);
+  }
+  assert.equal(storyOpVi(STORY_BY_ID.get('s01')), 'Anna cho Tom thêm 3 quả, nên số táo của Tom nhiều lên: làm phép cộng. 2 cộng 3 bằng 5.');
+  assert.equal(storyOpVi(STORY_BY_ID.get('s14')), '3 con vịt bơi đi mất, nên số vịt trong ao ít đi: làm phép trừ. 4 trừ 3 bằng 1.');
+  assert.equal(explainVi('t12', storyItem(STORY_BY_ID.get('s21'), 3, seeded(1), 0)), storyOpVi(STORY_BY_ID.get('s21')));
+  const ref = itemRef(MATH_BY_ID.get('math-t12'), storyItem(STORY_BY_ID.get('s01'), 1, seeded(1), 0));
+  assert.deepEqual(ref, { lessonId: 'math-t12', activity: 'story', itemId: 's01' });
+  // Câu hỏi bước 1 / bước 2 có dòng dịch.
+  const s = STORY_BY_ID.get('s01');
+  assert.match(translateQuestion(`${s.text} Add or take away?`, s.vi), /phép cộng \(\+\) hay phép trừ/);
+  assert.match(translateQuestion('How many toy cars does Tom have now?', 'Bây giờ Tom có bao nhiêu chiếc ô tô đồ chơi?'), /^Bây giờ Tom .* Bé chạm số đúng/);
+  assert.ok(displayWords(s.hint).length >= 2);
 });

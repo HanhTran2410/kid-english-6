@@ -1,5 +1,5 @@
-// 🔢 Toán phần 2 — Math-d / Math-e (SPEC-math2.md mục 11): T8 How many more (MATH-02 / 03), T9 Number bonds (MATH-04 / 05),
-// T10 Add it up (MATH-19), T11 Take away (MATH-09), dòng gợi ý trên thẻ bài,
+// 🔢 Toán phần 2 — Math-d → Math-f (SPEC-math2.md mục 11): T8 How many more (MATH-02 / 03), T9 Number bonds (MATH-04 / 05),
+// T10 Add it up (MATH-19), T11 Take away (MATH-09), T12 Story sums (MATH-14, MATH-17 bước 2), dòng gợi ý trên thẻ bài,
 // thẻ sai mờ tại chỗ và giữ khi ra nền (MATH-17), bố cục iPhone dọc 375 × 667 (khung 10 ô ≥ 48 px, khay trong màn).
 import { test, expect } from '@playwright/test';
 import { fakeSpeech, startApp, spoken } from './helpers.js';
@@ -221,12 +221,12 @@ async function playTo(page, index) {
   }, { timeout: 30000 }).toBe(index);
 }
 
-test('danh sách: T10, T11 có dòng gợi ý "học Tách – gộp số trước" khi chưa có sao ở T9 (không khóa)', async ({ page }) => {
+test('danh sách: T10 → T12 có dòng gợi ý "học Tách – gộp số trước" khi chưa có sao ở T9 (không khóa)', async ({ page }) => {
   await fakeSpeech(page);
   await startApp(page);
   await page.getByRole('button', { name: 'Toán' }).click();
-  await expect(page.locator('.lesson-card')).toHaveCount(11);
-  for (const id of ['math-t10', 'math-t11']) await expect(page.locator(`.lesson-card[data-lesson="${id}"] .lesson-note`)).toHaveText('Gợi ý: học 🐞 Tách – gộp số trước');
+  await expect(page.locator('.lesson-card')).toHaveCount(12);
+  for (const id of ['math-t10', 'math-t11', 'math-t12']) await expect(page.locator(`.lesson-card[data-lesson="${id}"] .lesson-note`)).toHaveText('Gợi ý: học 🐞 Tách – gộp số trước');
   await expect(page.locator('.lesson-card[data-lesson="math-t9"] .lesson-note')).toHaveCount(0);
   await page.evaluate(() => window.kidEnglish6.db.put('progress', { key: 'lesson:math-t9', lessonId: 'math-t9', bestStars: 2, plays: 1, completedAt: 1 }));
   await page.getByRole('button', { name: 'Về' }).click();
@@ -349,4 +349,136 @@ test('iPhone dọc 375 × 667: T10, T11 — khay trong màn, ô khung ≥ 48 px,
     await page.getByRole('button', { name: 'Về' }).click();
     await page.getByRole('button', { name: 'Về' }).click().catch(() => {});
   }
+});
+
+// ---------- Math-f: T12 Story sums ----------
+
+const otherOp = (op) => (op === '+' ? '−' : '+');
+
+/** Bấm thẻ dấu (bước 1) tới khi điều kiện trên lượt đúng. */
+async function tapSignUntil(page, op, done) {
+  await expect.poll(async () => {
+    const cur = await round(page);
+    if (!done(cur)) await page.locator(`.mt-opcard[data-op="${op}"]`).click({ timeout: 300 }).catch(() => {});
+    return done(await round(page));
+  }).toBe(true);
+}
+
+/** Chơi hết lượt T12: chọn đúng dấu rồi đúng kết quả, bỏ qua phần đọc câu. */
+async function playStories(page) {
+  for (let guard = 0; guard < 900; guard++) {
+    if (await page.locator('.done-panel').isVisible()) return;
+    const skip = page.getByRole('button', { name: 'Bỏ qua phần đọc' });
+    const r = await round(page);
+    if (await skip.isVisible()) await skip.click().catch(() => {});
+    else if (r && r.phase === 'item' && r.results[r.index] == null) {
+      const it = r.items[r.index];
+      const sign = page.locator(`.mt-opcard[data-op="${it.op}"]`);
+      if (await sign.isVisible()) await sign.click({ timeout: 500 }).catch(() => {});
+      else await page.locator(`.mt-ans[data-n="${it.answer}"]`).click({ timeout: 500 }).catch(() => {});
+    }
+    await page.waitForTimeout(80);
+  }
+  throw new Error('Không xong lượt');
+}
+
+const setVisibility = (page, state) => page.evaluate((s) => {
+  Object.defineProperty(document, 'visibilityState', { value: s, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+}, state);
+
+test('T12 mức 1: làm mẫu s01 (cộng) + s13 (trừ); bước 1 hai thẻ dấu + nhóm đồ ban đầu; sai dấu → sáng cụm hint, "more or fewer"; bước 2 phép tính + khay; hết lượt', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await page.getByRole('button', { name: 'Story sums' }).click();
+  await expect.poll(() => spoken(page)).toContain('Tom has 2 apples. Anna gives him 3 more. How many apples does Tom have now?');
+  await expect.poll(() => spoken(page)).toContain('More! So we add.');
+  await expect.poll(() => spoken(page)).toContain('Two plus three is five.');
+  await expect.poll(() => spoken(page)).toContain('Fewer! So we take away.');
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  await expect(page.locator('.mt-opcard')).toHaveCount(2);
+  await expect(page.locator('.mt-cell.blue')).toHaveCount(item.a);
+  await expect(page.locator('.mt-eq')).toHaveCount(0);
+  await expect(page.locator('.mt-storyhelp')).toBeHidden();
+  await tapSignUntil(page, otherOp(item.op), (cur) => cur.wrong >= 1);
+  await expect(page.locator('.mt-storyhelp')).toBeVisible();
+  await expect.poll(async () => (await page.locator('.sword.hintlit').count()) > 1).toBe(true);
+  await expect.poll(() => spoken(page)).toEqual(expect.arrayContaining([expect.stringMatching(/ more or fewer /)]));
+  await tapSignUntil(page, item.op, (cur) => cur.story?.step === 2);
+  const r = await round(page);
+  expect([r.story.opWrong, r.wrong]).toEqual([1, 0]);
+  await expect(page.locator('.mt-eq')).toHaveAttribute('aria-label', `${item.a} ${item.op} ${item.b}`);
+  await expect(page.locator('.mt-ans')).toHaveCount(3);
+  await expect(page.locator('.mt-framebox')).toBeVisible();
+  await tapUntil(page, item.answer, (cur) => cur.results[0] != null);
+  expect((await round(page)).results[0]).toBe('helped');
+  const op = await page.evaluate((k) => window.kidEnglish6.db.get('progress', k), `math-t12/op/${item.id}`);
+  expect([op.kind, op.helped]).toEqual(['t12:wrong-op', 1]);
+  expect((await page.evaluate((k) => window.kidEnglish6.db.get('progress', k), `math-t12/story/${item.id}`)).helped).toBe(1);
+  await playStories(page);
+  await expect(page.locator('.done-stars')).toHaveAttribute('aria-label', '2 sao');
+});
+
+test('MATH-14: T12 sai dấu 2 lần → tiếng Việt, dấu đúng sáng; bước 2 đúng ngay vẫn là missed', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openAt(page, 'Story sums', 2);
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  await tapSignUntil(page, otherOp(item.op), (cur) => cur.wrong >= 2);
+  await expect(page.locator(`.mt-opcard[data-op="${item.op}"].hint`)).toBeVisible();
+  await tapSignUntil(page, item.op, (cur) => cur.story?.step === 2);
+  // Mức 2: khung chỉ hiện khi sai.
+  await expect(page.locator('.mt-framebox')).toBeHidden();
+  await expect(page.locator('.mt-ans')).toHaveCount(4);
+  await tapUntil(page, item.answer, (cur) => cur.results[0] != null);
+  expect((await round(page)).results[0]).toBe('missed');
+});
+
+test('MATH-17: T12 ra nền ở bước 2 → quay lại đúng mục, đúng bước, lần sai hai bước vẫn tính', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openAt(page, 'Story sums', 2);
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  await tapSignUntil(page, otherOp(item.op), (cur) => cur.wrong >= 1);
+  await tapSignUntil(page, item.op, (cur) => cur.story?.step === 2);
+  await tapUntil(page, wrongOf(item), (cur) => cur.wrong >= 1);
+  await setVisibility(page, 'hidden');
+  await setVisibility(page, 'visible');
+  await page.locator('.resume-overlay').getByRole('button', { name: 'Bắt đầu' }).click();
+  const after = await round(page);
+  expect([after.index, after.story.step, after.story.opWrong, after.wrong]).toEqual([0, 2, 1, 1]);
+  await expect(page.locator('.mt-opcard')).toHaveCount(0);
+  await expect(page.locator(`.mt-ans.tried[data-n="${wrongOf(item)}"]`)).toBeVisible();
+  await tapUntil(page, item.answer, (cur) => cur.results[0] != null);
+  expect((await round(page)).results[0]).toBe('helped');
+});
+
+test('iPhone dọc 375 × 667: T12 bước 1 và bước 2 — thẻ dấu, khay trong màn, ô khung ≥ 48 px, không tràn ngang', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 667 });
+  await fakeSpeech(page);
+  await startApp(page);
+  await page.getByRole('button', { name: 'Toán' }).click();
+  await page.getByRole('button', { name: 'Story sums' }).click();
+  await page.getByRole('button', { name: 'Đến lượt con' }).click();
+  const item = (await round(page)).items[0];
+  const inScreen = async (sel, minH) => {
+    await expect(page.locator(sel).first()).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(375);
+    for (const card of await page.locator(sel).all()) {
+      const box = await card.boundingBox();
+      expect(box.height).toBeGreaterThanOrEqual(minH);
+      expect(box.y + box.height).toBeLessThanOrEqual(667);
+    }
+    for (const cell of await page.locator('.mt-cell').all()) expect((await cell.boundingBox()).width).toBeGreaterThanOrEqual(48);
+  };
+  await inScreen('.mt-opcard', 64);
+  await tapSignUntil(page, otherOp(item.op), (cur) => cur.wrong >= 1);
+  await expect(page.locator('.mt-storyhelp')).toBeVisible();
+  await inScreen('.mt-opcard', 64);
+  await tapSignUntil(page, item.op, (cur) => cur.story?.step === 2);
+  await inScreen('.mt-ans', 64);
 });

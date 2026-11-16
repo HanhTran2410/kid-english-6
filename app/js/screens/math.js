@@ -1,4 +1,4 @@
-// Khu 🔢 Math / Toán (SPEC-math.md, SPEC-math2.md): các kiểu mục của 11 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
+// Khu 🔢 Math / Toán (SPEC-math.md, SPEC-math2.md): các kiểu mục của 12 bài (thẻ số, nhóm đồ, cá sấu, xếp số, tia số, chục – đơn vị,
 // câu đố) và phần Olly làm mẫu. Khung lượt chơi (chọn mức, 8 mục, đọc câu, sao, ra nền quay lại) ở screens/round.js.
 
 import { h } from '../ui.js';
@@ -18,7 +18,8 @@ import {
   numberCard, crocEl, signCard, groupEl, drawPairs, makeBoard, sentenceLine, reducedMotion, rodEl, orderBoard, numberLine, personCard,
 } from '../math/views.js';
 import { t8Item, t9Item, opItem } from '../math/sums.js';
-import { buildT8, buildT9, buildOp, demoSums } from './math2.js';
+import { buildT8, buildT9, buildOp, buildStory, demoSums } from './math2.js';
+import { STORY_BY_ID, storyItem } from '../math/stories.js';
 
 
 /** Mô tả mức trên nút chọn mức. */
@@ -34,6 +35,7 @@ const LEVEL_VI = {
   t9: ['Tới 5, có khung 10 ô', 'Tới 10', 'Đôi bạn của 10'],
   t10: ['Tới 5, đếm hết', 'Tới 10, đếm tiếp', 'Chỉ phép tính'],
   t11: ['Tới 5', 'Tới 10', 'Chỉ phép tính'],
+  t12: ['Số tới 5, có hình', 'Số tới 10', 'Câu đố đánh lừa'],
 };
 
 /** Tia số: 11 số; iPhone dọc chỉ đủ chỗ cho 7 ô ≥ 48 px (SPEC-math 8.2). */
@@ -75,7 +77,7 @@ async function allow20(db) {
 /** `problemKey` bé gặp gần đây ở bài (16 mục gần nhất) — bộ sinh phần 2 ưu tiên key khác (SPEC-math2 2.4). */
 async function recentKeys(db, lesson) {
   const records = await db.getAllByIndex('progress', 'lessonId', lesson.id);
-  return records.filter((r) => r.activity !== 'read' && r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 16).map((r) => `${r.activity}:${r.itemId}`);
+  return records.filter((r) => r.activity !== 'read' && r.activity !== 'op' && r.lastAt).sort((a, b) => b.lastAt - a.lastAt).slice(0, 16).map((r) => `${r.activity}:${r.itemId}`);
 }
 
 // ---------- Các kiểu mục ----------
@@ -92,6 +94,7 @@ function buildView(ctx, item) {
   if (key === 't8') return buildT8(ctx, item);
   if (key === 't9') return buildT9(ctx, item);
   if (key === 't10' || key === 't11') return buildOp(ctx, item);
+  if (key === 't12') return buildStory(ctx, item);
   return buildCompare(ctx, item, key === 't6' ? 'tens' : 'blocks');
 }
 
@@ -369,6 +372,7 @@ async function runItem(ctx, item) {
   const view = buildView(ctx, item);
   if (view.board) return runMake(ctx, item, view);
   if (view.order) return runOrder(ctx, item, view);
+  if (view.story) return view.run();
   const result = await chooseLoop(ctx, view);
   await view.afterCorrect?.();
   return { result, line: await praiseAndRead(ctx, item, result) };
@@ -419,6 +423,8 @@ function showSolved(ctx, item) {
     view.board.lock(true);
   } else if (view.order) {
     view.solve();
+  } else if (view.story) {
+    view.reveal();
   } else if (view.reveal) {
     view.correct.classList.add('right');
     view.reveal().catch(() => {});
@@ -619,6 +625,10 @@ async function demoSteps(dctx, { short }) {
     const L = round.level;
     const [a, b] = L === 3 ? [7, 3] : [5, 2];
     steps.push(() => demoSums(dctx, opItem({ op: '−', a, b, thing: 'birds' }, L, Math.random, 1)));
+  } else if (lesson.key === 't12') {
+    // Mức 1–2: một câu cộng, một câu trừ; mức 3: "gives" hai chiều (người nhận → cộng, người cho → trừ).
+    const ids = round.level === 3 ? ['s11', 's21'] : ['s01', 's13'];
+    for (const id of ids) steps.push(() => demoSums(dctx, storyItem(STORY_BY_ID.get(id), round.level, Math.random, 1)));
   } else if (round.level === 1) {
     steps.push(() => demoMake(dctx, 34));
   } else {
