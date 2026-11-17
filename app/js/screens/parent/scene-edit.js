@@ -1,12 +1,15 @@
 // Góc bố mẹ → Bài học → 🖼️ Soạn tranh (SPEC-ta-tranh mục 8): ảnh tranh, tên, cấp độ, các câu (thêm / sửa / nhân bản / xóa /
 // đổi thứ tự / nghe thử), ĐẶT MŨI TÊN bằng cách chạm vào tranh (Không chỉ, hướng, cỡ vùng chạm), nhờ AI (prompt + dán JSON,
-// mục 8.3). Thay ảnh hoặc dán câu từ AI → mọi mũi tên "cần kiểm tra": phải xác nhận mới lưu được (8.2).
+// mục 8.3). Thay ảnh hoặc dán câu từ AI → mọi mũi tên "cần kiểm tra": phải xác nhận TỪNG CÂU mới lưu được (8.2, 8.6).
+// Mục 4.5: kéo trên tranh để khoanh khung đối tượng (vùng chạm phủ trọn người / vật); "👆 Thử chạm như bé" để thử vùng chạm.
 
 import { h, toast, copyText, confirmDialog } from '../../ui.js';
 import { resizeCover } from '../../image.js';
 import { setWordImage, lessonImages, mediaBlob, saveScene, deleteScene, SCENE_IMAGE } from '../../db.js';
-import { arrowGeometry, hitRadius, hitCenter, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
-import { validateScene, parseSceneText, scenePrompt, scenePicturePrompt, newSid, newSceneId } from '../../scene-data.js';
+import { arrowGeometry, hitRadius, hitCenter, hitRect, pickSentence, normalizeBox, arrowForBox, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
+import {
+  validateScene, parseSceneText, scenePrompt, scenePicturePrompt, newSid, newSceneId, SCENE_TOPICS, SCENE_TOPIC_BY_ID, sceneTopicPrompt, TOPIC_THINGS,
+} from '../../scene-data.js';
 import { SCENE_BY_ID } from '../../data/builtin-scenes.js';
 import { parentLayout, goParent, section, field, notice } from './common.js';
 import { imageErrorMessage } from './pictures.js';
@@ -43,7 +46,8 @@ function editor(app, body, old, oldImg, urls, base = null) {
     : { id: newSceneId(), title: '', titleVi: '', level: 2, track: 'phonics', sentences: [blankSentence()] };
   let image = oldImg ? { blob: mediaBlob(oldImg), mimeType: oldImg.mimeType, width: oldImg.width, height: oldImg.height, fresh: false } : null;
   let active = draft.sentences.findIndex((s) => s.point) >= 0 ? draft.sentences.findIndex((s) => s.point) : 0;
-  let needsCheck = false;
+  const unchecked = new Set(); // sid các câu có mũi tên chưa được bố mẹ kiểm tra (mục 8.6)
+  let checkWhy = '';
   const checkNote = h('div');
 
   // ---------- Ảnh ----------
@@ -65,17 +69,29 @@ function editor(app, body, old, oldImg, urls, base = null) {
       image = { ...out, fresh: true };
       setImageUrl();
       pickBtn.textContent = '🔄 Đổi ảnh';
-      if (draft.sentences.some((s) => s.point)) markCheck('Đã thay ảnh — hãy kiểm tra lại mũi tên của từng câu.');
+      if (draft.sentences.some((s) => s.point)) markCheck('Đã thay ảnh — mũi tên / khung cũ có thể không còn đúng chỗ.');
       renderStage();
     } catch (err) {
       toast(imageErrorMessage(err), 4000);
     }
   });
 
+  /** Mọi câu có mũi tên phải được kiểm tra lại TỪNG CÂU (không có nút "đúng hết"): bấm 🎯, chỉnh nếu lệch, bấm ✓. */
   function markCheck(why) {
-    needsCheck = true;
-    checkNote.replaceChildren(notice('warn', h('div', { text: why }),
-      h('button.btn.small', { type: 'button', text: '✓ Mũi tên đều đúng rồi', onclick: () => { needsCheck = false; checkNote.replaceChildren(); } })));
+    checkWhy = why;
+    for (const x of draft.sentences) if (x.point) unchecked.add(x.sid);
+    renderCheckNote();
+  }
+  function renderCheckNote() {
+    for (const sid of [...unchecked]) if (!draft.sentences.some((x) => x.sid === sid && x.point)) unchecked.delete(sid);
+    checkNote.replaceChildren(...(unchecked.size ? [notice('warn', h('div', {
+      text: `${checkWhy} Còn ${unchecked.size} câu chưa kiểm tra (⚠️ trong danh sách): bấm 🎯 từng câu, kéo khoanh lại khung nếu lệch, rồi bấm "✓ Câu này đúng".`,
+    }))] : []));
+  }
+  /** Bố mẹ vừa xem / chỉnh mũi tên của câu: câu đó đã kiểm tra. */
+  function checked(x) {
+    if (!unchecked.delete(x.sid)) return;
+    renderCheckNote();
   }
 
   // ---------- Tên, cấp độ ----------
@@ -87,12 +103,41 @@ function editor(app, body, old, oldImg, urls, base = null) {
     .map(([v, t]) => h('option', { value: String(v), text: t, selected: v === draft.level })));
   level.addEventListener('change', () => { draft.level = Number(level.value); });
 
+  // ---------- Tranh mới theo chủ đề (mục 8.5): chọn chủ đề → chép prompt vẽ tranh → chọn ảnh → chép prompt viết câu ----------
+  let topicId = null;
+  const topicSel = h('select', { 'aria-label': 'Chủ đề tranh' }, h('option', { value: '', text: '— Chọn chủ đề —' }),
+    ...SCENE_TOPICS.map((t) => h('option', { value: t.id, text: `${t.titleVi} — ${t.title}` })));
+  topicSel.addEventListener('change', () => {
+    const prev = SCENE_TOPIC_BY_ID.get(topicId);
+    topicId = topicSel.value || null;
+    const t = SCENE_TOPIC_BY_ID.get(topicId);
+    if (!t) return;
+    // Tên còn trống (hoặc vẫn là tên của chủ đề chọn trước) → điền tên chủ đề.
+    if (!draft.title.trim() || draft.title === prev?.title) title.value = draft.title = t.title;
+    if (!draft.titleVi?.trim() || draft.titleVi === prev?.titleVi) titleVi.value = draft.titleVi = t.titleVi;
+  });
+  const drawTopicBtn = h('button.btn.primary', {
+    type: 'button', text: '📋 Chép prompt vẽ tranh theo chủ đề',
+    onclick: () => {
+      if (!topicId) return toast('Chọn chủ đề trước nhé.');
+      copyText(sceneTopicPrompt(topicId, draft.level)).then((ok) => toast(ok
+        ? 'Đã chép prompt vẽ tranh. Dán vào ChatGPT / Gemini để AI vẽ, lưu ảnh về máy rồi bấm "Chọn / chụp ảnh".'
+        : 'Không chép được.', 4500));
+    },
+  });
+
   // ---------- Khung đặt mũi tên ----------
   const arrow = h('div.scene-arrow', { 'aria-hidden': 'true' });
   arrow.innerHTML = ARROW_SVG;
   const ring = h('div.hit-ring', { 'aria-hidden': 'true' });
+  const objBox = h('div.edit-box', { 'aria-hidden': 'true', hidden: true }); // khung đối tượng = vùng chạm (mục 4.5)
+  const dragBox = h('div.edit-box.drawing', { 'aria-hidden': 'true', hidden: true });
+  const tryMark = h('div.try-mark', { 'aria-hidden': 'true', hidden: true });
   const dots = h('div.edit-dots');
-  const frame = h('div.scene-frame.edit-frame', { 'aria-label': 'Chạm vào tranh để đặt mũi tên' }, h('div.scene-art', {}, imgEl), dots, ring, arrow);
+  const frame = h('div.scene-frame.edit-frame', { 'aria-label': 'Kéo để khoanh người / vật, chạm để đặt mũi tên' }, h('div.scene-art', {}, imgEl), dots, ring, objBox, dragBox, tryMark, arrow);
+  let tryMode = false;
+  const tryBtn = h('button.btn.small', { type: 'button', text: '👆 Thử chạm như bé', 'aria-pressed': 'false' });
+  const checkBtn = h('button.btn.small.primary', { type: 'button', text: '✓ Câu này đúng' });
   const activeLabel = h('p.field-hint');
   const fromSel = h('select', { 'aria-label': 'Hướng mũi tên' }, ...FROM_VALUES.map((f) => h('option', { value: f, text: FROM_VI[f] })));
   const hitRange = h('input', { type: 'range', min: String(HIT_MIN), max: String(HIT_MAX), step: '0.01', 'aria-label': 'Cỡ vùng chạm' });
@@ -100,10 +145,18 @@ function editor(app, body, old, oldImg, urls, base = null) {
 
   function renderStage() {
     const s = draft.sentences[active];
-    activeLabel.textContent = s ? `Câu ${active + 1}: ${s.en || '(chưa có chữ)'} — ${s.point ? 'chạm chỗ khác để dời mũi tên' : 'chạm vào tranh để đặt mũi tên'}` : '';
+    activeLabel.textContent = tryMode ? '👆 Đang thử: chạm vào tranh như bé — app cho biết trúng câu nào. Bấm lại nút để thôi thử.'
+      : s ? `Câu ${active + 1}: ${s.en || '(chưa có chữ)'} — ${s.box ? 'kéo để khoanh lại khung, chạm để dời khung' : 'KÉO để khoanh trọn người / vật (vùng chạm), hoặc chạm để đặt mũi tên'}${unchecked.has(s.sid) ? ' · ⚠️ chưa kiểm tra' : ''}` : '';
     fromSel.value = s?.from ?? 'auto';
     hitRange.value = String(s?.hit ?? 0.08);
+    hitRange.disabled = Boolean(s?.box); // có khung: vùng chạm là khung, không dùng vòng tròn
+    checkBtn.hidden = !s || !unchecked.has(s.sid);
     const box = { w: frame.clientWidth, h: frame.clientHeight };
+    objBox.hidden = !s?.box || !box.w;
+    if (s?.box && box.w) {
+      const r = hitRect(s, box);
+      Object.assign(objBox.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+    }
     dots.replaceChildren(...draft.sentences.map((x, i) => (x.point && i !== active
       ? h('span.edit-dot', { text: String(i + 1), style: { left: `${x.point.x * 100}%`, top: `${x.point.y * 100}%` } }) : null)).filter(Boolean));
     if (!s?.point || !box.w) {
@@ -115,24 +168,106 @@ function editor(app, body, old, oldImg, urls, base = null) {
     arrow.hidden = false;
     Object.assign(arrow.style, { left: `${g.tail.x}px`, top: `${g.tail.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
     arrow.dataset.from = g.from;
+    ring.hidden = Boolean(s.box);
+    if (s.box) return;
     const r = hitRadius(s, box);
     const c = hitCenter(s);
-    ring.hidden = false;
     Object.assign(ring.style, { left: `${c.x * box.w - r}px`, top: `${c.y * box.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
   }
-  frame.addEventListener('click', (e) => {
-    const s = draft.sentences[active];
-    if (!s) return;
+  // Chạm = đặt mũi tên (câu có khung: dời khung tới chỗ chạm); kéo = khoanh khung đối tượng; đang thử = chạm như bé.
+  const DRAG_PX = 8;
+  let press = null;
+  const rel = (e) => {
     const r = frame.getBoundingClientRect();
-    const round = (v) => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000;
-    s.point = { x: round((e.clientX - r.left) / r.width), y: round((e.clientY - r.top) / r.height) };
-    delete s.at; // bố mẹ chạm thẳng vào đối tượng: vùng chạm theo chỗ vừa chạm
+    return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)), r };
+  };
+  const round = (v) => Math.round(Math.min(1, Math.max(0, v)) * 1000) / 1000;
+  frame.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    press = { start: rel(e), x0: e.clientX, y0: e.clientY, dragging: false, id: e.pointerId };
+    frame.setPointerCapture?.(e.pointerId);
+  });
+  frame.addEventListener('pointermove', (e) => {
+    if (!press || tryMode || e.pointerId !== press.id) return;
+    if (!press.dragging && Math.hypot(e.clientX - press.x0, e.clientY - press.y0) < DRAG_PX) return;
+    press.dragging = true;
+    e.preventDefault();
+    const a = press.start;
+    const b = rel(e);
+    Object.assign(dragBox.style, {
+      left: `${Math.min(a.x, b.x) * 100}%`, top: `${Math.min(a.y, b.y) * 100}%`, width: `${Math.abs(b.x - a.x) * 100}%`, height: `${Math.abs(b.y - a.y) * 100}%`,
+    });
+    dragBox.hidden = false;
+  });
+  const endPress = (e) => {
+    if (!press || e.pointerId !== press.id) return;
+    const p = press;
+    press = null;
+    dragBox.hidden = true;
+    const s = draft.sentences[active];
+    const at = rel(e);
+    if (tryMode) return tryTap(at);
+    if (!s) return;
+    if (p.dragging) {
+      const b = normalizeBox({ x: Math.min(p.start.x, at.x), y: Math.min(p.start.y, at.y), w: Math.abs(at.x - p.start.x), h: Math.abs(at.y - p.start.y) });
+      s.box = b;
+      Object.assign(s, arrowForBox(b));
+    } else if (s.box) {
+      // Chạm khi đã có khung: dời khung (giữ cỡ) cho tâm khung tới chỗ chạm.
+      s.box = normalizeBox({ x: at.x - s.box.w / 2, y: at.y - s.box.h / 2, w: s.box.w, h: s.box.h });
+      Object.assign(s, arrowForBox(s.box));
+    } else s.point = { x: round(at.x), y: round(at.y) };
+    delete s.at; // bố mẹ đặt thẳng vào đối tượng: vùng chạm theo chỗ vừa đặt
+    checked(s);
     renderStage();
     renderList();
+  };
+  frame.addEventListener('pointerup', endPress);
+  frame.addEventListener('pointercancel', () => { press = null; dragBox.hidden = true; });
+  /** Thử chạm như bé (mục 8.6): chạm trúng câu nào thì sáng vùng câu đó + báo; trượt thì báo trượt. */
+  function tryTap(at) {
+    const box = { w: frame.clientWidth, h: frame.clientHeight };
+    const i = pickSentence(draft.sentences, { x: at.x * box.w, y: at.y * box.h }, box, active);
+    Object.assign(tryMark.style, { left: `${at.x * 100}%`, top: `${at.y * 100}%` });
+    tryMark.hidden = false;
+    tryMark.classList.toggle('miss', i < 0);
+    if (i < 0) {
+      toast('Không trúng câu nào — bé chạm chỗ này sẽ bị tính là chưa đúng.', 3000);
+      return;
+    }
+    active = i;
+    renderList();
+    renderStage();
+    toast(`Trúng câu ${i + 1}: ${draft.sentences[i].en}`, 3000);
+  }
+  tryBtn.addEventListener('click', () => {
+    tryMode = !tryMode;
+    tryBtn.setAttribute('aria-pressed', String(tryMode));
+    tryBtn.classList.toggle('primary', tryMode);
+    frame.classList.toggle('trying', tryMode);
+    tryMark.hidden = true;
+    renderStage();
+  });
+  checkBtn.addEventListener('click', () => {
+    const s = draft.sentences[active];
+    if (!s) return;
+    checked(s);
+    // Sang câu chưa kiểm tra kế tiếp.
+    const next = draft.sentences.findIndex((x) => unchecked.has(x.sid));
+    if (next >= 0) active = next;
+    renderList();
+    renderStage();
   });
   fromSel.addEventListener('change', () => { draft.sentences[active].from = fromSel.value; renderStage(); });
   hitRange.addEventListener('input', () => { draft.sentences[active].hit = Number(hitRange.value); renderStage(); });
-  noPoint.addEventListener('click', () => { draft.sentences[active].point = null; renderStage(); renderList(); });
+  noPoint.addEventListener('click', () => {
+    const s = draft.sentences[active];
+    s.point = null;
+    delete s.box;
+    checked(s);
+    renderStage();
+    renderList();
+  });
   const onResize = () => renderStage();
   window.addEventListener('resize', onResize);
 
@@ -155,7 +290,9 @@ function editor(app, body, old, oldImg, urls, base = null) {
       };
       const btn = (text, label, onclick, cls = '') => h(`button.btn.small${cls}`, { type: 'button', text, 'aria-label': label, title: label, onclick });
       return h(`div.scene-edit-row${i === active ? '.active' : ''}`, { dataset: { sid: s.sid } },
-        h('div.scene-edit-num', {}, h('strong', { text: String(i + 1) }), h('span', { text: s.point ? '🎯' : '—', title: s.point ? 'Có mũi tên' : 'Không chỉ' })),
+        h('div.scene-edit-num', {}, h('strong', { text: String(i + 1) }), unchecked.has(s.sid)
+          ? h('span.unchecked', { text: '⚠️', title: 'Chưa kiểm tra mũi tên / khung' })
+          : h('span', { text: s.box ? '🔲' : s.point ? '🎯' : '—', title: s.box ? 'Có khung' : s.point ? 'Có mũi tên' : 'Không chỉ' })),
         h('div.scene-edit-fields', {}, en, vi),
         h('div.lesson-actions', {},
           btn('🎯', `Đặt mũi tên câu ${i + 1}`, () => { active = i; renderList(); renderStage(); frame.scrollIntoView({ behavior: 'smooth', block: 'center' }); }),
@@ -194,7 +331,7 @@ function editor(app, body, old, oldImg, urls, base = null) {
     active = Math.max(0, draft.sentences.findIndex((s) => s.point));
     aiArea.value = '';
     if (r.warnings.length) aiResult.append(notice('warn', h('strong', { text: 'Lưu ý:' }), h('ul', {}, ...r.warnings.map((w) => h('li', { text: w })))));
-    markCheck(`Đã lấy ${draft.sentences.length} câu từ AI. Vị trí mũi tên AI đoán thường lệch — hãy bấm 🎯 từng câu và chạm lại cho đúng.`);
+    markCheck(`Đã lấy ${draft.sentences.length} câu từ AI. Khung AI khoanh có thể lệch.`);
     renderList();
     renderStage();
   };
@@ -202,7 +339,12 @@ function editor(app, body, old, oldImg, urls, base = null) {
   // ---------- Lưu, xem thử, xóa ----------
   async function save() {
     if (!image) return toast('Chưa có ảnh tranh.'), false;
-    if (needsCheck) return toast('Hãy kiểm tra lại mũi tên rồi bấm "✓ Mũi tên đều đúng rồi".', 4000), false;
+    if (unchecked.size) {
+      active = draft.sentences.findIndex((x) => unchecked.has(x.sid));
+      renderList();
+      renderStage();
+      return toast(`Còn ${unchecked.size} câu chưa kiểm tra mũi tên / khung (⚠️). Bấm 🎯 từng câu rồi "✓ Câu này đúng".`, 4500), false;
+    }
     const r = validateScene(draft);
     if (!r.ok) {
       toast(r.errors[0], 5000);
@@ -229,6 +371,9 @@ function editor(app, body, old, oldImg, urls, base = null) {
   setImageUrl();
   renderList();
   body.append(
+    section('🎨 Tranh mới theo chủ đề',
+      h('p.field-hint', { text: `1. Chọn chủ đề và cấp độ câu → bấm "Chép prompt vẽ tranh theo chủ đề", dán vào ChatGPT / Gemini để AI vẽ, lưu ảnh về máy. 2. Bấm "Chọn / chụp ảnh" ở mục Ảnh tranh. 3. Ở mục "Nhờ AI viết câu" bấm "Chép prompt", dán vào AI kèm ảnh, dán kết quả lại. Cấp 1 vẽ ${TOPIC_THINGS[1]} người / vật, cấp 2 vẽ ${TOPIC_THINGS[2]}, cấp 3 vẽ ${TOPIC_THINGS[3]}.` }),
+      field('Chủ đề', topicSel), field('Cấp độ câu', level), drawTopicBtn),
     section('Ảnh tranh', h('p.field-hint', { text: 'Tranh nhiều người / vật đang làm các việc khác nhau, nét rõ, không có chữ. App cắt về khung 4:3.' }),
       base ? notice('info', `Đang thay tranh có sẵn "${base.title}": giữ nguyên ${base.sentences.length} câu. Bấm "Chép prompt vẽ tranh" để AI vẽ tranh mới đúng các câu này, lưu ảnh rồi chọn ảnh, sau đó đặt lại mũi tên.`) : null,
       h('div.lesson-actions', {}, pickBtn,
@@ -237,12 +382,13 @@ function editor(app, body, old, oldImg, urls, base = null) {
           if (!ok) return toast('Chưa có câu nào để vẽ.');
           copyText(scenePicturePrompt(draft)).then((done) => toast(done ? 'Đã chép prompt vẽ tranh. Dán vào ChatGPT / Gemini để AI vẽ.' : 'Không chép được.'));
         } })), fileInput),
-    section('Tên và cấp độ', field('Tên tranh (tiếng Anh)', title), field('Tên tiếng Việt', titleVi), field('Cấp độ câu', level)),
-    section('🎯 Đặt mũi tên', activeLabel, frame, h('div.lesson-actions', {}, noPoint, fromSel), field('Cỡ vùng chạm (vòng tròn mờ)', hitRange), checkNote),
+    section('Tên tranh', field('Tên tranh (tiếng Anh)', title), field('Tên tiếng Việt', titleVi)),
+    section('🎯 Đặt mũi tên', checkNote, activeLabel, frame, h('div.lesson-actions', {}, checkBtn, noPoint, fromSel, tryBtn),
+      field('Cỡ vùng chạm (vòng tròn mờ — chỉ khi chưa khoanh khung)', hitRange)),
     section('Các câu', list, h('button.btn', { type: 'button', text: '+ Thêm câu', onclick: () => { draft.sentences.push(blankSentence()); active = draft.sentences.length - 1; renderList(); renderStage(); } })),
     section('✨ Nhờ AI viết câu',
       h('p.field-hint', { text: 'Bấm "Chép prompt", dán vào ChatGPT / Claude / Gemini KÈM ẢNH tranh. Dán kết quả vào ô dưới rồi bấm "Dùng các câu này".' }),
-      h('button.btn', { type: 'button', text: '📋 Chép prompt', onclick: () => copyText(scenePrompt({ level: draft.level })).then((ok) => toast(ok ? 'Đã chép prompt. Gửi cho AI kèm ảnh tranh.' : 'Không chép được.')) }),
+      h('button.btn', { type: 'button', text: '📋 Chép prompt', onclick: () => copyText(scenePrompt({ level: draft.level, topic: topicId })).then((ok) => toast(ok ? 'Đã chép prompt. Gửi cho AI kèm ảnh tranh.' : 'Không chép được.')) }),
       aiArea, h('button.btn.primary', { type: 'button', text: 'Dùng các câu này', onclick: useAi }), aiResult),
     h('div.lesson-actions.sticky-actions', {},
       h('button.btn.primary', { type: 'button', text: '💾 Lưu tranh', onclick: () => save() }),

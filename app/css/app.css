@@ -499,6 +499,16 @@ input[type='text'], input[type='number'], select, textarea {
 .edit-dots { position: absolute; inset: 0; pointer-events: none; }
 .edit-dot { position: absolute; transform: translate(-50%, -50%); min-width: 26px; height: 26px; padding: 0 6px; border-radius: 13px; background: rgba(38, 33, 92, 0.75); color: #fff; font-size: 14px; display: grid; place-items: center; }
 .hit-ring { position: absolute; border-radius: 50%; border: 3px dashed rgba(224, 49, 49, 0.7); background: rgba(224, 49, 49, 0.08); pointer-events: none; }
+/* Khung đối tượng (SPEC-ta-tranh 4.5): vùng chạm phủ trọn người / vật; kéo để khoanh; thử chạm như bé (8.6). */
+.edit-frame { touch-action: none; user-select: none; }
+.edit-frame.trying { cursor: pointer; outline: 4px solid var(--yellow); }
+.edit-box { position: absolute; border-radius: 10px; border: 3px dashed rgba(224, 49, 49, 0.8); background: rgba(224, 49, 49, 0.1); pointer-events: none; }
+.edit-box[hidden], .try-mark[hidden] { display: none; }
+.edit-box.drawing { border-color: #1c7ed6; background: rgba(28, 126, 214, 0.12); }
+.try-mark { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: #2f9e44; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; }
+.try-mark.miss { background: #e03131; }
+.scene-edit-num .unchecked { font-size: 18px; }
+.find-ring.box { border-radius: 14px; }
 .scene-edit-list { display: grid; gap: 8px; }
 .scene-edit-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; padding: 8px; border-radius: 12px; border: 2px solid transparent; }
 .scene-edit-row.active { border-color: var(--lilac); background: #f8f5ff; }

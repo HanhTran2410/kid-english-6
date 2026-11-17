@@ -112,13 +112,18 @@ test('Thay tranh có sẵn: Kho ảnh → Thay tranh → bản sao giữ 7 câu,
   await toParent(page, 'Kho ảnh');
   await page.getByRole('button', { name: 'Thay tranh In the park' }).click();
   await expect(page.locator('.scene-edit-row')).toHaveCount(7);
-  await page.getByRole('button', { name: /Chép prompt vẽ tranh/ }).click();
+  await page.getByRole('button', { name: '📋 Chép prompt vẽ tranh theo các câu' }).click();
   const prompt = await page.evaluate(() => navigator.clipboard.readText());
   expect(prompt).toContain('- A boy is flying a kite.');
   await page.locator('input[aria-label="Ảnh tranh"]').setInputFiles({ name: 'park.png', mimeType: 'image/png', buffer: await png(page, 4, 3) });
   await page.getByRole('button', { name: '💾 Lưu tranh' }).click();
-  await expect(page.locator('.toast').last()).toContainText('kiểm tra lại mũi tên');
-  await page.getByRole('button', { name: '✓ Mũi tên đều đúng rồi' }).click();
+  // Ảnh mới: mọi câu có mũi tên phải kiểm tra từng câu (SPEC-ta-tranh 8.6) — 6 câu có mũi tên.
+  await expect(page.locator('.toast').last()).toContainText('Còn 6 câu chưa kiểm tra');
+  for (let left = 6; left > 0; left--) {
+    await expect(page.locator('.scene-edit-row .unchecked')).toHaveCount(left);
+    await page.getByRole('button', { name: '✓ Câu này đúng' }).click();
+  }
+  await expect(page.locator('.scene-edit-row .unchecked')).toHaveCount(0);
   await page.getByRole('button', { name: '💾 Lưu tranh' }).click();
   await expect(page.locator('.toast').last()).toContainText('Đã lưu tranh');
   await expect.poll(() => page.evaluate(() => window.kidEnglish6.settings.hiddenScenes)).toEqual(['scene-park']);

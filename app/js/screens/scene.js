@@ -6,7 +6,7 @@ import { play } from '../speech/sfx.js';
 import { isAbort, scaled, abortError } from '../timing.js';
 import { tokenize } from '../text.js';
 import { displayWords } from '../karaoke.js';
-import { arrowGeometry, pickSentence, hitRadius, hitCenter } from '../scene.js';
+import { arrowGeometry, pickSentence, hitRadius, hitCenter, hitRect, hitTest } from '../scene.js';
 import { SCENE_BY_ID } from '../data/builtin-scenes.js';
 import { recordLessonDone, recordItem, starsFor, RESULT } from '../progress.js';
 import { QUESTIONS } from '../captions.js';
@@ -248,9 +248,16 @@ function buildScene(app, params, scene, fillArt) {
     };
     const showRing = (s) => {
       const b = box();
-      const r = hitRadius(s, b);
-      const c = hitCenter(s); // vòng bao quanh đối tượng, không phải quanh đầu mũi tên
-      Object.assign(ring.style, { left: `${c.x * b.w - r}px`, top: `${c.y * b.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+      ring.classList.toggle('box', Boolean(s.box));
+      if (s.box) {
+        // Khung đối tượng (mục 4.5): sáng đúng khung vùng chạm.
+        const r = hitRect(s, b);
+        Object.assign(ring.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+      } else {
+        const r = hitRadius(s, b);
+        const c = hitCenter(s); // vòng bao quanh đối tượng, không phải quanh đầu mũi tên
+        Object.assign(ring.style, { left: `${c.x * b.w - r}px`, top: `${c.y * b.h - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+      }
       ring.hidden = false;
     };
 
@@ -271,9 +278,7 @@ function buildScene(app, params, scene, fillArt) {
         let result;
         for (;;) {
           const tap = await waitFrameTap();
-          const b = box();
-          const c = hitCenter(s);
-          const hit = Math.hypot(tap.x - c.x * b.w, tap.y - c.y * b.h) <= hitRadius(s, b);
+          const hit = Boolean(hitTest(s, tap, box()));
           if (hit) {
             play('ding');
             placeArrow(i, false);

@@ -97,6 +97,14 @@ Mỗi tranh có một `level`. Cấp độ áp cho **mọi câu** trong tranh; t
 - **Chạm rơi vào nhiều vùng** (chồng nhau, hoặc nhiều câu cùng chỉ một vật): chọn câu có `khoảng cách / bán kính` nhỏ nhất. Bằng nhau (chênh < 0,05) → ưu tiên **câu đang hiện**; không có thì câu **đứng trước** trong bài. Không bao giờ chọn ngẫu nhiên.
 - Chạm ngoài mọi vùng: không làm gì (không chuyển câu, không dừng đọc).
 
+### 4.5. Khung đối tượng (`box`, 0.11.3 — bố mẹ yêu cầu 2026-11-17)
+Vấn đề: tranh do AI vẽ thì AI viết câu chỉ **đoán** một điểm; vòng tròn quanh điểm đoán lệch (hoặc quá nhỏ so với người / cây) → bé chạm đúng mà bị tính sai.
+- Câu có thể có **`box: {x, y, w, h}`** — khung chữ nhật bao trọn người / vật (tỉ lệ 0–1 của ảnh 4:3; x, y = góc trên trái). Có khung thì **vùng chạm là khung**, nới thêm 2% cạnh ngắn mỗi phía (ngón tay bé), tối thiểu 48px mỗi chiều; không dùng `hit` / vòng tròn.
+- **Mũi tên tự đặt theo khung:** đầu mũi tên ở giữa cạnh khung phía còn nhiều chỗ trống nhất (tính theo tỉ lệ 4:3), thân nằm ngoài khung → không đè lên đối tượng. Bố mẹ vẫn đổi hướng được.
+- **Chạm vào chỗ nhiều vùng chồng nhau:** ưu tiên vùng **nhỏ** nhất (quả bóng nằm trong khung cái cây → quả bóng); vùng to hơn ≥ 1,5 lần bị loại; còn lại theo quy tắc 4.4.
+- Chế độ Tìm: vòng sáng chỉ đáp án là đúng khung (bo góc), không phải vòng tròn.
+- Tranh cũ / tranh có sẵn không có khung: giữ vòng tròn như 4.4 (không cần chuyển dữ liệu).
+
 ## 5. Âm thanh, hẹn giờ và tương tác
 
 ### 5.1. Nguyên tắc
@@ -221,6 +229,7 @@ App chấp nhận JSON có bọc trong khối ```` ```json ```` (AI hay làm v�
 | `en` | chuỗi không rỗng, ≤ 20 từ | Từ chối |
 | `vi` | chuỗi | Thiếu → để rỗng, cảnh báo (vẫn cho lưu) |
 | `point` | `null` hoặc `{x, y}` với 0 ≤ x, y ≤ 1 | Ngoài 0–1 / sai dạng → từ chối |
+| `box` | `null` hoặc `{x, y, w, h}` số (4.5) | Kẹp vào trong ảnh, cạnh ≥ 0,03; không phải số → từ chối. Có khung mà không có `point` → app tự đặt mũi tên theo khung |
 | `from` | trong danh sách mục 4.2 | Thiếu → `auto`; sai → từ chối |
 | `hit` | số 0,04–0,2 | Thiếu → 0,08; ngoài khoảng → kẹp về 0,04 / 0,2, cảnh báo |
 | `hit` khi `point: null` | — | Bỏ qua, không báo lỗi |
@@ -245,7 +254,7 @@ Cảnh báo thêm (không chặn lưu): câu dài hơn mức của `level` (mụ
 - Xóa tranh → xóa ảnh của tranh (mỗi ảnh chỉ thuộc một tranh, mục 7.1) và tiến độ của tranh.
 
 ### 8.3. Tạo bằng prompt AI
-- App có sẵn prompt (nút **Chép prompt**); bố mẹ gửi tranh + prompt cho AI (ChatGPT / Claude / Gemini…), dán kết quả vào app → kiểm tra (mục 7.4) → mở màn Đặt mũi tên để bố mẹ **xác nhận từng điểm** (tọa độ AI đưa thường lệch) → lưu.
+- App có sẵn prompt (nút **Chép prompt**); bố mẹ gửi tranh + prompt cho AI (ChatGPT / Claude / Gemini…), dán kết quả vào app → kiểm tra (mục 7.4) → mở màn Đặt mũi tên để bố mẹ **xác nhận từng điểm** (tọa độ AI đưa thường lệch) → lưu. *Từ 0.11.3: AI trả khung `box` thay cho điểm, bố mẹ kiểm tra từng câu (mục 4.5, 8.6).*
 - Prompt yêu cầu AI:
   - Chỉ trả về **một JSON** đúng định dạng mục 7.3, không Markdown, không giải thích.
   - Đúng cấp độ được chọn (mục 2.2), dùng các từ của Unit nếu bố mẹ dán danh sách từ.
@@ -258,6 +267,21 @@ Cảnh báo thêm (không chặn lưu): câu dài hơn mức của `level` (mụ
 
 ### 8.4. Tranh có sẵn
 - 3–5 tranh theo chủ đề quen thuộc (công viên, lớp học, nhà bếp, bãi biển, sinh nhật), đủ 3 cấp độ, tranh và câu tự tạo. Đi kèm app (service worker cache), `builtIn: true`, không sửa / xóa được.
+
+### 8.5. Tranh mới theo chủ đề (0.11.3, bố mẹ yêu cầu 2026-11-17 — làm theo cách tạo bài của app Bông)
+Bố mẹ không phải tự gõ prompt: **chọn chủ đề → app sinh prompt vẽ tranh → có tranh rồi app sinh prompt viết câu cho đúng tranh đó**.
+- Màn Soạn tranh có mục đầu **🎨 Tranh mới theo chủ đề**: ô **Chủ đề** (10 chủ đề: công viên, lớp học, bãi biển, bếp, sinh nhật, sân chơi, nông trại, sở thú, siêu thị, ở nhà), **Cấp độ câu** (chuyển từ mục Tên lên đây vì cấp độ quyết định số thứ được vẽ), nút **📋 Chép prompt vẽ tranh theo chủ đề**.
+- Mỗi chủ đề viết sẵn trong code (`SCENE_TOPICS`, `scene-data.js`): tên Anh / Việt, cảnh, 8 người / vật cụ thể dùng từ dễ lớp 1 (ví dụ *a boy building a sandcastle*, *a girl in a yellow swimsuit swimming in the sea*). Vẽ **5 thứ ở cấp 1, 7 ở cấp 2, 8 ở cấp 3** (thứ dễ tả trước).
+- **Prompt vẽ tranh** (`sceneTopicPrompt`, tiếng Anh như prompt ảnh của app Bông): một tranh hoạt hình khung **4:3**, có đủ các thứ trong danh sách, mỗi thứ đủ to để chỉ mũi tên, nhìn trọn, **không chồng lên nhau**, rải khắp tranh; không thêm nhân vật / vật lớn khác; **không có chữ, số, biển hiệu**.
+- Chọn chủ đề → **tên tranh tự điền** (Anh + Việt) nếu ô tên đang trống hoặc vẫn là tên của chủ đề chọn trước; bố mẹ đã sửa tên thì giữ.
+- **Prompt viết câu** (nút 📋 Chép prompt ở mục ✨ Nhờ AI viết câu, gửi KÈM ẢNH) khi đã chọn chủ đề thì thêm: tên chủ đề, cảnh, danh sách thứ đã yêu cầu vẽ, `title` / `titleVi` dùng tên chủ đề; dặn AI **chỉ tả những gì thật sự thấy trong ảnh** (AI vẽ có thể thiếu / khác danh sách). Không chọn chủ đề thì prompt như cũ (8.3).
+- Các bước còn lại như cũ: chọn ảnh (cắt 4:3) → dán JSON → kiểm tra (7.4) → xác nhận từng mũi tên → lưu. Chủ đề chỉ dùng lúc soạn, không lưu vào tranh.
+
+### 8.6. Kiểm tra từng câu + thử chạm như bé (0.11.3)
+- **Prompt viết câu (8.3) xin `box`** (khung bao trọn người / vật, sát, không bao thứ khác) thay cho `point` / `from`: ước lượng khung tốt hơn hẳn đoán một điểm; app tự đặt mũi tên.
+- **Màn Đặt mũi tên:** **kéo** trên tranh để khoanh khung (hiện khung nét đứt); **chạm** khi câu đã có khung → dời khung tới chỗ chạm; câu chưa có khung thì chạm = đặt mũi tên như cũ (vòng tròn + thanh cỡ vùng chạm).
+- **Kiểm tra TỪNG câu (thay nút "✓ Mũi tên đều đúng rồi"):** dán câu từ AI hoặc thay ảnh → mọi câu có mũi tên thành ⚠️ "chưa kiểm tra". Bố mẹ bấm 🎯, chỉnh nếu lệch (kéo / chạm cũng tính là đã kiểm tra), hoặc bấm **✓ Câu này đúng** → sang câu chưa kiểm tra kế tiếp. Còn câu ⚠️ thì **không lưu được** (báo số câu, nhảy tới câu đầu tiên còn ⚠️).
+- **👆 Thử chạm như bé:** bật nút → chạm vào tranh không sửa gì; app báo "Trúng câu N: …" (và chọn câu đó) hoặc "Không trúng câu nào"; chấm xanh / đỏ ở chỗ chạm.
 
 ## 9. Tiến độ và sao
 - Khóa trong kho `progress`:
@@ -334,6 +358,7 @@ Làm sau khi "Đọc câu" (0.4) xong, vì dùng chung phần karaoke và thanh 
 | 0.4.3 *(xong 2026-11-10, cùng bản 0.4.2)* | Prompt AI, dán JSON, kiểm tra dữ liệu (mục 7.4, 8.3); đủ 3–5 tranh có sẵn |
 | 0.4.4 *(xong 2026-11-10, app bản 0.4.3)* | Tìm trong tranh, sao, tiến độ (mục 9, 11) |
 | sau 0.4 | Bé đọc, Bé tả |
+| 0.11.3 *(xong 2026-11-17)* | Tranh mới theo chủ đề: chọn chủ đề → prompt vẽ tranh → prompt viết câu (mục 8.5); khung đối tượng làm vùng chạm, AI khoanh khung, kiểm tra từng câu, thử chạm như bé (mục 4.5, 8.6) |
 
 ## 14. Đã chốt (2026-11-06)
 | Nội dung | Quyết định |

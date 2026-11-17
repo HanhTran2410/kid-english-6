@@ -68,11 +68,74 @@ export function arrowGeometry(point, from, box) {
   return { tip, tail, length: len, angle, from: dir };
 }
 
+// ---------- Khung đối tượng (SPEC-ta-tranh mục 4.5): vùng chạm phủ trọn người / vật ----------
+/** Nới khung mỗi phía (tỉ lệ cạnh ngắn) cho ngón tay bé; vùng chạm tối thiểu 48px mỗi chiều. */
+export const BOX_PAD = 0.02;
+export const BOX_MIN_PX = 48;
+export const BOX_MIN = 0.03; // khung nhỏ nhất (tỉ lệ) khi bố mẹ / AI khoanh
+const clamp01 = (v) => Math.min(1, Math.max(0, v));
+const r3 = (v) => Math.round(v * 1000) / 1000;
+
+/** Chuẩn hóa khung {x, y, w, h} (tỉ lệ 0–1): kẹp trong ảnh, cạnh ≥ BOX_MIN. Sai dạng → null. */
+export function normalizeBox(b) {
+  if (!b || ![b.x, b.y, b.w, b.h].every((v) => typeof v === 'number' && Number.isFinite(v))) return null;
+  const x = clamp01(b.x);
+  const y = clamp01(b.y);
+  const w = Math.max(BOX_MIN, Math.min(1 - x, b.w));
+  const h = Math.max(BOX_MIN, Math.min(1 - y, b.h));
+  return { x: r3(Math.min(x, 1 - w)), y: r3(Math.min(y, 1 - h)), w: r3(w), h: r3(h) };
+}
+
 /**
- * Tâm vùng chạm của câu (tỉ lệ 0–1): `at` = tâm đối tượng nếu có (tranh có sẵn: mũi tên đặt CẠNH đối tượng nên đầu mũi tên
+ * Mũi tên cho khung: đầu mũi tên ở giữa cạnh khung phía còn NHIỀU CHỖ TRỐNG nhất (tính theo khung ảnh 4:3), thân nằm ở
+ * phía đó — mũi tên không bao giờ đè lên đối tượng. @returns {{ point: {x, y}, from: string }}
+ */
+export function arrowForBox(b) {
+  const room = { left: b.x * 4, right: (1 - b.x - b.w) * 4, top: b.y * 3, bottom: (1 - b.y - b.h) * 3 };
+  const side = Object.entries(room).sort((a, c) => c[1] - a[1])[0][0];
+  const cx = b.x + b.w / 2;
+  const cy = b.y + b.h / 2;
+  const point = {
+    left: { x: b.x + 0.01, y: cy }, right: { x: b.x + b.w - 0.01, y: cy },
+    top: { x: cx, y: b.y + 0.01 }, bottom: { x: cx, y: b.y + b.h - 0.01 },
+  }[side];
+  return { point: { x: r3(clamp01(point.x)), y: r3(clamp01(point.y)) }, from: side };
+}
+
+/** Vùng chạm hình chữ nhật (px) của câu có khung: khung nới BOX_PAD, tối thiểu BOX_MIN_PX mỗi chiều. */
+export function hitRect(sentence, box) {
+  const b = sentence.box;
+  const pad = BOX_PAD * Math.min(box.w, box.h);
+  const cx = (b.x + b.w / 2) * box.w;
+  const cy = (b.y + b.h / 2) * box.h;
+  const hw = Math.max(BOX_MIN_PX / 2, (b.w * box.w) / 2 + pad);
+  const hh = Math.max(BOX_MIN_PX / 2, (b.h * box.h) / 2 + pad);
+  return { left: cx - hw, top: cy - hh, width: 2 * hw, height: 2 * hh, cx, cy, hw, hh };
+}
+
+/**
+ * Chạm `tap` (px) có trúng vùng của câu không: câu có khung → hình chữ nhật; không có → vòng tròn quanh `hitCenter`.
+ * @returns {null | { score: number, area: number }} score 0 (giữa) … 1 (mép); area để ưu tiên vùng nhỏ khi chồng nhau
+ */
+export function hitTest(sentence, tap, box) {
+  if (!sentence.point) return null;
+  if (sentence.box) {
+    const r = hitRect(sentence, box);
+    const score = Math.max(Math.abs(tap.x - r.cx) / r.hw, Math.abs(tap.y - r.cy) / r.hh);
+    return score <= 1 ? { score, area: r.width * r.height } : null;
+  }
+  const r = hitRadius(sentence, box);
+  const c = hitCenter(sentence);
+  const d = Math.hypot(tap.x - c.x * box.w, tap.y - c.y * box.h);
+  return d <= r ? { score: d / r, area: Math.PI * r * r } : null;
+}
+
+/**
+ * Tâm vùng chạm của câu (tỉ lệ 0–1): có khung → tâm khung; `at` = tâm đối tượng nếu có (tranh có sẵn: mũi tên đặt CẠNH đối tượng nên đầu mũi tên
  * lệch khỏi hình); không có thì chính đầu mũi tên `point` (tranh bố mẹ soạn: bố mẹ chạm thẳng vào đối tượng).
  */
-export const hitCenter = (sentence) => sentence.at ?? sentence.point;
+export const hitCenter = (sentence) => (sentence.box
+  ? { x: sentence.box.x + sentence.box.w / 2, y: sentence.box.y + sentence.box.h / 2 } : sentence.at ?? sentence.point);
 
 /** Bán kính vùng chạm (px) của câu: `hit` (kẹp 0,04–0,2) × cạnh ngắn, tối thiểu 24px. */
 export function hitRadius(sentence, box) {
@@ -81,19 +144,19 @@ export function hitRadius(sentence, box) {
 }
 
 /**
- * Chạm vào tranh tại `tap` (px trong khung) → chỉ số câu, −1 nếu ngoài mọi vùng (SPEC-ta-tranh 4.4):
- * nhiều vùng → câu có khoảng cách / bán kính nhỏ nhất; chênh < 0,05 coi như bằng → ưu tiên câu đang hiện, rồi câu đứng trước.
+ * Chạm vào tranh tại `tap` (px trong khung) → chỉ số câu, −1 nếu ngoài mọi vùng (SPEC-ta-tranh 4.4, 4.5):
+ * nhiều vùng → vùng NHỎ nhất trước (quả bóng nằm trong khung cái cây → quả bóng; vùng to hơn ≥ 1,5 lần bị loại), rồi câu có
+ * khoảng cách / cỡ vùng nhỏ nhất; chênh < 0,05 coi như bằng → ưu tiên câu đang hiện, rồi câu đứng trước.
  */
 export function pickSentence(sentences, tap, box, current = -1) {
-  const hits = [];
+  let hits = [];
   sentences.forEach((s, i) => {
-    if (!s.point) return;
-    const r = hitRadius(s, box);
-    const c = hitCenter(s);
-    const d = Math.hypot(tap.x - c.x * box.w, tap.y - c.y * box.h);
-    if (d <= r) hits.push({ i, score: d / r });
+    const t = hitTest(s, tap, box);
+    if (t) hits.push({ i, ...t });
   });
   if (!hits.length) return -1;
+  const small = Math.min(...hits.map((x) => x.area));
+  hits = hits.filter((x) => x.area < small * 1.5);
   const best = Math.min(...hits.map((x) => x.score));
   const near = hits.filter((x) => x.score - best < 0.05);
   return near.find((x) => x.i === current)?.i ?? Math.min(...near.map((x) => x.i));

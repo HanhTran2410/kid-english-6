@@ -110,7 +110,7 @@ test('kiểm tra tranh (bảng 7.4): lỗi chỉ rõ câu; thiếu thì điền 
   assert.equal(parseSceneText('```json\n{"title":"A"}\n```').data.title, 'A');
   const p = scenePrompt({ level: 1 });
   assert.match(p, /Cấp độ 1: mỗi câu 3–6 từ/);
-  assert.match(p, /"point": null/);
+  assert.match(p, /"box": null/); // 0.11.3: AI khoanh khung (mục 4.5), không đoán điểm
   const example = JSON.parse(p.slice(p.indexOf('{', p.indexOf('VÍ DỤ CẤU TRÚC'))));
   assert.equal(validateScene(example).ok, true);
 });
@@ -147,4 +147,62 @@ test('kiểm tra tranh giữ `at` (bản sao tranh có sẵn), `at` ngoài 0–1
   assert.deepEqual(ok.scene.sentences[0].at, { x: 0.55, y: 0.2 });
   const bad = validateScene({ title: 'X', sentences: [{ en: 'A kite.', point: { x: 0.6, y: 0.2 }, at: { x: 1.4, y: 0.2 } }] });
   assert.match(bad.errors.join('\n'), /vị trí đối tượng \("at"\) phải từ 0 đến 1/);
+});
+
+test('SPEC-ta-tranh 8.5 — tranh theo chủ đề: mỗi chủ đề 8 người / vật; prompt vẽ đúng số theo cấp độ, khung 4:3, không chữ; prompt viết câu biết chủ đề + tên tranh, ví dụ JSON hợp lệ', async () => {
+  const { SCENE_TOPICS, sceneTopicPrompt, scenePrompt, validateScene, TOPIC_THINGS } = await import('../../app/js/scene-data.js');
+  assert.ok(SCENE_TOPICS.length >= 8);
+  assert.equal(new Set(SCENE_TOPICS.map((t) => t.id)).size, SCENE_TOPICS.length);
+  for (const t of SCENE_TOPICS) {
+    assert.equal(t.things.length, 8, t.id);
+    assert.ok(t.title && t.titleVi && t.scene);
+    for (const level of [1, 2, 3]) {
+      const p = sceneTopicPrompt(t.id, level);
+      assert.ok(p.includes(t.scene));
+      assert.equal(p.split('\n').filter((l) => l.startsWith('- ')).length, TOPIC_THINGS[level]);
+      assert.match(p, /landscape 4:3/);
+      assert.match(p, /No text anywhere/);
+      assert.match(p, /not overlapping/);
+    }
+    const s = scenePrompt({ level: 2, topic: t.id });
+    assert.ok(s.includes(`chủ đề "${t.title}"`));
+    for (const x of t.things.slice(0, TOPIC_THINGS[2])) assert.ok(s.includes(`- ${x}`), x);
+    assert.match(s, /không có hoặc khác trong ảnh thì tả theo đúng ảnh/);
+    const example = JSON.parse(s.slice(s.indexOf('{', s.indexOf('VÍ DỤ CẤU TRÚC'))));
+    assert.equal(example.title, t.title);
+    assert.equal(validateScene(example).ok, true);
+  }
+  assert.equal(sceneTopicPrompt('nope'), '');
+  assert.doesNotMatch(scenePrompt({ level: 2 }), /Tranh được vẽ theo chủ đề/); // không chọn chủ đề: như cũ
+});
+
+test('SPEC-ta-tranh 4.5 — khung đối tượng: chuẩn hóa / kẹp; mũi tên ở cạnh khung phía nhiều chỗ trống; chạm trong khung (cả mép nới) trúng, ngoài khung trượt; khung chồng nhau → khung nhỏ hơn; tranh cũ (vòng tròn) như trước', async () => {
+  const { normalizeBox, arrowForBox, hitTest, pickSentence, hitCenter, BOX_MIN } = await import('../../app/js/scene.js');
+  const { validateScene } = await import('../../app/js/scene-data.js');
+  assert.deepEqual(normalizeBox({ x: 0.9, y: -0.1, w: 0.3, h: 0.001 }), { x: 0.9, y: 0, w: 0.1, h: BOX_MIN });
+  assert.equal(normalizeBox({ x: 'a', y: 0, w: 1, h: 1 }), null);
+  // Khung sát mép trái → mũi tên từ phải; khung ở góc dưới phải → từ trái / trên.
+  assert.equal(arrowForBox({ x: 0, y: 0.3, w: 0.2, h: 0.4 }).from, 'right');
+  const a = arrowForBox({ x: 0.7, y: 0.6, w: 0.25, h: 0.35 });
+  assert.equal(a.from, 'left');
+  assert.ok(a.point.x > 0.7 && a.point.x < 0.72 && Math.abs(a.point.y - 0.775) < 0.001);
+  const B = { w: 800, h: 600 };
+  const tree = { point: { x: 0.5, y: 0.1 }, box: { x: 0.3, y: 0.1, w: 0.4, h: 0.8 } };
+  const ball = { point: { x: 0.5, y: 0.4 }, box: { x: 0.45, y: 0.35, w: 0.1, h: 0.1 } };
+  assert.ok(hitTest(tree, { x: 400, y: 500 }, B), 'chạm thân cây (xa đầu mũi tên) vẫn trúng');
+  assert.ok(hitTest(tree, { x: 0.3 * 800 - 10, y: 300 }, B), 'mép nới cho ngón tay');
+  assert.equal(hitTest(tree, { x: 100, y: 300 }, B), null);
+  assert.equal(pickSentence([tree, ball], { x: 400, y: 240 }, B), 1, 'quả bóng trong khung cây → quả bóng');
+  assert.equal(pickSentence([tree, ball], { x: 400, y: 450 }, B), 0);
+  assert.deepEqual(hitCenter(tree), { x: 0.5, y: 0.5 });
+  // Tranh cũ: vòng tròn quanh điểm.
+  assert.equal(pickSentence([{ point: { x: 0.5, y: 0.5 }, hit: 0.08 }], { x: 400, y: 300 }, B), 0);
+  // AI chỉ gửi khung → app tự đặt mũi tên; khung sai dạng → lỗi chỉ rõ câu.
+  const v = validateScene({ title: 'X', sentences: [{ en: 'A park.', box: null }, { en: 'A boy.', box: { x: 0.1, y: 0.2, w: 0.2, h: 0.5 } }] });
+  assert.equal(v.ok, true);
+  assert.deepEqual(v.scene.sentences[1].box, { x: 0.1, y: 0.2, w: 0.2, h: 0.5 });
+  assert.ok(v.scene.sentences[1].point);
+  assert.equal(v.scene.sentences[1].from, 'right');
+  assert.equal(v.scene.sentences[0].point, null);
+  assert.match(validateScene({ title: 'X', sentences: [{ en: 'A.', box: { x: 0 } }] }).errors.join(), /Câu 1: khung/);
 });
