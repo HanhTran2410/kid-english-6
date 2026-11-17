@@ -481,6 +481,11 @@ input[type='text'], input[type='number'], select, textarea {
 .scene-arrow.moving { transition: left 0.4s ease-out, top 0.4s ease-out, width 0.4s ease-out, transform 0.4s ease-out, opacity 0.2s; opacity: 0.75; }
 .scene-arrow.gone { opacity: 0; }
 .scene-arrow.arrived svg { animation: arrow-bounce 0.5s ease-out 1; }
+/* Nhiều khung một câu (SPEC-ta-tranh 4.6): mũi tên / vòng sáng của khung thêm ẩn hiện theo mũi tên / vòng chính. */
+.more-arrows, .more-rings, .more-boxes { position: absolute; inset: 0; pointer-events: none; }
+.scene-arrow.gone ~ .more-arrows, .scene-arrow[hidden] ~ .more-arrows, .scene-arrow.moving ~ .more-arrows { display: none; }
+.scene-arrow.arrived ~ .more-arrows svg { animation: arrow-bounce 0.5s ease-out 1; }
+.find-ring[hidden] ~ .more-rings { display: none; }
 @keyframes arrow-bounce { 40% { transform: translateX(6px); } }
 .scene-thumb { width: 100%; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; }
 .scene-thumb svg { width: 100%; height: 100%; display: block; }
@@ -505,6 +510,7 @@ input[type='text'], input[type='number'], select, textarea {
 .edit-box { position: absolute; border-radius: 10px; border: 3px dashed rgba(224, 49, 49, 0.8); background: rgba(224, 49, 49, 0.1); pointer-events: none; }
 .edit-box[hidden], .try-mark[hidden] { display: none; }
 .edit-box.drawing { border-color: #1c7ed6; background: rgba(28, 126, 214, 0.12); }
+.edit-box.more { border-color: rgba(232, 89, 12, 0.9); background: rgba(232, 89, 12, 0.08); }
 .try-mark { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; background: #2f9e44; border: 3px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); pointer-events: none; }
 .try-mark.miss { background: #e03131; }
 .scene-edit-num .unchecked { font-size: 18px; }

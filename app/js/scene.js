@@ -73,6 +73,10 @@ export function arrowGeometry(point, from, box) {
 export const BOX_PAD = 0.02;
 export const BOX_MIN_PX = 48;
 export const BOX_MIN = 0.03; // khung nhỏ nhất (tỉ lệ) khi bố mẹ / AI khoanh
+/** Một câu có tối đa bao nhiêu khung (khung chính `box` + khung thêm `more`, ví dụ hai chùm bóng hai bên cửa sổ). */
+export const MAX_BOXES = 4;
+/** Mọi khung của câu: khung chính trước, rồi các khung thêm. */
+export const boxesOf = (s) => (s?.box ? [s.box, ...(Array.isArray(s.more) ? s.more : [])] : []);
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 const r3 = (v) => Math.round(v * 1000) / 1000;
 
@@ -87,24 +91,26 @@ export function normalizeBox(b) {
 }
 
 /**
- * Mũi tên cho khung: đầu mũi tên ở giữa cạnh khung phía còn NHIỀU CHỖ TRỐNG nhất (tính theo khung ảnh 4:3), thân nằm ở
- * phía đó — mũi tên không bao giờ đè lên đối tượng. @returns {{ point: {x, y}, from: string }}
+ * Mũi tên cho khung: thân nằm ở phía `side` (bố mẹ chọn), đầu mũi tên ở giữa cạnh khung phía đó (hướng chéo → góc khung).
+ * Không chọn / "auto" → phía còn NHIỀU CHỖ TRỐNG nhất (tính theo khung ảnh 4:3). Mũi tên không đè lên đối tượng.
+ * @returns {{ point: {x, y}, from: string }}
  */
-export function arrowForBox(b) {
-  const room = { left: b.x * 4, right: (1 - b.x - b.w) * 4, top: b.y * 3, bottom: (1 - b.y - b.h) * 3 };
-  const side = Object.entries(room).sort((a, c) => c[1] - a[1])[0][0];
-  const cx = b.x + b.w / 2;
-  const cy = b.y + b.h / 2;
-  const point = {
-    left: { x: b.x + 0.01, y: cy }, right: { x: b.x + b.w - 0.01, y: cy },
-    top: { x: cx, y: b.y + 0.01 }, bottom: { x: cx, y: b.y + b.h - 0.01 },
-  }[side];
-  return { point: { x: r3(clamp01(point.x)), y: r3(clamp01(point.y)) }, from: side };
+export function arrowForBox(b, side = null) {
+  if (!side || side === 'auto' || !DIRECTIONS[side]) {
+    const room = { left: b.x * 4, right: (1 - b.x - b.w) * 4, top: b.y * 3, bottom: (1 - b.y - b.h) * 3 };
+    side = Object.entries(room).sort((a, c) => c[1] - a[1])[0][0];
+  }
+  const [dx, dy] = DIRECTIONS[side];
+  const sx = Math.sign(dx);
+  const sy = Math.sign(dy);
+  const in1 = 0.01; // đầu mũi tên lấn vào trong khung một chút
+  const x = sx > 0 ? b.x + b.w - in1 : sx < 0 ? b.x + in1 : b.x + b.w / 2;
+  const y = sy > 0 ? b.y + b.h - in1 : sy < 0 ? b.y + in1 : b.y + b.h / 2;
+  return { point: { x: r3(clamp01(x)), y: r3(clamp01(y)) }, from: side };
 }
 
-/** Vùng chạm hình chữ nhật (px) của câu có khung: khung nới BOX_PAD, tối thiểu BOX_MIN_PX mỗi chiều. */
-export function hitRect(sentence, box) {
-  const b = sentence.box;
+/** Vùng chạm hình chữ nhật (px) của một khung `b`: khung nới BOX_PAD, tối thiểu BOX_MIN_PX mỗi chiều. */
+export function rectOf(b, box) {
   const pad = BOX_PAD * Math.min(box.w, box.h);
   const cx = (b.x + b.w / 2) * box.w;
   const cy = (b.y + b.h / 2) * box.h;
@@ -112,6 +118,10 @@ export function hitRect(sentence, box) {
   const hh = Math.max(BOX_MIN_PX / 2, (b.h * box.h) / 2 + pad);
   return { left: cx - hw, top: cy - hh, width: 2 * hw, height: 2 * hh, cx, cy, hw, hh };
 }
+/** Vùng chạm của khung chính (px). */
+export const hitRect = (sentence, box) => rectOf(sentence.box, box);
+/** Vùng chạm của mọi khung của câu (px). */
+export const hitRects = (sentence, box) => boxesOf(sentence).map((b) => rectOf(b, box));
 
 /**
  * Chạm `tap` (px) có trúng vùng của câu không: câu có khung → hình chữ nhật; không có → vòng tròn quanh `hitCenter`.
@@ -120,9 +130,13 @@ export function hitRect(sentence, box) {
 export function hitTest(sentence, tap, box) {
   if (!sentence.point) return null;
   if (sentence.box) {
-    const r = hitRect(sentence, box);
-    const score = Math.max(Math.abs(tap.x - r.cx) / r.hw, Math.abs(tap.y - r.cy) / r.hh);
-    return score <= 1 ? { score, area: r.width * r.height } : null;
+    // Nhiều khung: trúng khung nào cũng được; lấy khung chạm gần giữa nhất.
+    let best = null;
+    for (const r of hitRects(sentence, box)) {
+      const score = Math.max(Math.abs(tap.x - r.cx) / r.hw, Math.abs(tap.y - r.cy) / r.hh);
+      if (score <= 1 && (!best || score < best.score)) best = { score, area: r.width * r.height };
+    }
+    return best;
   }
   const r = hitRadius(sentence, box);
   const c = hitCenter(sentence);

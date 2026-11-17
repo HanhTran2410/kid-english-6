@@ -6,7 +6,7 @@ import { play } from '../speech/sfx.js';
 import { isAbort, scaled, abortError } from '../timing.js';
 import { tokenize } from '../text.js';
 import { displayWords } from '../karaoke.js';
-import { arrowGeometry, pickSentence, hitRadius, hitCenter, hitRect, hitTest } from '../scene.js';
+import { arrowGeometry, pickSentence, hitRadius, hitCenter, hitRects, hitTest, arrowForBox } from '../scene.js';
 import { SCENE_BY_ID } from '../data/builtin-scenes.js';
 import { recordLessonDone, recordItem, starsFor, RESULT } from '../progress.js';
 import { QUESTIONS } from '../captions.js';
@@ -69,7 +69,9 @@ function buildScene(app, params, scene, fillArt) {
   fillArt(art);
   const arrow = h('div.scene-arrow', { 'aria-hidden': 'true', hidden: true });
   arrow.innerHTML = '<svg viewBox="0 0 100 36" preserveAspectRatio="none"><path d="M0 13 H70 V2 L100 18 L70 34 V23 H0 Z" fill="#e03131" stroke="#fff" stroke-width="3" stroke-linejoin="round" vector-effect="non-scaling-stroke"/></svg>';
-  const frame = h('div.scene-frame', { role: 'img', 'aria-label': scene.title }, art, arrow);
+  // Khung thêm của câu (nhóm đồ vật ở nhiều chỗ, SPEC-ta-tranh 4.6): mỗi khung một mũi tên, ẩn / hiện cùng mũi tên chính (CSS).
+  const moreArrows = h('div.more-arrows', { 'aria-hidden': 'true' });
+  const frame = h('div.scene-frame', { role: 'img', 'aria-label': scene.title }, art, arrow, moreArrows);
   const sentenceBox = h('div.sentence.scene-sentence');
   const viLine = h('p.sentence-vi.scene-vi');
   const textBar = h('div.scene-text', {}, sentenceBox, viLine);
@@ -104,6 +106,7 @@ function buildScene(app, params, scene, fillArt) {
     if (!s.point || !frame.clientWidth) {
       arrow.classList.add('gone');
       arrow.dataset.sentence = '';
+      moreArrows.replaceChildren();
       return;
     }
     const g = arrowGeometry(s.point, s.from, box());
@@ -116,6 +119,13 @@ function buildScene(app, params, scene, fillArt) {
     Object.assign(arrow.style, { left: `${g.tail.x}px`, top: `${g.tail.y}px`, width: `${g.length}px`, transform: `rotate(${g.angle}deg)` });
     arrow.dataset.sentence = s.sid;
     arrow.dataset.from = g.from;
+    moreArrows.replaceChildren(...(s.more ?? []).map((b) => {
+      const extra = arrowForBox(b, g.from); // cùng hướng với mũi tên chính
+      const e = arrowGeometry(extra.point, extra.from, box());
+      const el = h('div.scene-arrow.more', { html: arrow.innerHTML });
+      Object.assign(el.style, { left: `${e.tail.x}px`, top: `${e.tail.y}px`, width: `${e.length}px`, transform: `rotate(${e.angle}deg)` });
+      return el;
+    }));
   }
 
   /** Thanh chữ: chiều cao = câu dài nhất của tranh (EN + VI) ở bề rộng hiện tại → không nhảy khi đổi câu / bật tắt VI (3.2). */
@@ -222,7 +232,8 @@ function buildScene(app, params, scene, fillArt) {
     app.root.querySelector('.scene-title').textContent = `🔍 ${scene.title}`;
     const t = new Teacher(app, { signal: activity, stage: textBar, replayBtn });
     const ring = h('div.find-ring', { 'aria-hidden': 'true', hidden: true });
-    frame.append(ring);
+    const moreRings = h('div.more-rings', { 'aria-hidden': 'true' }); // vòng sáng các khung thêm — ẩn cùng `ring` (CSS)
+    frame.append(ring, moreRings);
     const results = [];
 
     /** Chờ bé chạm vào tranh (bỏ qua khi Olly đang nói) → toạ độ px trong khung. */
@@ -249,10 +260,14 @@ function buildScene(app, params, scene, fillArt) {
     const showRing = (s) => {
       const b = box();
       ring.classList.toggle('box', Boolean(s.box));
+      moreRings.replaceChildren();
       if (s.box) {
-        // Khung đối tượng (mục 4.5): sáng đúng khung vùng chạm.
-        const r = hitRect(s, b);
+        // Khung đối tượng (mục 4.5, 4.6): sáng đúng các khung vùng chạm.
+        const [r, ...rest] = hitRects(s, b);
         Object.assign(ring.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
+        moreRings.append(...rest.map((x) => h('div.find-ring.box', {
+          style: { left: `${x.left}px`, top: `${x.top}px`, width: `${x.width}px`, height: `${x.height}px` },
+        })));
       } else {
         const r = hitRadius(s, b);
         const c = hitCenter(s); // vòng bao quanh đối tượng, không phải quanh đầu mũi tên

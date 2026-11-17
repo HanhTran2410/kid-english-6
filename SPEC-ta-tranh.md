@@ -105,6 +105,14 @@ Vấn đề: tranh do AI vẽ thì AI viết câu chỉ **đoán** một điểm
 - Chế độ Tìm: vòng sáng chỉ đáp án là đúng khung (bo góc), không phải vòng tròn.
 - Tranh cũ / tranh có sẵn không có khung: giữ vòng tròn như 4.4 (không cần chuyển dữ liệu).
 
+### 4.6. Nhiều khung một câu + hướng mũi tên của câu có khung (0.11.5 — bố mẹ gặp ở tranh sinh nhật 2026-11-17)
+Câu tả **một nhóm đồ vật nằm ở nhiều chỗ tách rời** (ví dụ *"Colorful balloons are near the window."* với hai chùm bóng hai bên cửa sổ): một khung to bao cả hai chùm thì chạm khoảng trống ở giữa cũng tính đúng, mũi tên chỉ một chùm.
+- Câu có **khung chính `box` + tối đa 3 khung thêm `more`** (`MAX_BOXES` = 4). Chạm trúng **khung nào** cũng đúng; khoảng trống giữa các khung không tính.
+- Mỗi khung thêm có **một mũi tên riêng**, cùng hướng với mũi tên chính; lúc nghe các mũi tên hiện cùng nhau (khung thêm hiện ngay, không trượt); chế độ Tìm sáng mọi khung.
+- **Màn Đặt mũi tên:** có khung chính rồi thì nút **"+ Thêm khung"** → lần kéo tới khoanh khung thêm (nét đứt màu cam); **"🗑 Bỏ khung thêm"**; danh sách câu ghi 🔲×2…; "Không chỉ" bỏ mọi khung.
+- **Đổi hướng mũi tên (sửa lỗi 0.11.3):** câu có khung thì ô "Hướng mũi tên" chuyển **đầu mũi tên sang đúng cạnh khung phía đã chọn** (hướng chéo → góc khung); "Tự chọn" = phía nhiều chỗ trống nhất. Hướng đã chọn được giữ khi kéo lại / dời khung chính và khi mở lại tranh. (0.11.3 chỉ đổi phía thân mũi tên, đầu mũi tên vẫn ở cạnh dưới.)
+- **AI:** prompt viết câu dặn: nhóm đồ vật ở 2–4 chỗ tách rời → `"box"` là **danh sách** khung, không gộp thành một khung to. App nhận `box` là một khung hoặc danh sách (thừa thì giữ 4 khung đầu, cảnh báo), và giữ `from` AI ghi.
+
 ## 5. Âm thanh, hẹn giờ và tương tác
 
 ### 5.1. Nguyên tắc
@@ -358,6 +366,7 @@ Làm sau khi "Đọc câu" (0.4) xong, vì dùng chung phần karaoke và thanh 
 | 0.4.3 *(xong 2026-11-10, cùng bản 0.4.2)* | Prompt AI, dán JSON, kiểm tra dữ liệu (mục 7.4, 8.3); đủ 3–5 tranh có sẵn |
 | 0.4.4 *(xong 2026-11-10, app bản 0.4.3)* | Tìm trong tranh, sao, tiến độ (mục 9, 11) |
 | sau 0.4 | Bé đọc, Bé tả |
+| 0.11.5 *(xong 2026-11-17)* | Nhiều khung một câu, đổi hướng mũi tên của câu có khung (mục 4.6) |
 | 0.11.3 *(xong 2026-11-17)* | Tranh mới theo chủ đề: chọn chủ đề → prompt vẽ tranh → prompt viết câu (mục 8.5); khung đối tượng làm vùng chạm, AI khoanh khung, kiểm tra từng câu, thử chạm như bé (mục 4.5, 8.6) |
 
 ## 14. Đã chốt (2026-11-06)

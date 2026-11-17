@@ -2,7 +2,7 @@
 // Hàm thuần, không DOM.
 
 import { parseLessonText } from './lesson.js';
-import { FROM_VALUES, HIT_DEFAULT, HIT_MIN, HIT_MAX, normalizeBox, arrowForBox } from './scene.js';
+import { FROM_VALUES, HIT_DEFAULT, HIT_MIN, HIT_MAX, normalizeBox, arrowForBox, MAX_BOXES } from './scene.js';
 
 export const LEVEL_WORDS = { 1: [3, 6], 2: [4, 9], 3: [6, 12] };
 const MAX_WORDS = 20;
@@ -67,11 +67,18 @@ export function validateScene(data) {
     let from = s.from ?? 'auto';
     if (!FROM_VALUES.includes(from)) errors.push(`${where}: hướng mũi tên "${from}" không hợp lệ.`);
     // Khung đối tượng (mục 4.5): vùng chạm phủ trọn người / vật. AI chỉ gửi khung → app tự đặt mũi tên ở cạnh khung.
+    // Nhóm đồ vật ở nhiều chỗ tách rời (4.6): "box" là danh sách khung (hoặc khung chính + "more") — tối đa MAX_BOXES.
     let objBox = null;
+    let more = [];
     if (s.box != null) {
-      objBox = normalizeBox(s.box);
-      if (!objBox) errors.push(`${where}: khung ("box") phải có x, y, w, h là số từ 0 đến 1.`);
-      else if (!point) ({ point, from } = arrowForBox(objBox));
+      const raw = [...(Array.isArray(s.box) ? s.box : [s.box]), ...(Array.isArray(s.more) ? s.more : [])];
+      const list = raw.map(normalizeBox);
+      if (!raw.length || list.some((b) => !b)) errors.push(`${where}: khung ("box") phải có x, y, w, h là số từ 0 đến 1.`);
+      else {
+        if (list.length > MAX_BOXES) warnings.push(`${where}: chỉ giữ ${MAX_BOXES} khung đầu.`);
+        [objBox, ...more] = list.slice(0, MAX_BOXES);
+        if (!point) ({ point, from } = arrowForBox(objBox, from));
+      }
     }
     let hit = s.hit ?? HIT_DEFAULT;
     if (point && (typeof hit !== 'number' || hit < HIT_MIN || hit > HIT_MAX)) {
@@ -93,7 +100,7 @@ export function validateScene(data) {
     let sid = str(s.sid);
     if (!sid || usedSid.has(sid)) sid = newSid();
     usedSid.add(sid);
-    sentences.push({ sid, en, vi, point, ...(objBox ? { box: objBox } : at ? { at } : {}), from, hit: point ? hit : HIT_DEFAULT, keywords });
+    sentences.push({ sid, en, vi, point, ...(objBox ? { box: objBox, ...(more.length ? { more } : {}) } : at ? { at } : {}), from, hit: point ? hit : HIT_DEFAULT, keywords });
   });
   if (sentences.length && !sentences.some((s) => s.point)) warnings.push('Chưa câu nào có mũi tên — chế độ Tìm trong tranh sẽ không chơi được.');
   if (errors.length) return { ok: false, scene: null, errors, warnings };
@@ -147,7 +154,7 @@ export function scenePrompt({ level = 2, words = '', topic = null } = {}) {
     `2. Cấp độ ${level}: mỗi câu ${lo}–${hi} từ${level === 1 ? '; chỉ dùng "This is…", "It is…", màu sắc, "is + V-ing"' : level === 2 ? '; được dùng giới từ vị trí (in, on, next to, near, under), quần áo + màu' : '; được dùng and / but và he / she / it / they (chỉ khi câu ngay trước đã nói về đúng người / vật đó)'}.`,
     '3. Câu đầu tả chung cả tranh (≤ 7 từ), "box": null. Mỗi câu sau tả MỘT người / vật chính nhìn thấy rõ, có "box".',
     '4. Viết 5–8 câu. Chỉ tả những gì CÓ trong tranh và nhìn rõ; không bịa người, vật, câu chuyện hay tình huống.',
-    '5. "box": KHUNG CHỮ NHẬT bao trọn người / vật được tả (cả người từ đầu tới chân, cả đồ vật), dạng {"x", "y", "w", "h"} — tỉ lệ 0 đến 1 của ảnh: x, y = góc trên trái của khung (0,0 = góc trên trái ảnh), w, h = rộng, cao (so với cả ảnh). Khung sát người / vật, không bao người / vật khác. Không cần "point" — app tự đặt mũi tên cạnh khung; bố mẹ sẽ kiểm tra từng khung.',
+    '5. "box": KHUNG CHỮ NHẬT bao trọn người / vật được tả (cả người từ đầu tới chân, cả đồ vật), dạng {"x", "y", "w", "h"} — tỉ lệ 0 đến 1 của ảnh: x, y = góc trên trái của khung (0,0 = góc trên trái ảnh), w, h = rộng, cao (so với cả ảnh). Khung sát người / vật, không bao người / vật khác. Câu tả MỘT NHÓM đồ vật nằm ở 2–4 chỗ tách rời (ví dụ hai chùm bóng hai bên cửa sổ) → "box" là DANH SÁCH khung, mỗi chỗ một khung (không gộp thành một khung to bao cả khoảng trống ở giữa). Không cần "point" — app tự đặt mũi tên cạnh khung; bố mẹ sẽ kiểm tra từng khung.',
     '6. "vi": dịch tự nhiên cả câu, kiểu bố mẹ nói với con. "keywords": 1–3 từ chính của câu.',
     ...(words.trim() ? ['7. Ưu tiên dùng các từ bé đang học:', words.trim()] : []),
     '',

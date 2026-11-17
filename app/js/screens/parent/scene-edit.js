@@ -6,7 +6,9 @@
 import { h, toast, copyText, confirmDialog } from '../../ui.js';
 import { resizeCover } from '../../image.js';
 import { setWordImage, lessonImages, mediaBlob, saveScene, deleteScene, SCENE_IMAGE } from '../../db.js';
-import { arrowGeometry, hitRadius, hitCenter, hitRect, pickSentence, normalizeBox, arrowForBox, FROM_VALUES, HIT_MIN, HIT_MAX } from '../../scene.js';
+import {
+  arrowGeometry, hitRadius, hitCenter, hitRect, hitRects, boxesOf, MAX_BOXES, pickSentence, normalizeBox, arrowForBox, FROM_VALUES, HIT_MIN, HIT_MAX,
+} from '../../scene.js';
 import {
   validateScene, parseSceneText, scenePrompt, scenePicturePrompt, newSid, newSceneId, SCENE_TOPICS, SCENE_TOPIC_BY_ID, sceneTopicPrompt, TOPIC_THINGS,
 } from '../../scene-data.js';
@@ -131,10 +133,18 @@ function editor(app, body, old, oldImg, urls, base = null) {
   arrow.innerHTML = ARROW_SVG;
   const ring = h('div.hit-ring', { 'aria-hidden': 'true' });
   const objBox = h('div.edit-box', { 'aria-hidden': 'true', hidden: true }); // khung đối tượng = vùng chạm (mục 4.5)
+  const moreBoxes = h('div.more-boxes', { 'aria-hidden': 'true' }); // khung thêm của câu (mục 4.6)
+  const moreArrows = h('div.more-arrows', { 'aria-hidden': 'true' });
+  let addMode = false; // lần kéo tới: khoanh khung THÊM (không thay khung chính)
+  // Hướng mũi tên bố mẹ tự chọn cho câu có khung (sid → hướng): kéo / dời khung vẫn giữ hướng đó.
+  const manualSide = new Map(draft.sentences.filter((x) => x.box && x.from && x.from !== arrowForBox(x.box).from).map((x) => [x.sid, x.from]));
+  const placeBoxArrow = (x) => Object.assign(x, arrowForBox(x.box, manualSide.get(x.sid)));
+  const addBoxBtn = h('button.btn.small', { type: 'button', text: '+ Thêm khung' });
+  const clearMoreBtn = h('button.btn.small', { type: 'button', text: '🗑 Bỏ khung thêm' });
   const dragBox = h('div.edit-box.drawing', { 'aria-hidden': 'true', hidden: true });
   const tryMark = h('div.try-mark', { 'aria-hidden': 'true', hidden: true });
   const dots = h('div.edit-dots');
-  const frame = h('div.scene-frame.edit-frame', { 'aria-label': 'Kéo để khoanh người / vật, chạm để đặt mũi tên' }, h('div.scene-art', {}, imgEl), dots, ring, objBox, dragBox, tryMark, arrow);
+  const frame = h('div.scene-frame.edit-frame', { 'aria-label': 'Kéo để khoanh người / vật, chạm để đặt mũi tên' }, h('div.scene-art', {}, imgEl), dots, ring, objBox, moreBoxes, dragBox, tryMark, arrow, moreArrows);
   let tryMode = false;
   const tryBtn = h('button.btn.small', { type: 'button', text: '👆 Thử chạm như bé', 'aria-pressed': 'false' });
   const checkBtn = h('button.btn.small.primary', { type: 'button', text: '✓ Câu này đúng' });
@@ -146,7 +156,10 @@ function editor(app, body, old, oldImg, urls, base = null) {
   function renderStage() {
     const s = draft.sentences[active];
     activeLabel.textContent = tryMode ? '👆 Đang thử: chạm vào tranh như bé — app cho biết trúng câu nào. Bấm lại nút để thôi thử.'
-      : s ? `Câu ${active + 1}: ${s.en || '(chưa có chữ)'} — ${s.box ? 'kéo để khoanh lại khung, chạm để dời khung' : 'KÉO để khoanh trọn người / vật (vùng chạm), hoặc chạm để đặt mũi tên'}${unchecked.has(s.sid) ? ' · ⚠️ chưa kiểm tra' : ''}` : '';
+      : s ? `Câu ${active + 1}: ${s.en || '(chưa có chữ)'} — ${addMode ? '➕ KÉO để khoanh khung thêm (chỗ thứ hai của nhóm đồ vật)' : s.box ? 'kéo để khoanh lại khung chính, chạm để dời khung chính' : 'KÉO để khoanh trọn người / vật (vùng chạm), hoặc chạm để đặt mũi tên'}${unchecked.has(s.sid) ? ' · ⚠️ chưa kiểm tra' : ''}` : '';
+    addBoxBtn.hidden = !s?.box || boxesOf(s).length >= MAX_BOXES;
+    addBoxBtn.classList.toggle('primary', addMode);
+    clearMoreBtn.hidden = !s?.more?.length;
     fromSel.value = s?.from ?? 'auto';
     hitRange.value = String(s?.hit ?? 0.08);
     hitRange.disabled = Boolean(s?.box); // có khung: vùng chạm là khung, không dùng vòng tròn
@@ -157,6 +170,16 @@ function editor(app, body, old, oldImg, urls, base = null) {
       const r = hitRect(s, box);
       Object.assign(objBox.style, { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` });
     }
+    // Khung thêm: khung nét đứt + mũi tên cùng hướng mũi tên chính (bé thấy như vậy).
+    const extra = box.w ? hitRects(s ?? {}, box).slice(1) : [];
+    moreBoxes.replaceChildren(...extra.map((r) => h('div.edit-box.more', { style: { left: `${r.left}px`, top: `${r.top}px`, width: `${r.width}px`, height: `${r.height}px` } })));
+    moreArrows.replaceChildren(...(box.w && s?.point ? (s.more ?? []) : []).map((b) => {
+      const a = arrowForBox(b, s.from);
+      const e = arrowGeometry(a.point, a.from, box);
+      const el = h('div.scene-arrow.more', { html: ARROW_SVG });
+      Object.assign(el.style, { left: `${e.tail.x}px`, top: `${e.tail.y}px`, width: `${e.length}px`, transform: `rotate(${e.angle}deg)` });
+      return el;
+    }));
     dots.replaceChildren(...draft.sentences.map((x, i) => (x.point && i !== active
       ? h('span.edit-dot', { text: String(i + 1), style: { left: `${x.point.x * 100}%`, top: `${x.point.y * 100}%` } }) : null)).filter(Boolean));
     if (!s?.point || !box.w) {
@@ -210,12 +233,16 @@ function editor(app, body, old, oldImg, urls, base = null) {
     if (!s) return;
     if (p.dragging) {
       const b = normalizeBox({ x: Math.min(p.start.x, at.x), y: Math.min(p.start.y, at.y), w: Math.abs(at.x - p.start.x), h: Math.abs(at.y - p.start.y) });
-      s.box = b;
-      Object.assign(s, arrowForBox(b));
+      if (addMode && s.box) s.more = [...(s.more ?? []), b].slice(0, MAX_BOXES - 1); // khung thêm (mục 4.6)
+      else {
+        s.box = b;
+        placeBoxArrow(s);
+      }
+      addMode = false;
     } else if (s.box) {
-      // Chạm khi đã có khung: dời khung (giữ cỡ) cho tâm khung tới chỗ chạm.
+      // Chạm khi đã có khung: dời khung chính (giữ cỡ) cho tâm khung tới chỗ chạm.
       s.box = normalizeBox({ x: at.x - s.box.w / 2, y: at.y - s.box.h / 2, w: s.box.w, h: s.box.h });
-      Object.assign(s, arrowForBox(s.box));
+      placeBoxArrow(s);
     } else s.point = { x: round(at.x), y: round(at.y) };
     delete s.at; // bố mẹ đặt thẳng vào đối tượng: vùng chạm theo chỗ vừa đặt
     checked(s);
@@ -258,12 +285,32 @@ function editor(app, body, old, oldImg, urls, base = null) {
     renderList();
     renderStage();
   });
-  fromSel.addEventListener('change', () => { draft.sentences[active].from = fromSel.value; renderStage(); });
+  fromSel.addEventListener('change', () => {
+    const s = draft.sentences[active];
+    if (s.box) {
+      // Câu có khung: đầu mũi tên chuyển sang đúng cạnh / góc khung phía đã chọn; "Tự chọn" = phía nhiều chỗ trống nhất.
+      if (fromSel.value === 'auto') manualSide.delete(s.sid);
+      else manualSide.set(s.sid, fromSel.value);
+      placeBoxArrow(s);
+    } else s.from = fromSel.value;
+    renderStage();
+  });
+  addBoxBtn.addEventListener('click', () => {
+    addMode = !addMode;
+    renderStage();
+  });
+  clearMoreBtn.addEventListener('click', () => {
+    delete draft.sentences[active].more;
+    addMode = false;
+    renderStage();
+    renderList();
+  });
   hitRange.addEventListener('input', () => { draft.sentences[active].hit = Number(hitRange.value); renderStage(); });
   noPoint.addEventListener('click', () => {
     const s = draft.sentences[active];
     s.point = null;
     delete s.box;
+    delete s.more;
     checked(s);
     renderStage();
     renderList();
@@ -292,10 +339,10 @@ function editor(app, body, old, oldImg, urls, base = null) {
       return h(`div.scene-edit-row${i === active ? '.active' : ''}`, { dataset: { sid: s.sid } },
         h('div.scene-edit-num', {}, h('strong', { text: String(i + 1) }), unchecked.has(s.sid)
           ? h('span.unchecked', { text: '⚠️', title: 'Chưa kiểm tra mũi tên / khung' })
-          : h('span', { text: s.box ? '🔲' : s.point ? '🎯' : '—', title: s.box ? 'Có khung' : s.point ? 'Có mũi tên' : 'Không chỉ' })),
+          : h('span', { text: s.box ? (s.more?.length ? `🔲×${s.more.length + 1}` : '🔲') : s.point ? '🎯' : '—', title: s.box ? `Có ${s.more?.length ? `${s.more.length + 1} khung` : 'khung'}` : s.point ? 'Có mũi tên' : 'Không chỉ' })),
         h('div.scene-edit-fields', {}, en, vi),
         h('div.lesson-actions', {},
-          btn('🎯', `Đặt mũi tên câu ${i + 1}`, () => { active = i; renderList(); renderStage(); frame.scrollIntoView({ behavior: 'smooth', block: 'center' }); }),
+          btn('🎯', `Đặt mũi tên câu ${i + 1}`, () => { active = i; addMode = false; renderList(); renderStage(); frame.scrollIntoView({ behavior: 'smooth', block: 'center' }); }),
           btn('▶', `Nghe thử câu ${i + 1}`, () => app.speaker.speak(s.en).catch(() => {})),
           btn('↑', `Đưa câu ${i + 1} lên`, () => move(-1)),
           btn('↓', `Đưa câu ${i + 1} xuống`, () => move(1)),
@@ -383,7 +430,7 @@ function editor(app, body, old, oldImg, urls, base = null) {
           copyText(scenePicturePrompt(draft)).then((done) => toast(done ? 'Đã chép prompt vẽ tranh. Dán vào ChatGPT / Gemini để AI vẽ.' : 'Không chép được.'));
         } })), fileInput),
     section('Tên tranh', field('Tên tranh (tiếng Anh)', title), field('Tên tiếng Việt', titleVi)),
-    section('🎯 Đặt mũi tên', checkNote, activeLabel, frame, h('div.lesson-actions', {}, checkBtn, noPoint, fromSel, tryBtn),
+    section('🎯 Đặt mũi tên', checkNote, activeLabel, frame, h('div.lesson-actions', {}, checkBtn, addBoxBtn, clearMoreBtn, noPoint, fromSel, tryBtn),
       field('Cỡ vùng chạm (vòng tròn mờ — chỉ khi chưa khoanh khung)', hitRange)),
     section('Các câu', list, h('button.btn', { type: 'button', text: '+ Thêm câu', onclick: () => { draft.sentences.push(blankSentence()); active = draft.sentences.length - 1; renderList(); renderStage(); } })),
     section('✨ Nhờ AI viết câu',

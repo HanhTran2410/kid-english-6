@@ -206,3 +206,33 @@ test('SPEC-ta-tranh 4.5 — khung đối tượng: chuẩn hóa / kẹp; mũi t�
   assert.equal(v.scene.sentences[0].point, null);
   assert.match(validateScene({ title: 'X', sentences: [{ en: 'A.', box: { x: 0 } }] }).errors.join(), /Câu 1: khung/);
 });
+
+test('SPEC-ta-tranh 4.6 — nhiều khung một câu + hướng mũi tên theo khung: chạm khung nào cũng trúng, khoảng trống giữa hai khung thì không; hướng bố mẹ chọn (cả chéo) đặt đầu mũi tên đúng cạnh / góc; AI gửi danh sách khung', async () => {
+  const { arrowForBox, hitTest, pickSentence, boxesOf, MAX_BOXES } = await import('../../app/js/scene.js');
+  const { validateScene } = await import('../../app/js/scene-data.js');
+  const B = { w: 800, h: 600 };
+  // Hai chùm bóng hai bên cửa sổ.
+  const balloons = { point: { x: 0.2, y: 0.2 }, box: { x: 0.02, y: 0.02, w: 0.18, h: 0.34 }, more: [{ x: 0.46, y: 0.06, w: 0.18, h: 0.3 }] };
+  assert.equal(boxesOf(balloons).length, 2);
+  assert.ok(hitTest(balloons, { x: 0.1 * 800, y: 0.2 * 600 }, B), 'chùm trái');
+  assert.ok(hitTest(balloons, { x: 0.55 * 800, y: 0.2 * 600 }, B), 'chùm phải');
+  assert.equal(hitTest(balloons, { x: 0.33 * 800, y: 0.2 * 600 }, B), null, 'cửa sổ ở giữa: không trúng');
+  const girl = { point: { x: 0.4, y: 0.4 }, box: { x: 0.33, y: 0.32, w: 0.15, h: 0.43 } };
+  assert.equal(pickSentence([balloons, girl], { x: 0.4 * 800, y: 0.5 * 600 }, B), 1);
+  // Hướng do bố mẹ chọn.
+  const b = { x: 0.2, y: 0.2, w: 0.4, h: 0.2 };
+  assert.deepEqual(arrowForBox(b, 'right'), { point: { x: 0.59, y: 0.3 }, from: 'right' });
+  assert.deepEqual(arrowForBox(b, 'left'), { point: { x: 0.21, y: 0.3 }, from: 'left' });
+  assert.deepEqual(arrowForBox(b, 'top'), { point: { x: 0.4, y: 0.21 }, from: 'top' });
+  assert.deepEqual(arrowForBox(b, 'bottom-right'), { point: { x: 0.59, y: 0.39 }, from: 'bottom-right' });
+  assert.equal(arrowForBox(b, 'auto').from, arrowForBox(b).from);
+  // AI gửi danh sách khung → khung chính + khung thêm; quá MAX_BOXES thì cắt, cảnh báo; giữ hướng AI ghi.
+  const v = validateScene({ title: 'X', sentences: [{ en: 'Colorful balloons are near the window.', from: 'right', box: [balloons.box, balloons.more[0]] }] });
+  assert.equal(v.ok, true);
+  assert.deepEqual(v.scene.sentences[0].box, balloons.box);
+  assert.deepEqual(v.scene.sentences[0].more, balloons.more);
+  assert.equal(v.scene.sentences[0].from, 'right');
+  const many = validateScene({ title: 'X', sentences: [{ en: 'Birds.', box: Array.from({ length: 6 }, (_, i) => ({ x: i * 0.15, y: 0, w: 0.1, h: 0.1 })) }] });
+  assert.equal(boxesOf(many.scene.sentences[0]).length, MAX_BOXES);
+  assert.match(many.warnings.join(), /chỉ giữ 4 khung/);
+});

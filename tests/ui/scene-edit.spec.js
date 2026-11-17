@@ -216,3 +216,77 @@ test('Khung đối tượng (4.5, 8.6): kéo khoanh khung → vùng chạm là k
     await expect(page.locator('.scene-done')).toBeVisible({ timeout: 800 });
   }).toPass({ timeout: 20_000 });
 });
+
+test('Nhiều khung một câu (4.6) + đổi hướng mũi tên của câu có khung: hai chùm bóng hai bên cửa sổ', async ({ page }) => {
+  test.setTimeout(180_000);
+  await fakeSpeech(page);
+  await startApp(page);
+  await openParent(page);
+  await page.getByRole('button', { name: 'Bài học' }).click();
+  await page.getByRole('button', { name: '+ Tạo tranh mới' }).click();
+  await page.locator('input[aria-label="Ảnh tranh"]').setInputFiles({ name: 'scene.png', mimeType: 'image/png', buffer: await scenePng(page) });
+  await expect(page.getByRole('button', { name: '🔄 Đổi ảnh' })).toBeVisible();
+  await page.getByRole('textbox', { name: 'Tên tranh' }).fill('Party');
+  await page.getByRole('textbox', { name: 'Câu 1 tiếng Anh' }).fill('Colorful balloons are near the window.');
+  await page.getByRole('button', { name: 'Đặt mũi tên câu 1' }).click();
+  const frame = page.locator('.edit-frame');
+  await page.waitForTimeout(700);
+  const fb = await frame.boundingBox();
+  const at = (x, y) => [fb.x + x * fb.width, fb.y + y * fb.height];
+  const drag = async (a, b) => {
+    await page.mouse.move(...at(...a));
+    await page.mouse.down();
+    await page.mouse.move(...at((a[0] + b[0]) / 2, (a[1] + b[1]) / 2), { steps: 4 });
+    await page.mouse.move(...at(...b), { steps: 4 });
+    await page.mouse.up();
+  };
+  await expect(page.getByRole('button', { name: '+ Thêm khung' })).toBeHidden(); // chưa có khung chính
+  await drag([0.02, 0.02], [0.2, 0.36]); // chùm trái
+  // Đổi hướng → đầu mũi tên chuyển sang cạnh phải của khung.
+  await page.getByRole('combobox', { name: 'Hướng mũi tên' }).selectOption('right');
+  await expect(frame.locator('.scene-arrow:not(.more)')).toHaveAttribute('data-from', 'right');
+  let s;
+  // Khung thêm: chùm phải.
+  await page.getByRole('button', { name: '+ Thêm khung' }).click();
+  await drag([0.46, 0.06], [0.64, 0.36]);
+  await expect(frame.locator('.edit-box.more')).toHaveCount(1);
+  await expect(frame.locator('.more-arrows .scene-arrow')).toHaveCount(1);
+  await expect(page.locator('.scene-edit-row').first()).toContainText('🔲×2');
+  // Thử chạm như bé.
+  await page.getByRole('button', { name: '👆 Thử chạm như bé' }).click();
+  for (const p of [[0.1, 0.2], [0.55, 0.2]]) {
+    await page.mouse.click(...at(...p));
+    await expect(page.locator('.toast').last()).toContainText('Trúng câu 1');
+  }
+  await page.mouse.click(...at(0.33, 0.2));
+  await expect(page.locator('.toast').last()).toContainText('Không trúng câu nào');
+  await page.getByRole('button', { name: '👆 Thử chạm như bé' }).click();
+  await page.getByRole('button', { name: '💾 Lưu tranh' }).click();
+  await expect(page.locator('.toast').last()).toContainText('Đã lưu tranh');
+  s = (await page.evaluate(() => window.kidEnglish6.db.getAll('scenes')))[0].sentences[0];
+  expect(s.from).toBe('right');
+  expect(s.point.x).toBeCloseTo(0.19, 1); // cạnh phải của chùm trái
+  expect(s.more).toHaveLength(1);
+  expect(s.more[0].x).toBeCloseTo(0.46, 1);
+
+  // Mở lại tranh: hướng đã chọn vẫn giữ khi dời khung chính.
+  await page.getByRole('button', { name: '← Quay lại' }).click();
+  await page.getByRole('button', { name: 'Sửa tranh Party' }).click();
+  await page.getByRole('button', { name: 'Đặt mũi tên câu 1' }).click();
+  await page.waitForTimeout(700);
+  await expect(page.getByRole('combobox', { name: 'Hướng mũi tên' })).toHaveValue('right');
+
+  // Bé: Tìm trong tranh — chạm chùm phải (khung thêm) là đúng.
+  await page.getByRole('button', { name: '← Quay lại' }).click();
+  await page.getByRole('button', { name: '← Quay lại' }).click();
+  await page.getByRole('button', { name: /Về màn hình của bé/ }).click();
+  await page.getByRole('button', { name: 'Tập đọc' }).click();
+  await page.getByRole('button', { name: '🖼️ Tả tranh' }).click();
+  await page.locator('.scene-card', { hasText: 'Party' }).click();
+  await page.getByRole('button', { name: 'Tìm trong tranh' }).click();
+  const kf = await page.locator('.scene-frame').boundingBox();
+  await expect(async () => {
+    await page.mouse.click(kf.x + 0.55 * kf.width, kf.y + 0.3 * kf.height);
+    await expect(page.locator('.scene-done')).toBeVisible({ timeout: 800 });
+  }).toPass({ timeout: 20_000 });
+});
