@@ -27,7 +27,6 @@ export const DEFAULT_SETTINGS = {
   lastBackupAt: null,
   bookName: '', // bộ sách tiếng Anh lớp 1 bé đang học (SPEC 5.1)
   bookDraft: null, // nháp "Tạo bài theo sách" (SPEC 5.7)
-  topicDraft: null, // nháp "Tạo bài theo chủ đề" (SPEC 5.8)
   librarySeen: null, // Thư viện bài đã thấy ("file|dung lượng"); null = chưa kiểm lần nào (SPEC 6.3)
   session: null,
 };

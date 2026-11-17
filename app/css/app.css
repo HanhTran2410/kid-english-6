@@ -988,8 +988,10 @@ circle.wr-ok { fill: #2f9e44; }
   .mt-wdot { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .mt-cell.glow, .mt-cell.nudge { animation: none; } }
-/* Chip chủ đề (Góc bố mẹ → Tạo bài theo chủ đề, SPEC 5.8) — như app Bông. */
-.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.chip { padding: 8px 14px; border-radius: 999px; border: 2px solid transparent; background: #eef0fb; color: inherit; font: inherit; min-height: 40px; cursor: pointer; }
-.chip.active { border-color: #6c4fd8; background: #e5defc; }
-.chip-vi { color: #6b6f86; font-size: 0.9em; }
+/* Xem lại danh sách từ trước khi lưu bài (SPEC 5.7, 0.11.6): emoji · từ · nghĩa (sửa được) · ✕ bỏ từ. */
+.word-review { display: grid; gap: 6px; margin: 8px 0 12px; }
+.word-review-row { display: grid; grid-template-columns: 34px minmax(70px, auto) 1fr auto; align-items: center; gap: 8px; padding: 6px 8px; border-radius: 12px; background: #f4f5fb; }
+.word-review-emoji { font-size: 24px; text-align: center; }
+.word-review-row input { min-width: 0; }
+.manual-book { margin-top: 14px; }
+.manual-book > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }

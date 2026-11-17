@@ -134,31 +134,29 @@ test('prompt vẽ tranh Tả tranh theo các câu: đủ mọi câu, cảnh chun
   assert.match(p, /No text anywhere/);
 });
 
-test('SPEC 5.8 — tạo bài theo chủ đề: mã bài không ghi đè; từ cần tránh (cùng chủ đề hết, bài khác tối đa 80); prompt có chủ đề, số từ, id, track topic, danh sách tránh; ví dụ trong prompt là bài hợp lệ', async () => {
-  const { topicLessonId, topicAvoidWords, topicLessonPrompt, LESSON_TOPICS, MAX_TOPIC_AVOID } = await import('../../app/js/lesson-prompts.js');
-  assert.equal(topicLessonId('Farm animals'), 'topic-farm-animals');
-  assert.equal(topicLessonId('Farm animals', ['topic-farm-animals']), 'topic-farm-animals-2');
-  assert.equal(topicLessonId('Farm animals', ['topic-farm-animals', 'topic-farm-animals-2']), 'topic-farm-animals-3');
-  assert.ok(LESSON_TOPICS.length >= 20);
-  const lessons = [
-    { track: 'topic', unit: 'Animals', words: [{ en: 'Cat' }, { en: 'dog' }] },
-    { track: 'book', unit: 'Unit 1', words: [{ en: 'red' }, { en: 'cat' }] },
-    { track: 'phonics', words: Array.from({ length: 120 }, (_, i) => ({ en: `w${i}` })) },
-  ];
-  const avoid = topicAvoidWords(lessons, 'animals');
-  assert.deepEqual(avoid.sameTopic, ['cat', 'dog']);
-  assert.ok(avoid.others.includes('red') && !avoid.others.includes('cat'));
-  assert.equal(avoid.others.length, MAX_TOPIC_AVOID);
-  const p = topicLessonPrompt({ topic: 'Animals', topicVi: 'Con vật', count: 6, group: 3, id: 'topic-animals-2', title: 'Animals 2', avoid });
-  assert.match(p, /Chủ đề: "Animals" \(Con vật\)/);
-  assert.match(p, /Chọn đúng 6 từ MỚI/);
-  assert.match(p, /"id": "topic-animals-2", "track": "topic", "book": null, "unit": "Animals"/);
-  assert.match(p, /"title" = "Animals 2"/);
-  assert.match(p, /KHÔNG chọn lại .*: cat, dog\./);
+test('SPEC 5.7 (0.11.6) — một bước: prompt gửi kèm ảnh (AI đọc Unit + từ trong ảnh, không thêm từ, lỗi → {"error"}); id "auto" → app đặt theo sách + Unit; bỏ một từ khỏi mọi hoạt động; nhóm âm tự động', async () => {
+  const { bookPhotoPrompt, fillBookId, withoutWord, learnedGroupOf, AUTO_ID } = await import('../../app/js/lesson-prompts.js');
+  const p = bookPhotoPrompt({ book: 'Tiếng Anh 1 Global Success', group: 2 });
+  assert.match(p, /ảnh các trang của MỘT Unit trong sách tiếng Anh lớp 1 "Tiếng Anh 1 Global Success"/);
+  assert.match(p, /chỉ dựa vào ảnh, không dựa vào trí nhớ về sách/);
+  assert.match(p, /KHÔNG thêm từ không có trong ảnh/);
+  assert.match(p, /\{"error": "lý do bằng tiếng Việt"\}/);
+  assert.match(p, /"id": "auto", "track": "book", "book": "Tiếng Anh 1 Global Success"/);
   assert.match(p, /Tách ô chữ \(Phonics kiểu Jolly\)/);
   const example = JSON.parse(p.slice(p.indexOf('{', p.indexOf('VÍ DỤ CẤU TRÚC'))));
-  const v = validateLesson(example);
+  assert.equal(example.id, AUTO_ID);
+  const v = validateLesson(fillBookId(example));
   assert.equal(v.ok, true, (v.errors ?? []).join('; '));
-  assert.equal(v.lesson.track, 'topic');
-  assert.doesNotMatch(topicLessonPrompt({ topic: 'Toys', id: 'topic-toys', title: 'Toys' }), /KHÔNG chọn lại|Cũng đã học ở bài khác/); // chưa có bài nào: không có danh sách tránh
+  assert.equal(v.lesson.id, 'book-tieng-anh-1-global-success-unit-3');
+  assert.equal(fillBookId({ track: 'book', book: 'B', unit: 'Unit 1' }).id, 'book-b-unit-1'); // thiếu id
+  assert.equal(fillBookId({ track: 'book', id: 'my-id', book: 'B', unit: 'Unit 1' }).id, 'my-id'); // có id thì giữ
+  assert.equal(fillBookId({ track: 'phonics', id: 'auto' }).id, 'auto');
+  const l = withoutWord(v.lesson, 'cat');
+  assert.deepEqual(l.words.map((w) => w.id), ['hello']);
+  assert.ok(l.activities.every((a) => !a.items?.includes('cat')));
+  assert.ok(!l.activities.some((a) => a.type === 'blend'), 'hoạt động rỗng bị bỏ');
+  assert.ok(l.activities.some((a) => a.type === 'talk'));
+  assert.equal(validateLesson(l).ok, true);
+  assert.equal(learnedGroupOf([1, 2, 4]), 4);
+  assert.equal(learnedGroupOf([]), 1);
 });

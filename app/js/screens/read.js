@@ -42,7 +42,7 @@ async function getLesson(app, id) {
 }
 
 const lessonEmoji = (l, zone) => (zone === 'talk' ? l.emoji ?? l.dialogues?.[0]?.partner.emoji : null)
-  ?? l.words.find((w) => w.emoji)?.emoji ?? (l.track === 'book' ? '📘' : l.track === 'topic' ? '🎯' : '🔤');
+  ?? l.words.find((w) => w.emoji)?.emoji ?? (l.track === 'book' ? '📘' : '🔤');
 
 // ---------- Danh sách bài ----------
 
@@ -55,7 +55,7 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   app.root.className = `child-screen read-list zone-list-${zone}`;
   const list = h('div.lesson-cards');
   // Khu Talk: tab đầu là các bài hội thoại hằng ngày có sẵn (mạch "phonics" trong dữ liệu).
-  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ['topic', '🎯 Chủ đề'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : []), ...(zone === 'spell' ? [['write', '✍️ Tập viết']] : [])];
+  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : []), ...(zone === 'spell' ? [['write', '✍️ Tập viết']] : [])];
   const tabs = tabList.map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
     type: 'button', text: label, 'aria-pressed': String(id === tab),
     onclick: () => {
@@ -78,9 +78,10 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
     return;
   }
   (async () => {
-    const lessons = (await zoneLessons(app.db, zone)).filter((l) => l.track === tab);
+    // Bài "theo chủ đề" tạo ở bản 0.11.4 (đã gỡ ở 0.11.6, SPEC 5.8) hiện chung tab Theo sách.
+    const lessons = (await zoneLessons(app.db, zone)).filter((l) => (l.track === 'topic' ? 'book' : l.track) === tab);
     if (!lessons.length) {
-      list.append(h('p.empty-note', { text: tab === 'book' ? 'Chưa có bài theo sách. Bố mẹ tạo bài ở Góc bố mẹ → Bài học.' : tab === 'topic' ? 'Chưa có bài theo chủ đề. Bố mẹ tạo bài ở Góc bố mẹ → Bài học → Tạo bài theo chủ đề.' : 'Chưa có bài.' }));
+      list.append(h('p.empty-note', { text: tab === 'book' ? 'Chưa có bài theo sách. Bố mẹ tạo bài ở Góc bố mẹ → Bài học.' : 'Chưa có bài.' }));
       return;
     }
     const progress = await Promise.all(lessons.map((l) => getLessonProgress(app.db, l.id, partOf(zone))));

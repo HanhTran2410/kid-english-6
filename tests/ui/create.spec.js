@@ -30,6 +30,8 @@ test('Tạo bài theo sách: chép prompt, nháp không mất, dán kết quả 
   await page.getByRole('button', { name: 'Bài học' }).click();
 
   await page.getByRole('combobox', { name: 'Bộ sách' }).selectOption('Tiếng Anh 1 Global Success');
+  // Cách tự gõ (không có ảnh) gập lại từ 0.11.6.
+  await page.locator('summary', { hasText: 'Tự gõ danh sách từ' }).click();
   await page.getByRole('textbox', { name: 'Unit', exact: true }).fill('Unit 3');
   await page.getByRole('textbox', { name: 'Tên Unit' }).fill('At the zoo');
   await expect(page.getByText('id bài: book-tieng-anh-1-global-success-unit-3')).toBeVisible();
@@ -73,52 +75,40 @@ test('Tạo bài theo sách: chép prompt, nháp không mất, dán kết quả 
   await expect(page.locator('.tile-row .tile')).toHaveText(['c', 'a', 't']);
 });
 
-test('Tạo bài theo chủ đề (5.8): chọn chủ đề → chép prompt (id, chủ đề, số từ) → nháp còn sau khi tải lại → dán kết quả AI → bài ở tab 🎯 Chủ đề; tạo lần hai cùng chủ đề → id "-2", tránh từ đã học', async ({ page }) => {
+test('Tạo bài theo sách một bước (0.11.6): chỉ chọn sách → chép prompt gửi kèm ảnh → dán kết quả "id": "auto" → app đặt id theo Unit; xem lại danh sách từ: bỏ từ sai, sửa nghĩa → lưu; AI không đọc được ảnh → báo lỗi rõ', async ({ page }) => {
   await fakeSpeech(page);
   await startApp(page);
   await openParent(page);
   await page.getByRole('button', { name: 'Bài học' }).click();
-  await page.getByRole('button', { name: 'Farm animals' }).click();
-  await expect(page.getByRole('textbox', { name: 'Chủ đề bài' })).toHaveValue('Farm animals');
-  await page.getByRole('combobox', { name: 'Số từ mới' }).selectOption('6');
-  await page.getByRole('button', { name: '📋 Chép prompt tạo bài theo chủ đề' }).click();
-  await expect(page.locator('.toast').last()).toContainText('Đã chép prompt');
-  let prompt = await page.evaluate(() => navigator.clipboard.readText());
-  expect(prompt).toContain('Chủ đề: "Farm animals" (Con vật nông trại).');
-  expect(prompt).toContain('Chọn đúng 6 từ MỚI');
-  expect(prompt).toContain('"id": "topic-farm-animals", "track": "topic"');
+  await expect(page.getByRole('textbox', { name: 'Unit', exact: true })).toBeHidden(); // không phải gõ Unit
+  await page.getByRole('combobox', { name: 'Bộ sách' }).selectOption('i-Learn Smart Start 1');
+  await expect(page.getByText('Tự động theo các bài Phonics bé đã học xong.')).toBeVisible();
+  await page.getByRole('button', { name: '📋 Chép prompt (gửi kèm ảnh các trang Unit)' }).click();
+  await expect(page.locator('.toast').last()).toContainText('đính kèm ảnh các trang của Unit');
+  const prompt = await page.evaluate(() => navigator.clipboard.readText());
+  expect(prompt).toContain('"i-Learn Smart Start 1"');
+  expect(prompt).toContain('"id": "auto"');
+  expect(prompt).toContain('KHÔNG thêm từ không có trong ảnh');
 
-  // Nháp còn sau khi tải lại app (chuyển sang app AI rồi quay lại).
-  await page.waitForTimeout(500);
-  await page.reload();
-  await page.getByRole('button', { name: 'Bắt đầu' }).click();
-  await openParent(page);
-  await page.getByRole('button', { name: 'Bài học' }).click();
-  await expect(page.getByRole('textbox', { name: 'Chủ đề bài' })).toHaveValue('Farm animals');
-  await expect(page.getByRole('combobox', { name: 'Số từ mới' })).toHaveValue('6');
-
-  const lesson = {
-    ...aiResult, id: 'topic-farm-animals', track: 'topic', book: null, unit: 'Farm animals', title: 'Farm animals', titleVi: 'Con vật nông trại',
-  };
-  await page.locator('textarea[placeholder^="Dán JSON"]').fill(JSON.stringify(lesson));
+  // AI không đọc được ảnh.
+  await page.locator('textarea[placeholder^="Dán JSON"]').fill('{"error": "Ảnh bị mờ"}');
   await page.getByRole('button', { name: 'Kiểm tra' }).click();
+  await expect(page.locator('.import-result')).toContainText('AI chưa đọc được trang sách: Ảnh bị mờ');
+
+  // Kết quả AI: id "auto", Unit đọc từ ảnh.
+  const fromAi = { ...aiResult, id: 'auto', book: 'i-Learn Smart Start 1', unit: 'Unit 5', title: 'Unit 5: Animals', titleVi: 'Bài 5: Con vật' };
+  await page.locator('textarea[placeholder^="Dán JSON"]').fill(JSON.stringify(fromAi));
+  await page.getByRole('button', { name: 'Kiểm tra' }).click();
+  await expect(page.locator('.import-result')).toContainText('id: book-i-learn-smart-start-1-unit-5');
+  await expect(page.locator('.word-review-row')).toHaveCount(5);
+  await page.getByRole('button', { name: 'Bỏ từ zoo' }).click();
+  await expect(page.locator('.word-review-row')).toHaveCount(4);
+  await expect(page.locator('.import-result')).toContainText('4 từ');
+  await page.getByRole('textbox', { name: 'Nghĩa của cat' }).fill('mèo con');
   await page.getByRole('button', { name: /Lưu bài/ }).click();
-  await expect(page.locator('.my-lessons .lesson-row')).toContainText('🎯 Theo chủ đề');
-
-  // Lần hai cùng chủ đề: id "-2", tên "Farm animals 2", không chọn lại từ của bài trước.
-  await page.getByRole('button', { name: '📋 Chép prompt tạo bài theo chủ đề' }).click();
-  prompt = await page.evaluate(() => navigator.clipboard.readText());
-  expect(prompt).toContain('"id": "topic-farm-animals-2"');
-  expect(prompt).toContain('"title" = "Farm animals 2"');
-  expect(prompt).toMatch(/KHÔNG chọn lại .*cat, dog, pig, fish, zoo/);
-
-  // Bé: Tập đọc → tab 🎯 Chủ đề.
-  await page.getByRole('button', { name: '← Quay lại' }).click();
-  await page.getByRole('button', { name: /Về màn hình của bé/ }).click();
-  await page.getByRole('button', { name: 'Tập đọc' }).click();
-  await page.getByRole('button', { name: '🎯 Chủ đề' }).click();
-  const card = page.locator('.lesson-card[data-lesson="topic-farm-animals"]');
-  await expect(card).toContainText('Farm animals');
-  await card.click();
-  await expect(page.locator('.tile-row .tile')).toHaveText(['c', 'a', 't']);
+  await expect(page.locator('.toast').last()).toContainText('Đã lưu bài');
+  const saved = await page.evaluate(() => window.kidEnglish6.db.get('lessons', 'book-i-learn-smart-start-1-unit-5'));
+  expect(saved.words.map((w) => w.id)).toEqual(['cat', 'dog', 'pig', 'fish']);
+  expect(saved.words[0].vi).toBe('mèo con');
+  expect(saved.activities.flatMap((a) => a.items ?? [])).not.toContain('zoo');
 });

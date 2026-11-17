@@ -342,13 +342,17 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
    - Câu theo mẫu câu của Unit; hội thoại ngắn có câu hỏi + câu mẫu + phần đầu câu + từ khóa (3.3).
 - Kết quả đi qua kiểm tra 5.5 như mọi JSON nhập vào.
 
-### 5.8. 🎯 Tạo bài theo chủ đề (0.11.4, bố mẹ yêu cầu 2026-11-17 — làm theo cách tạo bài của app Bông)
-Cách thứ hai, **thêm** bên cạnh bài theo sách (5.1, 5.7 giữ nguyên): bố mẹ **không cần danh sách từ** — chọn chủ đề, AI tự chọn từ và soạn cả bài.
-- **Mạch mới `track: "topic"`**: khu học có tab **🎯 Chủ đề** (sau 📘 Theo sách); Góc bố mẹ ghi "🎯 Theo chủ đề". `unit` = tên chủ đề, `book` = null.
-- **Góc bố mẹ → Bài học → "🎯 Tạo bài theo chủ đề (dùng AI)"** (mục đầu tiên): chip 24 chủ đề quen với bé lớp 1 (Animals, Farm animals, Food, Fruits, Colors, Toys, Family, My body, Clothes, Feelings, Weather, School things, My house, In the kitchen, Vehicles, Jobs, Sports, Actions, Nature, At the park…) hoặc tự gõ; **Số từ mới** 6 / 8 / 10; **Bé đã học Phonics tới** nhóm 1–7; nút **📋 Chép prompt tạo bài theo chủ đề** → dán vào AI → dán kết quả vào ô "Nhập bài (JSON)" (kiểm tra 5.5, lưu như mọi bài). Nháp lưu ở `topicDraft`.
-- **Prompt** (`topicLessonPrompt`): AI chọn đúng N từ **mới** — cụ thể, quen thuộc hằng ngày, dễ vẽ, có emoji; khoảng **một nửa đọc được bằng âm bé đã học** (để ghép âm), còn lại có thể là tricky; không chọn từ hiếm / trừu tượng cho đủ số. Phần còn lại giống bài theo sách (cùng yêu cầu: emoji, `explainVi`, tách ô chữ Jolly + bảng âm, hoạt động blend / tricky / spell / fill, một hội thoại 3–5 lượt) và 2–4 câu mẫu ngắn về chủ đề.
-- **Không lặp từ đã học** (như app Bông): từ của các bài **cùng chủ đề** luôn đưa hết vào prompt ("KHÔNG chọn lại, kể cả số ít / số nhiều"), từ các bài khác tối đa 80; từ đã học vẫn được xuất hiện trong câu / hội thoại để ôn. Bố mẹ xem được danh sách (bấm để mở).
-- **Mã bài không ghi đè:** `topic-<chủ đề>`, đã có thì `-2`, `-3`… (tên "Animals 2"); danh sách bài đọc lại mỗi khi lưu / xóa bài.
+### 5.7a. Tạo bài theo sách MỘT bước bằng ảnh (0.11.6, bố mẹ yêu cầu 2026-11-17 — gõ ít nhất, dùng AI nhiều nhất)
+- **Vì sao vẫn cần ảnh / danh sách:** tên sách + Unit chỉ để đặt tên. AI **không** nhớ chắc từng Unit của sách giáo khoa Việt Nam (dễ bịa từ) và app không chứa nội dung sách, nên AI phải **đọc từ ảnh trang sách** — nhưng bố mẹ không phải gõ.
+- **Cách chính:** Góc bố mẹ → Bài học → ✨ Tạo bài theo sách: chọn **Bộ sách** (app nhớ) → bấm **📋 Chép prompt (gửi kèm ảnh các trang Unit)** → mở ChatGPT / Gemini, đính kèm ảnh các trang của Unit (từ vựng, mẫu câu, hội thoại; nhiều ảnh được), dán prompt → dán kết quả vào **Nhập bài (JSON)** → Kiểm tra → xem lại → Lưu.
+- **Prompt một bước** (`bookPhotoPrompt`): AI chỉ dựa vào ảnh, không dựa vào trí nhớ về sách; đọc số + tên Unit như in trong sách; lấy ĐÚNG từ vựng mới + mẫu câu trong ảnh, không thêm từ ngoài ảnh, chữ không rõ thì bỏ; soạn luôn gói bài (cùng yêu cầu 3–8 như 5.7: emoji, giải thích, tách ô chữ, hoạt động, hội thoại). Ảnh không đọc được → AI chỉ trả `{"error": "…"}` → app báo "chụp lại ảnh rõ hơn".
+- **`"id": "auto"`:** AI không biết trước Unit → app đặt mã `book-<sách>-<unit>` theo Unit AI đọc được (`fillBookId`); trùng bài đã có thì hỏi Thay bài cũ / Lưu thành bài mới như cũ.
+- **Nhóm âm tự động:** "Bé đã học Phonics tới" lấy theo nhóm cao nhất bé đã học xong bài Phonics có sẵn (chưa xong nhóm nào → 1); bố mẹ chọn tay thì giữ lựa chọn đó.
+- **Xem lại trước khi lưu:** sau Kiểm tra, danh sách từ (emoji · từ · nghĩa sửa được · ✕). ✕ bỏ từ khỏi bài và mọi hoạt động (hoạt động rỗng bỏ luôn); kiểm tra lại khi Lưu.
+- **Không có ảnh:** mục gập "✍️ Không có ảnh? Tự gõ danh sách từ" — hai bước cũ của 5.7 (Unit, tên Unit, prompt 1 / tự gõ danh sách, prompt 2).
+
+### 5.8. (đã gỡ) Tạo bài theo chủ đề
+Có ở bản 0.11.4, **gỡ ở 0.11.6** theo bố mẹ (app Bông đã có tạo bài theo chủ đề; Olly chỉ cần cải thiện tạo bài theo sách — 5.7a). Bài "theo chủ đề" lỡ tạo ở 0.11.4 vẫn mở được, hiện ở tab 📘 Theo sách.
 
 ## 6. Góc bố mẹ
 
@@ -416,7 +420,9 @@ Cách thứ hai, **thêm** bên cạnh bài theo sách (5.1, 5.7 giữ nguyên):
 | 0.11.1 *(xong)* | 🔢 Toán phần 2 — Math-e (SPEC-math2.md, ghi chú 13): **➕ T10 Add it up** (câu chuyện + khung 10 ô có đồ ở mức 1–2, mức 3 chỉ phép tính; mức 1 đếm hết, mức 2 đếm tiếp từ số ban đầu, mức 3 từ số lớn hơn + cặp đổi chỗ `2 + 5 = 5 + 2` + cộng 0) · **➖ T11 Take away** (đồ bị bớt ở nguyên ô, bị gạch; đếm phần còn lại; mức 3 có trừ 0 và trừ hết). Thẻ T10, T11 có dòng gợi ý học Tách – gộp số trước (không khóa). Bảng bài mẫu MATH2-SAMPLES.md thêm T10, T11 |
 | 0.11.2 *(xong)* | 🔢 Toán phần 2 — Math-f (SPEC-math2.md, ghi chú 14): **✏️ T12 Story sums** — 24 câu đố đã duyệt, hai bước trong một mục: chọn **+ add** / **− take away** (sai → sáng cụm chữ quyết định + "more or fewer?"), rồi chọn kết quả với phép tính + khung 10 ô có đồ (gợi ý như T10 / T11); lượt 4 cộng + 4 trừ, mức 3 có 2 + 2 câu đánh lừa (*gives* hai chiều, *more* trong bài trừ, cộng không có *more*); chấm cả hai bước, Góc bố mẹ thấy tỉ lệ chọn đúng dấu; ra nền quay lại đúng bước. Khung 10 ô + phép tính + khay dùng chung T10 → T12. Bảng bài mẫu MATH2-SAMPLES.md thêm T12 |
 | 0.11.3 *(xong)* | 🖼️ Tả tranh: tranh mới theo chủ đề, khung đối tượng làm vùng chạm, kiểm tra từng câu ([SPEC-ta-tranh.md](SPEC-ta-tranh.md) mục 4.5, 8.5, 8.6) |
-| 0.11.4 *(xong)* | 🎯 Tạo bài theo chủ đề (mục 5.8): mạch `topic` + tab 🎯 Chủ đề, chọn chủ đề → prompt → AI tự chọn từ không lặp từ đã học |
+| 0.11.4 *(xong, gỡ ở 0.11.6)* | 🎯 Tạo bài theo chủ đề (mục 5.8) |
+| 0.11.5 *(xong)* | 🖼️ Tả tranh: nhiều khung một câu, đổi hướng mũi tên của câu có khung ([SPEC-ta-tranh.md](SPEC-ta-tranh.md) mục 4.6) |
+| 0.11.6 *(xong)* | ✨ Tạo bài theo sách một bước bằng ảnh (mục 5.7a): một prompt + ảnh các trang Unit, `"id": "auto"`, nhóm âm tự động, xem lại danh sách từ trước khi lưu; gỡ tạo bài theo chủ đề |
 | 0.9.0 *(xong)* | 🔢 Math-b + Math-c ([SPEC-math.md](SPEC-math.md); bố mẹ chọn làm trước Quest 2026-11-11): T4 Xếp số (first / next / next / last, mức 3 lớn → nhỏ), T5 Tia số (ếch nhảy từng bước; after / before → between → one more / one less), T7 Đọc và so sánh (câu đố 3 câu karaoke, chạm nhân vật; số tới 20 khi đã có ⭐⭐ ở T5) — danh sách Toán đủ T1 → T7 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 

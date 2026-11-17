@@ -7,29 +7,25 @@ import { saveLesson, replaceLesson, deleteLesson } from '../../db.js';
 import { parentLayout, goParent, section, notice } from './common.js';
 import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
-import { createPanel, topicPanel } from './create.js';
+import { createPanel } from './create.js';
+import { fillBookId, withoutWord } from '../../lesson-prompts.js';
 import { BUILTIN_LESSONS } from '../../data/builtin-lessons.js';
 
-const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách', topic: '🎯 Theo chủ đề' };
+const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
 
 export function lessonsView(app) {
   const body = parentLayout(app, { title: 'Bài học', back: () => goParent(app) });
   const listBox = h('div.lesson-list.my-lessons');
-  let topic = null;
-  const refresh = () => {
-    topic?.reload(); // mục Tạo bài theo chủ đề: mã bài + từ cần tránh theo danh sách bài mới
-    return renderList(app, listBox).catch((err) => {
-      console.error(err);
-      toast('Không đọc được danh sách bài.');
-    });
-  };
+  const refresh = () => renderList(app, listBox).catch((err) => {
+    console.error(err);
+    toast('Không đọc được danh sách bài.');
+  });
   const imp = importPanel(app, refresh);
   const focusImport = () => {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  topic = topicPanel(app, { focusImport });
-  body.append(topic, createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
+  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
   refresh();
 }
 
@@ -92,23 +88,62 @@ function importPanel(app, refresh) {
       result.append(notice('error', parsed.error));
       return;
     }
-    const r = validateLesson(parsed.data);
+    // AI không đọc được ảnh trang sách (prompt một bước, SPEC 5.7): chỉ trả {"error": "..."}.
+    if (parsed.data && typeof parsed.data.error === 'string' && !parsed.data.words) {
+      result.append(notice('error', h('strong', { text: 'AI chưa đọc được trang sách: ' }), parsed.data.error, ' — chụp lại ảnh rõ hơn (đủ sáng, thẳng trang) rồi thử lại.'));
+      return;
+    }
+    // Bài theo sách AI ghi "id": "auto": app đặt mã theo sách + Unit AI đọc được.
+    const r = validateLesson(fillBookId(parsed.data));
     if (!r.ok) {
       result.append(notice('error', h('strong', { text: `Chưa lưu được — ${r.errors.length} lỗi:` }), h('ul', {}, ...r.errors.map((e) => h('li', { text: e })))));
       return;
     }
     checked = r.lesson;
-    const l = r.lesson;
-    result.append(
-      notice('info', h('strong', { text: `✅ ${l.title}` }), ` — ${l.words.length} từ, ${l.sentences.length} câu, ${l.activities.length} hoạt động (id: ${l.id}).`),
+    result.append(...[
+      summary,
       r.warnings.length ? notice('warn', h('strong', { text: 'Lưu ý (vẫn lưu được):' }), h('ul', {}, ...r.warnings.map((w) => h('li', { text: w })))) : null,
+      review,
       h('button.btn.primary', { type: 'button', text: '💾 Lưu bài', onclick: () => save() }),
-    );
+    ].filter(Boolean));
+    renderReview();
   };
+
+  // Xem lại danh sách từ trước khi lưu: bỏ từ AI đọc sai (✕), sửa nghĩa tại chỗ — không phải sửa JSON.
+  const summary = h('div');
+  const review = h('div.word-review');
+  function renderReview() {
+    const l = checked;
+    summary.replaceChildren(notice('info', h('strong', { text: `✅ ${l.title}` }), ` — ${l.words.length} từ, ${l.sentences.length} câu, ${l.activities.length} hoạt động (id: ${l.id}).`));
+    review.replaceChildren(
+      h('p.field-hint', { text: `Xem lại ${l.words.length} từ AI soạn: chạm ✕ để bỏ từ sai / không có trong sách, sửa nghĩa nếu cần.` }),
+      ...l.words.map((w) => {
+        const vi = h('input', { type: 'text', value: w.vi, 'aria-label': `Nghĩa của ${w.en}` });
+        vi.addEventListener('input', () => { w.vi = vi.value; });
+        return h('div.word-review-row', { dataset: { word: w.id } },
+          h('span.word-review-emoji', { text: w.emoji ?? '•', 'aria-hidden': 'true' }),
+          h('strong.word-review-en', { text: w.en }),
+          vi,
+          h('button.btn.small', {
+            type: 'button', text: '✕', 'aria-label': `Bỏ từ ${w.en}`,
+            onclick: () => {
+              if (checked.words.length <= 1) return toast('Bài cần ít nhất 1 từ.');
+              checked = withoutWord(checked, w.id);
+              renderReview();
+            },
+          }));
+      }));
+  }
 
   const save = async () => {
     if (!checked) return;
-    const lesson = checked;
+    // Kiểm tra lại sau khi bố mẹ bỏ từ / sửa nghĩa (hoạt động rỗng đã được bỏ).
+    const again = validateLesson(checked);
+    if (!again.ok) {
+      result.append(notice('error', h('strong', { text: 'Chưa lưu được:' }), h('ul', {}, ...again.errors.map((e) => h('li', { text: e })))));
+      return;
+    }
+    const lesson = again.lesson;
     const existing = await app.db.get('lessons', lesson.id);
     if (!existing) {
       await saveLesson(app.db, lesson);
