@@ -2,11 +2,13 @@
 // Chạy: node scripts/make-shared-index.mjs. Workflow deploy chạy lại trước khi đưa app lên GitHub Pages, nên bố mẹ chỉ cần
 // tải file .json của bài vào app/shared/ (kể cả qua trang web GitHub) là thư viện tự cập nhật và chuông 🔔 báo bài mới.
 // Bài lỗi (không qua được kiểm tra) KHÔNG vào danh sách, và script báo lỗi để thấy ngay trong log deploy.
+// Gói chia sẻ (SPEC 6.4: bài + tranh + ảnh trong một file .json, bố mẹ tải về từ Góc bố mẹ) cũng là một mục của thư viện.
 
 import { readdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseLessonText, validateLesson } from '../app/js/lesson.js';
+import { validateScene } from '../app/js/scene-data.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const SHARED = path.join(root, 'app', 'shared');
@@ -19,6 +21,22 @@ export async function describeShared(dir = SHARED) {
   for (const file of names) {
     const text = await readFile(path.join(dir, file), 'utf8');
     const parsed = parseLessonText(text);
+    if (parsed.data?.kind === 'olly-share') {
+      const pkg = parsed.data;
+      const bad = [
+        ...(pkg.lessons ?? []).map((l) => validateLesson(l)).filter((x) => !x.ok).map((x) => x.errors[0]),
+        ...(pkg.scenes ?? []).map((sc) => validateScene(sc)).filter((x) => !x.ok).map((x) => x.errors[0]),
+      ];
+      if (bad.length || !(pkg.lessons?.length || pkg.scenes?.length)) {
+        problems.push(`${file}: gói chia sẻ lỗi — ${bad.join(' | ') || 'không có bài / tranh'}`);
+        continue;
+      }
+      files.push({
+        file, size: Buffer.byteLength(text, 'utf8'), id: pkg.lessons[0]?.id ?? `pkg:${file}`, title: pkg.title, titleVi: '',
+        track: 'package', emoji: '📦', lessons: pkg.lessons.length, scenes: pkg.scenes.length, images: pkg.images?.length ?? 0,
+      });
+      continue;
+    }
     const r = parsed.error ? { ok: false, errors: [parsed.error] } : validateLesson(parsed.data);
     if (!r.ok) {
       problems.push(`${file}: ${r.errors.join(' | ')}`);
@@ -37,6 +55,7 @@ export async function describeShared(dir = SHARED) {
   }
   const ids = new Map();
   for (const f of files) {
+    if (f.track === 'package') continue; // gói được trùng bài với file khác (cùng bài tải lại kèm ảnh)
     if (ids.has(f.id)) problems.push(`${f.file}: trùng id "${f.id}" với ${ids.get(f.id)}`);
     ids.set(f.id, f.file);
   }

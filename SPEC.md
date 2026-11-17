@@ -389,6 +389,14 @@ Có ở bản 0.11.4, **gỡ ở 0.11.6** theo bố mẹ (app Bông đã có t�
 - "Bài mới" = file chưa thấy trên máy này (`librarySeen`: tên file|dung lượng); đổi dung lượng = bài cập nhật. **Lần đầu** lấy cả thư viện hiện có làm mốc (không báo cả thư viện cũ) → bài cũ nhập ở Góc bố mẹ → Bài học → **📚 Thư viện bài**.
 - Nhập bài trùng id bài đã có → thay bài, giữ tiến độ các mục còn nguyên (5.5). Trùng id bài có sẵn của app → báo lỗi.
 
+### 6.4. 📤 Chia sẻ bài + tranh sang máy khác (0.11.7, bố mẹ yêu cầu 2026-11-17 — giống kid-english)
+- **Gói chia sẻ** = MỘT file `.json` (`kind: "olly-share"`): bài học (kèm ảnh **Kho ảnh** của các từ / câu trong bài, nếu có) và tranh Tả tranh (kèm ảnh tranh, câu, mũi tên, khung). Ảnh lưu base64 ngay trong file (Olly không cần thư viện nén). Bỏ dữ liệu riêng của máy (ngày giờ, bài đang học dở, tiến độ).
+- **Tải về:** Góc bố mẹ → Bài học: nút **⬇️ Tải về** ở mỗi bài bố mẹ tạo và mỗi tranh; mục **📤 Chia sẻ sang máy khác** có **⬇️ Tải tất cả bài & tranh bố mẹ tạo** (một file) + hướng dẫn. Tên file: `olly-<tên bài>-<ngày>.json` (nhiều mục: `olly-<n>-bai-tranh-<ngày>.json`).
+- **Đưa sang máy kia** (chọn một):
+  1. **GitHub**: repo → `app/shared` → Add file → Upload files → Commit. Workflow deploy chạy `scripts/make-shared-index.mjs`: gói hợp lệ thành một mục "📦 Gói chia sẻ" (số bài / tranh / ảnh) trong **📚 Thư viện bài**, chuông 🔔 báo; máy kia bấm **Nhập**. Gói lỗi không vào danh sách, script báo trong log.
+  2. **Gửi thẳng file** (Zalo, AirDrop, email…): máy kia → 📥 Nhập bài → 📄 Chọn file… (hoặc dán nội dung) → app nhận ra gói → **📥 Nhập gói**.
+- **Khi nhập:** bài trùng id thì cập nhật như Thư viện bài (giữ kết quả học các mục còn nguyên); tranh trùng id thì thay; **từ đã có ảnh trên máy kia thì giữ ảnh của máy đó**; mục lỗi bị bỏ qua và liệt kê, phần còn lại vẫn nhập. Báo "Đã nhập n bài, m tranh, k ảnh (giữ j ảnh đã có trên máy)".
+
 ## 7. Thứ tự làm
 | Phiên bản | Phạm vi |
 |---|---|
@@ -422,6 +430,7 @@ Có ở bản 0.11.4, **gỡ ở 0.11.6** theo bố mẹ (app Bông đã có t�
 | 0.11.3 *(xong)* | 🖼️ Tả tranh: tranh mới theo chủ đề, khung đối tượng làm vùng chạm, kiểm tra từng câu ([SPEC-ta-tranh.md](SPEC-ta-tranh.md) mục 4.5, 8.5, 8.6) |
 | 0.11.4 *(xong, gỡ ở 0.11.6)* | 🎯 Tạo bài theo chủ đề (mục 5.8) |
 | 0.11.5 *(xong)* | 🖼️ Tả tranh: nhiều khung một câu, đổi hướng mũi tên của câu có khung ([SPEC-ta-tranh.md](SPEC-ta-tranh.md) mục 4.6) |
+| 0.11.7 *(xong)* | 📤 Chia sẻ bài + tranh sang máy khác: gói .json kèm ảnh, tải về từng bài / tranh / tất cả, nhập qua Thư viện bài (app/shared) hoặc Chọn file (mục 6.4) |
 | 0.11.6 *(xong)* | ✨ Tạo bài theo sách một bước bằng ảnh (mục 5.7a): một prompt + ảnh các trang Unit, `"id": "auto"`, nhóm âm tự động, xem lại danh sách từ trước khi lưu; gỡ tạo bài theo chủ đề |
 | 0.9.0 *(xong)* | 🔢 Math-b + Math-c ([SPEC-math.md](SPEC-math.md); bố mẹ chọn làm trước Quest 2026-11-11): T4 Xếp số (first / next / next / last, mức 3 lớn → nhỏ), T5 Tia số (ếch nhảy từng bước; after / before → between → one more / one less), T7 Đọc và so sánh (câu đố 3 câu karaoke, chạm nhân vật; số tới 20 khi đã có ⭐⭐ ở T5) — danh sách Toán đủ T1 → T7 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |

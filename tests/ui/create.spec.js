@@ -112,3 +112,45 @@ test('Tạo bài theo sách một bước (0.11.6): chỉ chọn sách → chép
   expect(saved.words[0].vi).toBe('mèo con');
   expect(saved.activities.flatMap((a) => a.items ?? [])).not.toContain('zoo');
 });
+
+test('Chia sẻ sang máy khác (6.4): máy A tải về bài (gói .json kèm ảnh) → máy B chọn file → 📥 Nhập gói → có bài; "Tải tất cả" gói mọi bài bố mẹ tạo', async ({ page, browser }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openParent(page);
+  await page.getByRole('button', { name: 'Bài học' }).click();
+  await page.locator('textarea[placeholder^="Dán JSON"]').fill(JSON.stringify(aiResult));
+  await page.getByRole('button', { name: 'Kiểm tra' }).click();
+  await page.getByRole('button', { name: /Lưu bài/ }).click();
+  await expect(page.locator('.my-lessons .lesson-row')).toContainText('Unit 3: At the zoo');
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: 'Tải về bài Unit 3: At the zoo' }).click(),
+  ]);
+  expect(download.suggestedFilename()).toMatch(/^olly-unit-3-at-the-zoo-\d{4}-\d{2}-\d{2}\.json$/);
+  const file = await download.path();
+  const pkg = JSON.parse(await (await import('node:fs/promises')).readFile(file, 'utf8'));
+  expect(pkg.kind).toBe('olly-share');
+  expect(pkg.lessons.map((l) => l.id)).toEqual([aiResult.id]);
+
+  const [all] = await Promise.all([
+    page.waitForEvent('download'),
+    page.getByRole('button', { name: '⬇️ Tải tất cả bài & tranh bố mẹ tạo' }).click(),
+  ]);
+  expect(all.suggestedFilename()).toMatch(/^olly-unit-3-at-the-zoo-/); // chỉ có 1 bài bố mẹ tạo
+  await expect(page.locator('.toast').last()).toContainText('1 bài, 0 tranh');
+
+  // Máy B: trình duyệt khác, dữ liệu trống.
+  const ctx = await browser.newContext();
+  const b = await ctx.newPage();
+  await fakeSpeech(b);
+  await startApp(b);
+  await openParent(b);
+  await b.getByRole('button', { name: 'Bài học' }).click();
+  await expect(b.locator('.my-lessons .lesson-row')).toHaveCount(0);
+  await b.locator('.import-result').locator('xpath=..').locator('input[type="file"]').setInputFiles(file);
+  await expect(b.locator('.import-result')).toContainText('📦 Gói chia sẻ: 1 bài, 0 tranh');
+  await b.getByRole('button', { name: '📥 Nhập gói' }).click();
+  await expect(b.locator('.toast').last()).toContainText('Đã nhập 1 bài');
+  await expect(b.locator('.my-lessons .lesson-row')).toContainText('Unit 3: At the zoo');
+  await ctx.close();
+});

@@ -70,8 +70,9 @@ test('trùng id: lưu thành bài mới (id -2) hoặc thay bài cũ; xuất fil
   await expect(page.locator('.my-lessons')).toContainText('Sounds s a t (mới)');
 
   const download = page.waitForEvent('download');
-  await page.locator('.my-lessons .lesson-row', { hasText: 'id: phonics-g1-test ·' }).getByRole('button', { name: /Xuất/ }).click();
-  expect((await download).suggestedFilename()).toBe('phonics-g1-test.json');
+  await page.locator('.my-lessons .lesson-row', { hasText: 'id: phonics-g1-test ·' }).getByRole('button', { name: /Tải về/ }).click();
+  // Bài bố mẹ tạo: tải về thành gói chia sẻ (SPEC 6.4, 0.11.7) — kèm ảnh, nhập được ở máy khác.
+  expect((await download).suggestedFilename()).toMatch(/^olly-sounds-s-a-t-moi-\d{4}-\d{2}-\d{2}\.json$/);
 
   await page.locator('.my-lessons .lesson-row', { hasText: 'id: phonics-g1-test-2' }).getByRole('button', { name: /Xóa/ }).click();
   await page.getByRole('button', { name: 'Hủy' }).click();

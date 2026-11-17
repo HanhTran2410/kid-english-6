@@ -160,3 +160,56 @@ test('SPEC 5.7 (0.11.6) — một bước: prompt gửi kèm ảnh (AI đọc Un
   assert.equal(learnedGroupOf([1, 2, 4]), 4);
   assert.equal(learnedGroupOf([]), 1);
 });
+
+test('SPEC 6.4 — gói chia sẻ: bài + ảnh Kho ảnh của từ / câu trong bài + tranh + ảnh tranh → một file; nhập ở máy khác đủ cả; máy kia đã có ảnh cho từ thì giữ ảnh của máy đó; gói lỗi một mục vẫn nhập phần còn lại', async () => {
+  await import('fake-indexeddb/auto');
+  const { openDatabase, saveLesson, saveScene, setWordImage, lessonImages, SCENE_IMAGE } = await import('../../app/js/db.js');
+  const { makeSharePackage, installPackage, isSharePackage, installedText } = await import('../../app/js/share.js');
+  const { setLibraryImage, libraryImages } = await import('../../app/js/picture-library.js');
+  const { installLesson } = await import('../../app/js/library.js');
+  const blob = (text) => new Blob([new TextEncoder().encode(text)], { type: 'image/png' });
+  const src = await openDatabase(`share-src-${Math.random()}`);
+  const lesson = validateLesson({
+    version: 1, kind: 'lesson', id: 'book-b-unit-1', track: 'book', book: 'B', unit: 'Unit 1', title: 'Unit 1: Pets',
+    words: [{ id: 'cat', en: 'cat', vi: 'mèo', emoji: '🐱', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'] }, { id: 'dog', en: 'dog', vi: 'chó', emoji: '🐶', graphemes: ['d', 'o', 'g'], sounds: ['d', 'o', 'g'] }],
+    sentences: [{ id: 's1', en: 'I see a cat.', vi: 'Tớ thấy con mèo.' }], activities: [{ type: 'blend', items: ['cat', 'dog'] }],
+  }).lesson;
+  await saveLesson(src, lesson);
+  await setLibraryImage(src, 'cat', { blob: blob('cat-img'), mimeType: 'image/png', width: 10, height: 10 });
+  await setLibraryImage(src, 'dog', { blob: blob('dog-img'), mimeType: 'image/png', width: 10, height: 10 });
+  await setLibraryImage(src, 's:i see a cat', { blob: blob('sentence-img'), mimeType: 'image/png', width: 10, height: 10 });
+  await setLibraryImage(src, 'fish', { blob: blob('fish-img'), mimeType: 'image/png', width: 10, height: 10 }); // không thuộc bài
+  await saveScene(src, { id: 'scene-x', title: 'Party', titleVi: '', level: 2, track: 'phonics', sentences: [{ sid: 'a1', en: 'Balloons.', vi: '', point: { x: 0.1, y: 0.1 }, box: { x: 0, y: 0, w: 0.2, h: 0.3 }, more: [{ x: 0.5, y: 0, w: 0.2, h: 0.3 }], from: 'right', hit: 0.08, keywords: [] }] });
+  await setWordImage(src, { lessonId: 'scene-x', wordId: SCENE_IMAGE, blob: blob('scene-img'), mimeType: 'image/jpeg', width: 1200, height: 900 });
+
+  const made = await makeSharePackage(src, { lessonIds: [lesson.id], sceneIds: ['scene-x'] }, Date.UTC(2026, 10, 17));
+  assert.equal(made.filename, 'olly-2-bai-tranh-2026-11-17.json');
+  assert.deepEqual(made.counts, { lessons: 1, scenes: 1, images: 4 });
+  const pkg = JSON.parse(JSON.stringify(made.package)); // như đọc lại từ file
+  assert.ok(isSharePackage(pkg));
+  assert.equal(pkg.lessons[0].createdAt, undefined);
+  assert.ok(!pkg.images.some((i) => i.word === 'fish'));
+
+  // Máy kia đã có ảnh "dog" riêng.
+  const dst = await openDatabase(`share-dst-${Math.random()}`);
+  await setLibraryImage(dst, 'dog', { blob: blob('my-dog'), mimeType: 'image/png', width: 5, height: 5 });
+  const r = await installPackage(dst, pkg, installLesson);
+  assert.deepEqual({ ...r, problems: r.problems.length }, { lessons: 1, scenes: 1, images: 3, kept: 1, problems: 0 });
+  assert.equal(installedText(r), 'Đã nhập 1 bài, 1 tranh, 3 ảnh (giữ 1 ảnh đã có trên máy)');
+  assert.equal((await dst.get('lessons', lesson.id)).title, 'Unit 1: Pets');
+  const sc = await dst.get('scenes', 'scene-x');
+  assert.equal(sc.sentences[0].more.length, 1);
+  const lib = await libraryImages(dst);
+  assert.equal(new TextDecoder().decode(lib.get('cat').data), 'cat-img');
+  assert.equal(new TextDecoder().decode(lib.get('dog').data), 'my-dog');
+  assert.equal(new TextDecoder().decode((await lessonImages(dst, 'scene-x')).get(SCENE_IMAGE).data), 'scene-img');
+
+  // Một mục lỗi không chặn phần còn lại.
+  const broken = { ...pkg, lessons: [{ ...pkg.lessons[0], id: 'BAD ID' }] };
+  const r2 = await installPackage(await openDatabase(`share-b-${Math.random()}`), broken, installLesson);
+  assert.equal(r2.lessons, 0);
+  assert.equal(r2.scenes, 1);
+  assert.match(r2.problems[0], /Bài "Unit 1: Pets"/);
+  src.close();
+  dst.close();
+});

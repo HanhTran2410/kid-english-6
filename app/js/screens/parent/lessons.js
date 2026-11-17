@@ -9,9 +9,11 @@ import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
 import { createPanel } from './create.js';
 import { fillBookId, withoutWord } from '../../lesson-prompts.js';
+import { isSharePackage, makeSharePackage, downloadPackage, installPackage, installedText } from '../../share.js';
+import { installLesson } from '../../library.js';
 import { BUILTIN_LESSONS } from '../../data/builtin-lessons.js';
 
-const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
+const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách', package: '📦 Gói chia sẻ' };
 
 export function lessonsView(app) {
   const body = parentLayout(app, { title: 'Bài học', back: () => goParent(app) });
@@ -25,7 +27,7 @@ export function lessonsView(app) {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
+  body.append(createPanel(app, { focusImport }), imp, sharePanel(app), libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
   refresh();
 }
 
@@ -52,7 +54,8 @@ async function renderList(app, box) {
         })),
       h('div.lesson-actions', {},
         picturesButton(app, lesson),
-        h('button.btn', { type: 'button', text: '⬇️ Xuất', onclick: () => exportLesson(lesson) }),
+        lesson.builtIn ? h('button.btn', { type: 'button', text: '⬇️ Xuất', onclick: () => exportLesson(lesson) })
+          : downloadButton(app, `bài ${lesson.title}`, { lessonIds: [lesson.id] }),
         lesson.builtIn ? null : h('button.btn.danger', {
           type: 'button',
           text: '🗑️ Xóa',
@@ -86,6 +89,26 @@ function importPanel(app, refresh) {
     const parsed = parseLessonText(area.value);
     if (parsed.error) {
       result.append(notice('error', parsed.error));
+      return;
+    }
+    // Gói chia sẻ từ máy khác (SPEC 6.4): bài + tranh + ảnh.
+    if (isSharePackage(parsed.data)) {
+      const pkg = parsed.data;
+      result.append(
+        notice('info', h('strong', { text: '📦 Gói chia sẻ: ' }), `${pkg.lessons.length} bài, ${pkg.scenes.length} tranh, ${pkg.images?.length ?? 0} ảnh — ${pkg.title}`),
+        h('button.btn.primary', {
+          type: 'button', text: '📥 Nhập gói',
+          onclick: async () => {
+            const r = await installPackage(app.db, pkg, installLesson);
+            toast(`${installedText(r)}.`, 4000);
+            if (r.problems.length) result.append(notice('warn', h('strong', { text: 'Có mục chưa nhập được:' }), h('ul', {}, ...r.problems.map((x) => h('li', { text: x })))));
+            else {
+              area.value = '';
+              result.replaceChildren();
+            }
+            refresh();
+          },
+        }));
       return;
     }
     // AI không đọc được ảnh trang sách (prompt một bước, SPEC 5.7): chỉ trả {"error": "..."}.
@@ -214,6 +237,45 @@ function exportLesson(lesson) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** Nút "⬇️ Tải về": gói bài / tranh (kèm ảnh) thành một file để đưa sang máy khác (SPEC 6.4). */
+function downloadButton(app, label, ids) {
+  return h('button.btn', {
+    type: 'button', text: '⬇️ Tải về', 'aria-label': `Tải về ${label}`,
+    onclick: async () => {
+      try {
+        const made = await makeSharePackage(app.db, ids);
+        downloadPackage(made);
+        toast(`Đã tải về ${made.filename} (${made.counts.images} ảnh).`, 3500);
+      } catch (err) {
+        console.error(err);
+        toast('Không tạo được file.');
+      }
+    },
+  });
+}
+
+/** 📤 Chia sẻ sang máy khác: tải TẤT CẢ bài + tranh bố mẹ tạo thành một file, và cách đưa sang máy kia. */
+function sharePanel(app) {
+  const all = h('button.btn.primary', {
+    type: 'button', text: '⬇️ Tải tất cả bài & tranh bố mẹ tạo',
+    onclick: async () => {
+      const lessonIds = (await app.db.getAll('lessons')).filter((l) => !l.builtIn).map((l) => l.id);
+      const sceneIds = (await app.db.getAll('scenes')).filter((x) => !x.builtIn).map((x) => x.id);
+      if (!lessonIds.length && !sceneIds.length) return toast('Chưa có bài hay tranh nào do bố mẹ tạo.');
+      const made = await makeSharePackage(app.db, { lessonIds, sceneIds });
+      downloadPackage(made);
+      toast(`Đã tải về ${made.filename}: ${made.counts.lessons} bài, ${made.counts.scenes} tranh, ${made.counts.images} ảnh.`, 4500);
+    },
+  });
+  return section('📤 Chia sẻ sang máy khác',
+    h('p.field-hint', { text: 'Bấm "⬇️ Tải về" ở từng bài / tranh (hoặc nút dưới để tải tất cả) — được MỘT file .json chứa bài, tranh và ảnh. Rồi chọn một cách:' }),
+    h('ol.share-steps', {},
+      h('li', { text: 'Đưa lên GitHub: mở repo kid-english-6 → thư mục app/shared → Add file → Upload files → chọn file → Commit. Vài phút sau, máy kia vào Góc bố mẹ → Bài học → 📚 Thư viện bài bấm Nhập (chuông 🔔 cũng báo).' }),
+      h('li', { text: 'Hoặc gửi thẳng file (Zalo, AirDrop, email…): máy kia vào Góc bố mẹ → Bài học → 📥 Nhập bài → 📄 Chọn file… → 📥 Nhập gói.' })),
+    h('p.field-hint', { text: 'Máy kia đã có ảnh cho một từ thì giữ ảnh của máy đó. Bài trùng thì được cập nhật, giữ kết quả học.' }),
+    all);
+}
+
 function libraryPanel(app, refresh) {
   const box = h('div.lesson-list.library-list', {}, h('p.muted', { text: 'Đang tải danh sách…' }));
   const load = async () => {
@@ -250,7 +312,11 @@ function libraryPanel(app, refresh) {
       });
       return h('div.lesson-row', { dataset: { file: f.file } },
         h('div.lesson-info', {}, h('strong', { text: `${f.emoji || '📘'} ${f.title}` }), f.titleVi ? h('span', { text: ` — ${f.titleVi}` }) : null,
-          h('div.field-hint', { text: [TRACK_LABEL[f.track] ?? f.track, `id: ${f.id}`, have.has(f.id) ? 'đã có trên máy' : null].filter(Boolean).join(' · ') }), status),
+          h('div.field-hint', {
+            text: (f.track === 'package'
+              ? [TRACK_LABEL.package, `${f.lessons} bài`, `${f.scenes} tranh`, `${f.images} ảnh`]
+              : [TRACK_LABEL[f.track] ?? f.track, `id: ${f.id}`, have.has(f.id) ? 'đã có trên máy' : null]).filter(Boolean).join(' · '),
+          }), status),
         h('div.lesson-actions', {}, btn));
     }));
   };
@@ -281,7 +347,8 @@ function scenesPanel(app) {
       box.append(h('div.lesson-row', { dataset: { scene: s.id } },
         h('div.lesson-info', {}, h('strong', { text: s.title }), s.titleVi ? h('span', { text: ` — ${s.titleVi}` }) : null,
           h('div.field-hint', { text: `${s.sentences.length} câu · cấp ${s.level} · ${s.sentences.filter((x) => x.point).length} mũi tên` })),
-        h('div.lesson-actions', {}, h('button.btn', { type: 'button', text: '✏️ Sửa', 'aria-label': `Sửa tranh ${s.title}`, onclick: () => goParent(app, 'scene-edit', { sceneId: s.id }) }))));
+        h('div.lesson-actions', {}, h('button.btn', { type: 'button', text: '✏️ Sửa', 'aria-label': `Sửa tranh ${s.title}`, onclick: () => goParent(app, 'scene-edit', { sceneId: s.id }) }),
+          s.builtIn ? null : downloadButton(app, `tranh ${s.title}`, { sceneIds: [s.id] }))));
     }
   }).catch(() => {});
   return section('🖼️ Tả tranh',

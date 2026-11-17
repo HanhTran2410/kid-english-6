@@ -3,6 +3,7 @@
 
 import { parseLessonText, validateLesson, itemsToReset } from './lesson.js';
 import { saveLesson, replaceLesson } from './db.js';
+import { isSharePackage, installPackage } from './share.js';
 
 export const SHARED_DIR = 'shared/';
 export const SHARED_INDEX = `${SHARED_DIR}index.json`;
@@ -31,7 +32,7 @@ export async function installLesson(db, data) {
   return { lesson, replaced: Boolean(existing), warnings: r.warnings };
 }
 
-/** Tải một file trong thư viện và cài vào máy. */
+/** Tải một file trong thư viện và cài vào máy: một bài, hoặc gói chia sẻ (bài + tranh + ảnh, SPEC 6.4) → `{ package }`. */
 export async function installShared(db, file, fetchFn = (...a) => fetch(...a)) {
   let res;
   try {
@@ -42,5 +43,6 @@ export async function installShared(db, file, fetchFn = (...a) => fetch(...a)) {
   if (!res.ok) throw new LibraryError('Không tải được bài này.');
   const parsed = parseLessonText(await res.text());
   if (parsed.error) throw new LibraryError(parsed.error);
+  if (isSharePackage(parsed.data)) return { package: await installPackage(db, parsed.data, installLesson) };
   return installLesson(db, parsed.data);
 }

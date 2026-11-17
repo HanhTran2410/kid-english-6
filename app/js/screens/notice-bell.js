@@ -5,16 +5,18 @@ import { h, toast } from '../ui.js';
 import { APP_VERSION } from '../app.js';
 import { play } from '../speech/sfx.js';
 import { LibraryError, installShared } from '../library.js';
+import { installedText } from '../share.js';
 import { notices, noticeCount, onNotices, markLibrarySeen, applyUpdate } from '../notices.js';
 
 const sizeText = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const TRACK_VI = { phonics: 'Phonics', book: 'Theo sách' };
+const TRACK_VI = { phonics: 'Phonics', book: 'Theo sách', package: 'Gói chia sẻ' };
 
 /** Tải một bài trong thư viện về và cài. Trả về câu tóm tắt. */
 export async function importShared(app, f) {
-  const { lesson, replaced } = await installShared(app.db, f.file);
+  const r = await installShared(app.db, f.file);
   await markLibrarySeen(app, f.file);
-  return `${replaced ? 'Đã cập nhật' : 'Đã nhập'} bài "${lesson.title}"`;
+  if (r.package) return installedText(r.package);
+  return `${r.replaced ? 'Đã cập nhật' : 'Đã nhập'} bài "${r.lesson.title}"`;
 }
 export const errorText = (err) => (err instanceof LibraryError ? err.message : 'Không nhập được bài này.');
 

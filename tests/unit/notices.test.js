@@ -106,3 +106,23 @@ test('thư viện thật trong repo (app/shared/) không có bài lỗi', async 
   const { problems } = await describeShared();
   assert.deepEqual(problems, []);
 });
+
+test('script thư viện + cài từ thư viện: gói chia sẻ (SPEC 6.4) là một mục "package" (số bài / tranh / ảnh); gói lỗi thì báo; cài từ thư viện → { package }', async () => {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'shared-pkg-'));
+  const pkg = { kind: 'olly-share', version: 1, title: 'Sat, Party', lessons: [lesson()], scenes: [{ id: 'scene-p', title: 'Party', level: 2, sentences: [{ en: 'A cake.', vi: '', point: null }] }], images: [] };
+  await writeFile(path.join(dir, '01-goi.json'), JSON.stringify(pkg));
+  await writeFile(path.join(dir, '02-goi-loi.json'), JSON.stringify({ ...pkg, scenes: [{ title: '', sentences: [] }] }));
+  await writeFile(path.join(dir, '03-sat.json'), JSON.stringify(lesson())); // cùng bài với gói: không báo trùng
+  const { files, problems } = await describeShared(dir);
+  assert.deepEqual(files.map((f) => [f.file, f.track, f.lessons, f.scenes, f.images, f.title]), [
+    ['01-goi.json', 'package', 1, 1, 0, 'Sat, Party'], ['03-sat.json', 'phonics', undefined, undefined, undefined, lesson().title],
+  ]);
+  assert.equal(problems.length, 1);
+  assert.match(problems[0], /02-goi-loi\.json: gói chia sẻ lỗi/);
+  const db = await openDatabase(`lib-pkg-${Math.random()}`);
+  const r = await installShared(db, '01-goi.json', async () => ({ ok: true, text: async () => JSON.stringify(pkg) }));
+  assert.equal(r.package.lessons, 1);
+  assert.equal(r.package.scenes, 1);
+  assert.ok(await db.get('scenes', 'scene-p'));
+  db.close();
+});
