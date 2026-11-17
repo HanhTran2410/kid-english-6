@@ -4,7 +4,7 @@
 import { SOUND_IDS, spellGraphemes, learnedGraphemes, isDecodable, AFTER_GROUPS } from './phonics.js';
 
 export const LESSON_VERSION = 1;
-export const TRACKS = ['phonics', 'book'];
+export const TRACKS = ['phonics', 'book', 'topic']; // topic: bài AI soạn theo chủ đề (SPEC 5.8)
 
 /** Loại hoạt động → mục nó dùng (`words` / `sentences`), hoặc `sounds` (danh sách mã âm). */
 export const ACTIVITY_TYPES = {
@@ -57,7 +57,7 @@ export function validateLesson(data, { builtIn = false } = {}) {
   else if (!ID_RE.test(id)) errors.push(`"id" chỉ gồm chữ thường không dấu, số và dấu gạch ngang (đang là "${id}").`);
 
   const track = str(data.track);
-  if (!TRACKS.includes(track)) errors.push(`"track" phải là "phonics" hoặc "book" (đang là ${JSON.stringify(data.track)}).`);
+  if (!TRACKS.includes(track)) errors.push(`"track" phải là "phonics", "book" hoặc "topic" (đang là ${JSON.stringify(data.track)}).`);
 
   const title = str(data.title);
   if (!title) errors.push('Thiếu tên bài ("title").');

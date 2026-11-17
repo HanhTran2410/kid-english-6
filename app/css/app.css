@@ -982,3 +982,8 @@ circle.wr-ok { fill: #2f9e44; }
   .mt-wdot { width: 18px; height: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .mt-cell.glow, .mt-cell.nudge { animation: none; } }
+/* Chip chủ đề (Góc bố mẹ → Tạo bài theo chủ đề, SPEC 5.8) — như app Bông. */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.chip { padding: 8px 14px; border-radius: 999px; border: 2px solid transparent; background: #eef0fb; color: inherit; font: inherit; min-height: 40px; cursor: pointer; }
+.chip.active { border-color: #6c4fd8; background: #e5defc; }
+.chip-vi { color: #6b6f86; font-size: 0.9em; }

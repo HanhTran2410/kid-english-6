@@ -8,7 +8,7 @@ import { LibraryError, installShared } from '../library.js';
 import { notices, noticeCount, onNotices, markLibrarySeen, applyUpdate } from '../notices.js';
 
 const sizeText = (n) => (n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`);
-const TRACK_VI = { phonics: 'Phonics', book: 'Theo sách' };
+const TRACK_VI = { phonics: 'Phonics', book: 'Theo sách', topic: 'Theo chủ đề' };
 
 /** Tải một bài trong thư viện về và cài. Trả về câu tóm tắt. */
 export async function importShared(app, f) {

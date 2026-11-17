@@ -7,24 +7,29 @@ import { saveLesson, replaceLesson, deleteLesson } from '../../db.js';
 import { parentLayout, goParent, section, notice } from './common.js';
 import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
-import { createPanel } from './create.js';
+import { createPanel, topicPanel } from './create.js';
 import { BUILTIN_LESSONS } from '../../data/builtin-lessons.js';
 
-const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách' };
+const TRACK_LABEL = { phonics: '🔤 Phonics', book: '📘 Theo sách', topic: '🎯 Theo chủ đề' };
 
 export function lessonsView(app) {
   const body = parentLayout(app, { title: 'Bài học', back: () => goParent(app) });
   const listBox = h('div.lesson-list.my-lessons');
-  const refresh = () => renderList(app, listBox).catch((err) => {
-    console.error(err);
-    toast('Không đọc được danh sách bài.');
-  });
+  let topic = null;
+  const refresh = () => {
+    topic?.reload(); // mục Tạo bài theo chủ đề: mã bài + từ cần tránh theo danh sách bài mới
+    return renderList(app, listBox).catch((err) => {
+      console.error(err);
+      toast('Không đọc được danh sách bài.');
+    });
+  };
   const imp = importPanel(app, refresh);
   const focusImport = () => {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  body.append(createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
+  topic = topicPanel(app, { focusImport });
+  body.append(topic, createPanel(app, { focusImport }), imp, libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
   refresh();
 }
 

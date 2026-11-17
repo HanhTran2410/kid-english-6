@@ -72,3 +72,53 @@ test('Tạo bài theo sách: chép prompt, nháp không mất, dán kết quả 
   await card.click();
   await expect(page.locator('.tile-row .tile')).toHaveText(['c', 'a', 't']);
 });
+
+test('Tạo bài theo chủ đề (5.8): chọn chủ đề → chép prompt (id, chủ đề, số từ) → nháp còn sau khi tải lại → dán kết quả AI → bài ở tab 🎯 Chủ đề; tạo lần hai cùng chủ đề → id "-2", tránh từ đã học', async ({ page }) => {
+  await fakeSpeech(page);
+  await startApp(page);
+  await openParent(page);
+  await page.getByRole('button', { name: 'Bài học' }).click();
+  await page.getByRole('button', { name: 'Farm animals' }).click();
+  await expect(page.getByRole('textbox', { name: 'Chủ đề bài' })).toHaveValue('Farm animals');
+  await page.getByRole('combobox', { name: 'Số từ mới' }).selectOption('6');
+  await page.getByRole('button', { name: '📋 Chép prompt tạo bài theo chủ đề' }).click();
+  await expect(page.locator('.toast').last()).toContainText('Đã chép prompt');
+  let prompt = await page.evaluate(() => navigator.clipboard.readText());
+  expect(prompt).toContain('Chủ đề: "Farm animals" (Con vật nông trại).');
+  expect(prompt).toContain('Chọn đúng 6 từ MỚI');
+  expect(prompt).toContain('"id": "topic-farm-animals", "track": "topic"');
+
+  // Nháp còn sau khi tải lại app (chuyển sang app AI rồi quay lại).
+  await page.waitForTimeout(500);
+  await page.reload();
+  await page.getByRole('button', { name: 'Bắt đầu' }).click();
+  await openParent(page);
+  await page.getByRole('button', { name: 'Bài học' }).click();
+  await expect(page.getByRole('textbox', { name: 'Chủ đề bài' })).toHaveValue('Farm animals');
+  await expect(page.getByRole('combobox', { name: 'Số từ mới' })).toHaveValue('6');
+
+  const lesson = {
+    ...aiResult, id: 'topic-farm-animals', track: 'topic', book: null, unit: 'Farm animals', title: 'Farm animals', titleVi: 'Con vật nông trại',
+  };
+  await page.locator('textarea[placeholder^="Dán JSON"]').fill(JSON.stringify(lesson));
+  await page.getByRole('button', { name: 'Kiểm tra' }).click();
+  await page.getByRole('button', { name: /Lưu bài/ }).click();
+  await expect(page.locator('.my-lessons .lesson-row')).toContainText('🎯 Theo chủ đề');
+
+  // Lần hai cùng chủ đề: id "-2", tên "Farm animals 2", không chọn lại từ của bài trước.
+  await page.getByRole('button', { name: '📋 Chép prompt tạo bài theo chủ đề' }).click();
+  prompt = await page.evaluate(() => navigator.clipboard.readText());
+  expect(prompt).toContain('"id": "topic-farm-animals-2"');
+  expect(prompt).toContain('"title" = "Farm animals 2"');
+  expect(prompt).toMatch(/KHÔNG chọn lại .*cat, dog, pig, fish, zoo/);
+
+  // Bé: Tập đọc → tab 🎯 Chủ đề.
+  await page.getByRole('button', { name: '← Quay lại' }).click();
+  await page.getByRole('button', { name: /Về màn hình của bé/ }).click();
+  await page.getByRole('button', { name: 'Tập đọc' }).click();
+  await page.getByRole('button', { name: '🎯 Chủ đề' }).click();
+  const card = page.locator('.lesson-card[data-lesson="topic-farm-animals"]');
+  await expect(card).toContainText('Farm animals');
+  await card.click();
+  await expect(page.locator('.tile-row .tile')).toHaveText(['c', 'a', 't']);
+});

@@ -342,6 +342,14 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
    - Câu theo mẫu câu của Unit; hội thoại ngắn có câu hỏi + câu mẫu + phần đầu câu + từ khóa (3.3).
 - Kết quả đi qua kiểm tra 5.5 như mọi JSON nhập vào.
 
+### 5.8. 🎯 Tạo bài theo chủ đề (0.11.4, bố mẹ yêu cầu 2026-11-17 — làm theo cách tạo bài của app Bông)
+Cách thứ hai, **thêm** bên cạnh bài theo sách (5.1, 5.7 giữ nguyên): bố mẹ **không cần danh sách từ** — chọn chủ đề, AI tự chọn từ và soạn cả bài.
+- **Mạch mới `track: "topic"`**: khu học có tab **🎯 Chủ đề** (sau 📘 Theo sách); Góc bố mẹ ghi "🎯 Theo chủ đề". `unit` = tên chủ đề, `book` = null.
+- **Góc bố mẹ → Bài học → "🎯 Tạo bài theo chủ đề (dùng AI)"** (mục đầu tiên): chip 24 chủ đề quen với bé lớp 1 (Animals, Farm animals, Food, Fruits, Colors, Toys, Family, My body, Clothes, Feelings, Weather, School things, My house, In the kitchen, Vehicles, Jobs, Sports, Actions, Nature, At the park…) hoặc tự gõ; **Số từ mới** 6 / 8 / 10; **Bé đã học Phonics tới** nhóm 1–7; nút **📋 Chép prompt tạo bài theo chủ đề** → dán vào AI → dán kết quả vào ô "Nhập bài (JSON)" (kiểm tra 5.5, lưu như mọi bài). Nháp lưu ở `topicDraft`.
+- **Prompt** (`topicLessonPrompt`): AI chọn đúng N từ **mới** — cụ thể, quen thuộc hằng ngày, dễ vẽ, có emoji; khoảng **một nửa đọc được bằng âm bé đã học** (để ghép âm), còn lại có thể là tricky; không chọn từ hiếm / trừu tượng cho đủ số. Phần còn lại giống bài theo sách (cùng yêu cầu: emoji, `explainVi`, tách ô chữ Jolly + bảng âm, hoạt động blend / tricky / spell / fill, một hội thoại 3–5 lượt) và 2–4 câu mẫu ngắn về chủ đề.
+- **Không lặp từ đã học** (như app Bông): từ của các bài **cùng chủ đề** luôn đưa hết vào prompt ("KHÔNG chọn lại, kể cả số ít / số nhiều"), từ các bài khác tối đa 80; từ đã học vẫn được xuất hiện trong câu / hội thoại để ôn. Bố mẹ xem được danh sách (bấm để mở).
+- **Mã bài không ghi đè:** `topic-<chủ đề>`, đã có thì `-2`, `-3`… (tên "Animals 2"); danh sách bài đọc lại mỗi khi lưu / xóa bài.
+
 ## 6. Góc bố mẹ
 
 ### 6.1. Cài đặt
@@ -407,6 +415,8 @@ Hai bước, để bố mẹ luôn kiểm soát danh sách từ:
 | 0.11.0 *(xong)* | 🔢 Toán phần 2 — Math-d (SPEC-math2.md, ghi chú 12): khay thẻ số dùng chung (bẫy có nghĩa trước, vị trí đáp án cân bằng, thẻ sai mờ tại chỗ), khung 10 ô, câu đọc `mathSentence`, `problemKey` + tránh bài vừa gặp. **🍎 T8 How many more?** (hai người cùng loại đồ, người nhiều hơn ở hàng trên / dưới ngẫu nhiên; mức 1 có dây nối, mức 3 hai hàng lệch → sai thì xếp lại thành cột rồi nối dây) · **🐞 T9 Number bonds** (bọ rùa + khung 10 ô cùng một bộ chấm, cánh úp có ?; mức 3 ≥ 3 mục "đôi bạn của 10", có 🔍; cánh 0 chấm). Bảng bài mẫu MATH2-SAMPLES.md |
 | 0.11.1 *(xong)* | 🔢 Toán phần 2 — Math-e (SPEC-math2.md, ghi chú 13): **➕ T10 Add it up** (câu chuyện + khung 10 ô có đồ ở mức 1–2, mức 3 chỉ phép tính; mức 1 đếm hết, mức 2 đếm tiếp từ số ban đầu, mức 3 từ số lớn hơn + cặp đổi chỗ `2 + 5 = 5 + 2` + cộng 0) · **➖ T11 Take away** (đồ bị bớt ở nguyên ô, bị gạch; đếm phần còn lại; mức 3 có trừ 0 và trừ hết). Thẻ T10, T11 có dòng gợi ý học Tách – gộp số trước (không khóa). Bảng bài mẫu MATH2-SAMPLES.md thêm T10, T11 |
 | 0.11.2 *(xong)* | 🔢 Toán phần 2 — Math-f (SPEC-math2.md, ghi chú 14): **✏️ T12 Story sums** — 24 câu đố đã duyệt, hai bước trong một mục: chọn **+ add** / **− take away** (sai → sáng cụm chữ quyết định + "more or fewer?"), rồi chọn kết quả với phép tính + khung 10 ô có đồ (gợi ý như T10 / T11); lượt 4 cộng + 4 trừ, mức 3 có 2 + 2 câu đánh lừa (*gives* hai chiều, *more* trong bài trừ, cộng không có *more*); chấm cả hai bước, Góc bố mẹ thấy tỉ lệ chọn đúng dấu; ra nền quay lại đúng bước. Khung 10 ô + phép tính + khay dùng chung T10 → T12. Bảng bài mẫu MATH2-SAMPLES.md thêm T12 |
+| 0.11.3 *(xong)* | 🖼️ Tả tranh: tranh mới theo chủ đề, khung đối tượng làm vùng chạm, kiểm tra từng câu ([SPEC-ta-tranh.md](SPEC-ta-tranh.md) mục 4.5, 8.5, 8.6) |
+| 0.11.4 *(xong)* | 🎯 Tạo bài theo chủ đề (mục 5.8): mạch `topic` + tab 🎯 Chủ đề, chọn chủ đề → prompt → AI tự chọn từ không lặp từ đã học |
 | 0.9.0 *(xong)* | 🔢 Math-b + Math-c ([SPEC-math.md](SPEC-math.md); bố mẹ chọn làm trước Quest 2026-11-11): T4 Xếp số (first / next / next / last, mức 3 lớn → nhỏ), T5 Tia số (ếch nhảy từng bước; after / before → between → one more / one less), T7 Đọc và so sánh (câu đố 3 câu karaoke, chạm nhân vật; số tới 20 khi đã có ⭐⭐ ở T5) — danh sách Toán đủ T1 → T7 |
 | xen kẽ | Góc bố mẹ: tiến độ, nghe lại ghi âm, sao lưu |
 

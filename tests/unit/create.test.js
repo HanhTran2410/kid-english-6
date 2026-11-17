@@ -133,3 +133,32 @@ test('prompt vẽ tranh Tả tranh theo các câu: đủ mọi câu, cảnh chun
   for (const s of SCENE_BY_ID.get('scene-park').sentences.slice(1)) assert.ok(p.includes(`- ${s.en}`), s.en);
   assert.match(p, /No text anywhere/);
 });
+
+test('SPEC 5.8 — tạo bài theo chủ đề: mã bài không ghi đè; từ cần tránh (cùng chủ đề hết, bài khác tối đa 80); prompt có chủ đề, số từ, id, track topic, danh sách tránh; ví dụ trong prompt là bài hợp lệ', async () => {
+  const { topicLessonId, topicAvoidWords, topicLessonPrompt, LESSON_TOPICS, MAX_TOPIC_AVOID } = await import('../../app/js/lesson-prompts.js');
+  assert.equal(topicLessonId('Farm animals'), 'topic-farm-animals');
+  assert.equal(topicLessonId('Farm animals', ['topic-farm-animals']), 'topic-farm-animals-2');
+  assert.equal(topicLessonId('Farm animals', ['topic-farm-animals', 'topic-farm-animals-2']), 'topic-farm-animals-3');
+  assert.ok(LESSON_TOPICS.length >= 20);
+  const lessons = [
+    { track: 'topic', unit: 'Animals', words: [{ en: 'Cat' }, { en: 'dog' }] },
+    { track: 'book', unit: 'Unit 1', words: [{ en: 'red' }, { en: 'cat' }] },
+    { track: 'phonics', words: Array.from({ length: 120 }, (_, i) => ({ en: `w${i}` })) },
+  ];
+  const avoid = topicAvoidWords(lessons, 'animals');
+  assert.deepEqual(avoid.sameTopic, ['cat', 'dog']);
+  assert.ok(avoid.others.includes('red') && !avoid.others.includes('cat'));
+  assert.equal(avoid.others.length, MAX_TOPIC_AVOID);
+  const p = topicLessonPrompt({ topic: 'Animals', topicVi: 'Con vật', count: 6, group: 3, id: 'topic-animals-2', title: 'Animals 2', avoid });
+  assert.match(p, /Chủ đề: "Animals" \(Con vật\)/);
+  assert.match(p, /Chọn đúng 6 từ MỚI/);
+  assert.match(p, /"id": "topic-animals-2", "track": "topic", "book": null, "unit": "Animals"/);
+  assert.match(p, /"title" = "Animals 2"/);
+  assert.match(p, /KHÔNG chọn lại .*: cat, dog\./);
+  assert.match(p, /Tách ô chữ \(Phonics kiểu Jolly\)/);
+  const example = JSON.parse(p.slice(p.indexOf('{', p.indexOf('VÍ DỤ CẤU TRÚC'))));
+  const v = validateLesson(example);
+  assert.equal(v.ok, true, (v.errors ?? []).join('; '));
+  assert.equal(v.lesson.track, 'topic');
+  assert.doesNotMatch(topicLessonPrompt({ topic: 'Toys', id: 'topic-toys', title: 'Toys' }), /KHÔNG chọn lại|Cũng đã học ở bài khác/); // chưa có bài nào: không có danh sách tránh
+});

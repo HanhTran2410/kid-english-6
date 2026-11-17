@@ -2,9 +2,12 @@
 // Bước 1: prompt lấy danh sách từ + mẫu câu từ ảnh trang sách → bố mẹ dán vào ô, xem và sửa.
 // Bước 2: prompt tạo gói bài JSON → bố mẹ dán kết quả vào ô "Nhập bài (JSON)" ngay bên dưới (kiểm tra + lưu như mọi bài).
 // Nháp lưu vào cài đặt (`bookDraft`) sau mỗi lần gõ: chuyển sang app AI rồi quay lại (iOS có thể tải lại app) không mất chữ.
+// SPEC 5.8: 🎯 Tạo bài theo chủ đề (`topicPanel`) — chọn chủ đề, AI tự chọn từ (không lặp từ đã học); nháp `topicDraft`.
 
 import { h, toast, copyText } from '../../ui.js';
-import { BOOKS, wordListPrompt, lessonPrompt, bookLessonId } from '../../lesson-prompts.js';
+import {
+  BOOKS, wordListPrompt, lessonPrompt, bookLessonId, LESSON_TOPICS, TOPIC_WORD_COUNTS, topicLessonId, topicAvoidWords, topicLessonPrompt,
+} from '../../lesson-prompts.js';
 import { section, field } from './common.js';
 
 const OTHER = '__other__';
@@ -91,4 +94,72 @@ export function createPanel(app, { focusImport }) {
     h('h3.step', { text: 'Bước 2 — Tạo bài' }),
     h('p.field-hint', { text: 'Bấm "Chép prompt 2", dán vào AI. AI trả về một khối JSON — dán vào ô "Nhập bài (JSON)" ngay bên dưới, bấm Kiểm tra rồi Lưu bài.' }),
     copy2);
+}
+
+// ---------- 🎯 Tạo bài theo chủ đề (SPEC 5.8 — cách tạo bài của app Bông): chọn chủ đề → chép prompt → AI tự chọn từ ----------
+export function topicPanel(app, { focusImport }) {
+  const draft = { topic: 'Animals', topicVi: 'Con vật', count: 8, group: app.settings.bookDraft?.group ?? 3, ...(app.settings.topicDraft ?? {}) };
+  // Danh sách bài để tránh từ đã học + đặt mã bài không trùng; đọc lại mỗi khi có bài được lưu / xóa (`panel.reload`),
+  // vì nút chép phải chạy ngay trong lúc chạm, không kịp đọc kho.
+  let lessons = [];
+  const reload = () => app.db.getAll('lessons').then((list) => { lessons = list; refreshAvoid(); }).catch(() => {});
+  reload();
+  const save = () => app.setSetting('topicDraft', { ...draft }).catch(() => {});
+
+  const topicInput = h('input', { type: 'text', value: draft.topic, placeholder: 'Ví dụ: Animals, My house…', 'aria-label': 'Chủ đề bài' });
+  const chips = h('div.chips', {}, ...LESSON_TOPICS.map(([en, vi]) => h('button.chip', {
+    type: 'button', 'aria-label': en,
+    onclick: () => {
+      draft.topic = topicInput.value = en;
+      draft.topicVi = vi;
+      save();
+      refreshAvoid();
+    },
+  }, en, h('span.chip-vi', { text: ` · ${vi}` }))));
+  topicInput.addEventListener('input', () => {
+    draft.topic = topicInput.value;
+    draft.topicVi = LESSON_TOPICS.find(([en]) => en.toLowerCase() === draft.topic.trim().toLowerCase())?.[1] ?? '';
+    save();
+    refreshAvoid();
+  });
+  const countSel = h('select', { 'aria-label': 'Số từ mới' }, ...TOPIC_WORD_COUNTS.map((n) => h('option', { value: String(n), text: `${n} từ`, selected: n === Number(draft.count) })));
+  countSel.addEventListener('change', () => { draft.count = Number(countSel.value); save(); });
+  const groupSel = h('select', { 'aria-label': 'Nhóm âm đã học (chủ đề)' }, ...[1, 2, 3, 4, 5, 6, 7].map((g) => h('option', { value: String(g), text: `Nhóm ${g}`, selected: g === Number(draft.group) })));
+  groupSel.addEventListener('change', () => { draft.group = Number(groupSel.value); save(); });
+
+  const avoidInfo = h('div.avoid-info');
+  const name = () => draft.topic.trim();
+  function refreshAvoid() {
+    for (const chip of chips.children) chip.classList.toggle('active', chip.getAttribute('aria-label').toLowerCase() === name().toLowerCase());
+    if (!name()) return avoidInfo.replaceChildren();
+    const { sameTopic, others } = topicAvoidWords(lessons, name());
+    avoidInfo.replaceChildren(...[
+      sameTopic.length ? h('details', {}, h('summary', { text: `🚫 Không lặp ${sameTopic.length} từ của các bài "${name()}" trước — bấm để xem` }), h('p.avoid-words', { text: sameTopic.join(', ') })) : null,
+      others.length ? h('details', {}, h('summary', { text: `🚫 Không lặp ${others.length} từ ở các bài khác — bấm để xem` }), h('p.avoid-words', { text: others.join(', ') })) : null,
+    ].filter(Boolean));
+  }
+  refreshAvoid();
+
+  // Copy phải gọi NGAY trong lúc chạm (trước mọi await) — Safari iOS chặn nếu đã qua một bước chờ.
+  const copyBtn = h('button.btn.primary', {
+    type: 'button', text: '📋 Chép prompt tạo bài theo chủ đề',
+    onclick: () => {
+      if (!name()) return toast('Chọn hoặc gõ chủ đề trước nhé.');
+      const id = topicLessonId(name(), lessons.map((l) => l.id));
+      // Bài thứ hai cùng chủ đề trở đi: "Animals 2", "Animals 3"… (khớp hậu tố của id).
+      const n = id === topicLessonId(name()) ? '' : ` ${id.split('-').pop()}`;
+      const title = `${name().charAt(0).toUpperCase()}${name().slice(1)}${n}`;
+      const prompt = topicLessonPrompt({ topic: name(), topicVi: draft.topicVi, count: draft.count, group: draft.group, id, title, avoid: topicAvoidWords(lessons, name()) });
+      copyText(prompt).then((ok) => {
+        toast(ok ? 'Đã chép prompt. Dán vào ChatGPT / Claude / Gemini, rồi dán kết quả vào ô "Nhập bài (JSON)" bên dưới.' : 'Không chép được — hãy thử lại.', 5000);
+        if (ok) focusImport();
+      });
+    },
+  });
+
+  const panel = section('🎯 Tạo bài theo chủ đề (dùng AI)',
+    h('p.field-hint', { text: 'Không cần danh sách từ: chọn chủ đề → bấm "Chép prompt", dán vào AI. AI tự chọn từ mới (không lặp từ bé đã học) và soạn cả bài: từ, ghép âm, câu, hội thoại. Dán kết quả vào ô "Nhập bài (JSON)" bên dưới, bấm Kiểm tra rồi Lưu bài. Bài nằm ở tab 🎯 Chủ đề.' }),
+    chips, field('Chủ đề', topicInput), field('Số từ mới', countSel), field('Bé đã học Phonics tới', groupSel, 'Để AI chọn một nửa số từ bé tự ghép âm được.'),
+    avoidInfo, copyBtn);
+  return Object.assign(panel, { reload });
 }

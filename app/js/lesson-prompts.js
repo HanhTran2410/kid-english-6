@@ -33,44 +33,71 @@ function soundTable(group) {
   return lines.join('\n');
 }
 
+/** Ví dụ cấu trúc gói bài (SPEC 5.4) cho prompt; `meta`: id, track, book, unit, title, titleVi. */
+const exampleLesson = (meta) => ({
+  version: 1,
+  kind: 'lesson',
+  ...meta,
+  words: [
+    { id: 'cat', en: 'cat', vi: 'con mèo', emoji: '🐱', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'], explainVi: '"cat" nghĩa là con mèo.' },
+    { id: 'hello', en: 'hello', vi: 'xin chào', emoji: '👋', tags: ['tricky'], explainVi: '"hello" là lời chào.' },
+  ],
+  sentences: [{ id: 's1', en: 'This is a cat.', vi: 'Đây là con mèo.' }],
+  dialogues: [{
+    id: 'd1',
+    title: 'What is it?',
+    titleVi: 'Đây là gì?',
+    partner: { name: 'Mimi', emoji: '🐱' },
+    turns: [
+      { id: 't1', ask: 'What is it?', askVi: 'Đây là con gì?', answer: 'It is a cat.', answerVi: 'Đó là con mèo.', starter: 'It is a', keywords: ['cat'], emoji: '🐱', reply: 'Meow!' },
+    ],
+  }],
+  activities: [
+    { type: 'blend', items: ['cat'] },
+    { type: 'tricky', items: ['hello'] },
+    { type: 'spell', items: ['cat'] },
+    { type: 'fill', items: ['cat'] },
+    { type: 'talk', items: ['d1'] },
+  ],
+});
+
+/**
+ * Yêu cầu 3–8 dùng chung cho bài theo sách và bài theo chủ đề: từ (emoji, giải thích), tách ô chữ Phonics, câu, hoạt động,
+ * tên bài, hội thoại. `sentencesRule` / `titleRule` / `dialogueAbout`: phần khác nhau giữa hai cách tạo bài.
+ */
+function sharedRules(group, { wordsRule, sentencesRule, titleRule, dialogueAbout }) {
+  const learned = [...learnedGraphemes(group)].join(' ');
+  return [
+    `3. ${wordsRule}: "id" = từ viết thường, khoảng trắng thay bằng "-"; "en"; "vi" (nghĩa ngắn, tự nhiên);`,
+    '   "emoji" (MỘT emoji thể hiện rõ nghĩa — không có emoji rõ thì bỏ trường này); "explainVi" (1 câu tiếng Việt ngắn giải thích từ cho bé).',
+    '4. Tách ô chữ (Phonics kiểu Jolly): nếu từ đọc được hoàn toàn bằng các nhóm chữ trong bảng dưới thì thêm',
+    '   "graphemes" (các ô, ghép lại đúng bằng từ) và "sounds" (mã âm, cùng số phần tử). Mã âm = chính grapheme, TRỪ: c, k, ck → "k";',
+    '   th trong this/that/the → "th-v", th trong thin/three → "th"; oo trong moon/zoo → "oo-l", oo trong book/look → "oo".',
+    '   Chữ đôi ll, ss, ff, zz là MỘT ô, mã âm là chữ đơn (vd. bell = ["b","e","ll"], sounds ["b","e","l"]).',
+    '   CHỈ tách ô khi MỖI ô đọc đúng âm chuẩn của nó trong từ, và chỉ dùng các nhóm chữ có trong bảng.',
+    '   Ngược lại → KHÔNG có graphemes/sounds, thêm "tags": ["tricky"]. Ví dụ tricky: one, two, the, said, hello,',
+    '   ball (chữ a không đọc /a/), pencil (c đọc /s/), teacher (ea), play (ay), happy (y cuối từ), yellow (ow cuối từ).',
+    soundTable(group),
+    `   Bé đã học các nhóm chữ: ${learned}. Từ có nhóm chữ CHƯA học vẫn tách ô bình thường nếu đúng quy tắc.`,
+    `5. ${sentencesRule}`,
+    '6. "activities": "blend" = mọi từ có graphemes; "tricky" = các từ không có graphemes;',
+    '   "spell" = tối đa 6 từ có graphemes VÀ có emoji; "fill" = tối đa 4 từ khác có graphemes và emoji (không trùng spell). Bỏ hoạt động nào rỗng.',
+    `7. ${titleRule}`,
+    `8. "dialogues": MỘT hội thoại 3–5 lượt luyện nói ${dialogueAbout}. Mỗi lượt: "ask" (bạn Mimi hỏi,`,
+    '   ≤ 10 từ), "askVi", "answer" (câu mẫu bé trả lời, ≤ 8 từ, ngắn và tự nhiên), "answerVi", "starter" (phần đầu của "answer",',
+    '   bé nói tiếp phần còn lại), "keywords" (1–3 từ chính bé phải nói; nếu có nhiều cách trả lời đúng như yes / no thì ghi cả hai),',
+    '   "emoji" (hình cho câu hỏi, nếu có), "reply" (Mimi đáp lại ngắn, không bắt buộc). Câu hỏi về bé dùng {name} cho tên bé,',
+    '   ví dụ "answer": "My name is {name}.". Thêm hoạt động { "type": "talk", "items": ["d1"] }.',
+  ];
+}
+
 /**
  * Prompt bước 2: tạo gói bài JSON theo đúng cấu trúc SPEC 5.4 từ danh sách từ / mẫu câu bố mẹ đã xem lại.
  * @param {{ book: string, unit: string, unitTitle?: string, words: string, patterns?: string, group?: number }} p
  */
 export function lessonPrompt({ book, unit, unitTitle = '', words, patterns = '', group = 3 }) {
   const id = bookLessonId(book, unit);
-  const learned = [...learnedGraphemes(group)].join(' ');
-  const example = {
-    version: 1,
-    kind: 'lesson',
-    id,
-    track: 'book',
-    book,
-    unit,
-    title: `${unit}${unitTitle ? `: ${unitTitle}` : ''}`,
-    titleVi: '…tên Unit bằng tiếng Việt…',
-    words: [
-      { id: 'cat', en: 'cat', vi: 'con mèo', emoji: '🐱', graphemes: ['c', 'a', 't'], sounds: ['k', 'a', 't'], explainVi: '"cat" nghĩa là con mèo.' },
-      { id: 'hello', en: 'hello', vi: 'xin chào', emoji: '👋', tags: ['tricky'], explainVi: '"hello" là lời chào.' },
-    ],
-    sentences: [{ id: 's1', en: 'This is a cat.', vi: 'Đây là con mèo.' }],
-    dialogues: [{
-      id: 'd1',
-      title: 'What is it?',
-      titleVi: 'Đây là gì?',
-      partner: { name: 'Mimi', emoji: '🐱' },
-      turns: [
-        { id: 't1', ask: 'What is it?', askVi: 'Đây là con gì?', answer: 'It is a cat.', answerVi: 'Đó là con mèo.', starter: 'It is a', keywords: ['cat'], emoji: '🐱', reply: 'Meow!' },
-      ],
-    }],
-    activities: [
-      { type: 'blend', items: ['cat'] },
-      { type: 'tricky', items: ['hello'] },
-      { type: 'spell', items: ['cat'] },
-      { type: 'fill', items: ['cat'] },
-      { type: 'talk', items: ['d1'] },
-    ],
-  };
+  const example = exampleLesson({ id, track: 'book', book, unit, title: `${unit}${unitTitle ? `: ${unitTitle}` : ''}`, titleVi: '…tên Unit bằng tiếng Việt…' });
   return [
     'Bạn soạn MỘT bài học tiếng Anh cho bé 6 tuổi (lớp 1, Việt Nam) cho app Olly English.',
     `Sách: ${book}. ${unit}${unitTitle ? ` — ${unitTitle}` : ''}.`,
@@ -82,28 +109,85 @@ export function lessonPrompt({ book, unit, unitTitle = '', words, patterns = '',
     'YÊU CẦU:',
     '1. Trả về DUY NHẤT một object JSON hợp lệ đúng cấu trúc ví dụ bên dưới. Không Markdown, không giải thích.',
     `2. Giữ nguyên: "version": 1, "kind": "lesson", "id": "${id}", "track": "book", "book", "unit".`,
-    '3. Mỗi từ trong danh sách là một mục trong "words": "id" = từ viết thường, khoảng trắng thay bằng "-"; "en"; "vi" (nghĩa ngắn, tự nhiên);',
-    '   "emoji" (MỘT emoji thể hiện rõ nghĩa — không có emoji rõ thì bỏ trường này); "explainVi" (1 câu tiếng Việt ngắn giải thích từ cho bé).',
-    '4. Tách ô chữ (Phonics kiểu Jolly): nếu từ đọc được hoàn toàn bằng các nhóm chữ trong bảng dưới thì thêm',
-    '   "graphemes" (các ô, ghép lại đúng bằng từ) và "sounds" (mã âm, cùng số phần tử). Mã âm = chính grapheme, TRỪ: c, k, ck → "k";',
-    '   th trong this/that/the → "th-v", th trong thin/three → "th"; oo trong moon/zoo → "oo-l", oo trong book/look → "oo".',
-    '   Chữ đôi ll, ss, ff, zz là MỘT ô, mã âm là chữ đơn (vd. bell = ["b","e","ll"], sounds ["b","e","l"]).',
-    '   CHỈ tách ô khi MỖI ô đọc đúng âm chuẩn của nó trong từ, và chỉ dùng các nhóm chữ có trong bảng.',
-    '   Ngược lại → KHÔNG có graphemes/sounds, thêm "tags": ["tricky"]. Ví dụ tricky: one, two, the, said, hello,',
-    '   ball (chữ a không đọc /a/), pencil (c đọc /s/), teacher (ea), play (ay), happy (y cuối từ), yellow (ow cuối từ).',
-    soundTable(group),
-    `   Bé đã học các nhóm chữ: ${learned}. Từ có nhóm chữ CHƯA học vẫn tách ô bình thường nếu đúng quy tắc.`,
-    '5. "sentences": mỗi mẫu câu một mục ("id": s1, s2…; "en"; "vi"). Không có mẫu câu thì để [].',
-    '6. "activities": "blend" = mọi từ có graphemes; "tricky" = các từ không có graphemes;',
-    '   "spell" = tối đa 6 từ có graphemes VÀ có emoji; "fill" = tối đa 4 từ khác có graphemes và emoji (không trùng spell). Bỏ hoạt động nào rỗng.',
-    '7. "title" = tên Unit bằng tiếng Anh, "titleVi" = tên Unit bằng tiếng Việt.',
-    '8. "dialogues": MỘT hội thoại 3–5 lượt luyện nói theo mẫu câu của Unit, dùng từ trong danh sách. Mỗi lượt: "ask" (bạn Mimi hỏi,',
-    '   ≤ 10 từ), "askVi", "answer" (câu mẫu bé trả lời, ≤ 8 từ, ngắn và tự nhiên), "answerVi", "starter" (phần đầu của "answer",',
-    '   bé nói tiếp phần còn lại), "keywords" (1–3 từ chính bé phải nói; nếu có nhiều cách trả lời đúng như yes / no thì ghi cả hai),',
-    '   "emoji" (hình cho câu hỏi, nếu có), "reply" (Mimi đáp lại ngắn, không bắt buộc). Câu hỏi về bé dùng {name} cho tên bé,',
-    '   ví dụ "answer": "My name is {name}.". Thêm hoạt động { "type": "talk", "items": ["d1"] }.',
+    ...sharedRules(group, {
+      wordsRule: 'Mỗi từ trong danh sách là một mục trong "words"',
+      sentencesRule: '"sentences": mỗi mẫu câu một mục ("id": s1, s2…; "en"; "vi"). Không có mẫu câu thì để [].',
+      titleRule: '"title" = tên Unit bằng tiếng Anh, "titleVi" = tên Unit bằng tiếng Việt.',
+      dialogueAbout: 'theo mẫu câu của Unit, dùng từ trong danh sách',
+    }),
     '',
     'VÍ DỤ CẤU TRÚC (thay bằng nội dung thật của Unit):',
+    JSON.stringify(example, null, 2),
+  ].join('\n');
+}
+
+// ---------- Tạo bài theo chủ đề (SPEC 5.8 — cách tạo bài của app Bông): AI tự chọn từ ----------
+/** Chủ đề gợi ý: [tiếng Anh (đưa vào prompt, tên bài), tiếng Việt]. Bố mẹ cũng gõ chủ đề khác được. */
+export const LESSON_TOPICS = [
+  ['Animals', 'Con vật'], ['Farm animals', 'Con vật nông trại'], ['Sea animals', 'Con vật dưới biển'], ['Bugs', 'Côn trùng'],
+  ['Food', 'Đồ ăn'], ['Fruits', 'Hoa quả'], ['Vegetables', 'Rau củ'], ['Drinks', 'Đồ uống'], ['Colors', 'Màu sắc'],
+  ['Toys', 'Đồ chơi'], ['Family', 'Gia đình'], ['My body', 'Cơ thể'], ['Clothes', 'Quần áo'], ['Feelings', 'Cảm xúc'],
+  ['Weather', 'Thời tiết'], ['School things', 'Đồ dùng học tập'], ['My house', 'Ngôi nhà'], ['In the kitchen', 'Trong bếp'],
+  ['Vehicles', 'Xe cộ'], ['Jobs', 'Nghề nghiệp'], ['Sports', 'Thể thao'], ['Actions', 'Hành động'], ['Nature', 'Thiên nhiên'],
+  ['At the park', 'Ở công viên'],
+];
+export const TOPIC_WORD_COUNTS = [6, 8, 10];
+export const MAX_TOPIC_AVOID = 80; // từ của bài khác chủ đề đưa vào prompt tối đa bao nhiêu (từ cùng chủ đề luôn đưa hết)
+
+/** Mã bài theo chủ đề: "topic-animals", trùng thì "topic-animals-2", "-3"… (không ghi đè bài cũ). */
+export function topicLessonId(topic, takenIds = []) {
+  const base = `topic-${slug(topic) || 'chu-de'}`;
+  const taken = new Set(takenIds);
+  if (!taken.has(base)) return base;
+  let n = 2;
+  while (taken.has(`${base}-${n}`)) n++;
+  return `${base}-${n}`;
+}
+
+/**
+ * Từ cần tránh (đã học ở bài khác): từ của các bài CÙNG chủ đề (`unit` trùng, không phân biệt hoa thường) luôn đưa hết;
+ * từ bài khác tối đa MAX_TOPIC_AVOID. @returns {{ sameTopic: string[], others: string[] }}
+ */
+export function topicAvoidWords(lessons, topic) {
+  const key = String(topic).trim().toLowerCase();
+  const words = (list) => [...new Set(list.flatMap((l) => (l.words ?? []).map((w) => String(w.en).trim().toLowerCase())).filter(Boolean))];
+  const same = lessons.filter((l) => l.track === 'topic' && String(l.unit ?? '').trim().toLowerCase() === key);
+  const sameTopic = words(same);
+  const set = new Set(sameTopic);
+  const others = words(lessons.filter((l) => !same.includes(l))).filter((w) => !set.has(w)).slice(0, MAX_TOPIC_AVOID);
+  return { sameTopic, others };
+}
+
+/**
+ * Prompt tạo bài theo chủ đề: AI tự chọn `count` từ mới (cụ thể, quen thuộc với bé 6 tuổi, một phần đọc được bằng âm đã học),
+ * tránh từ đã học, rồi soạn cả gói bài như bài theo sách (cùng yêu cầu 3–8).
+ * @param {{ topic: string, topicVi?: string, count?: number, group?: number, id: string, title: string, avoid?: { sameTopic: string[], others: string[] } }} p
+ */
+export function topicLessonPrompt({ topic, topicVi = '', count = 8, group = 3, id, title, avoid = { sameTopic: [], others: [] } }) {
+  const example = exampleLesson({ id, track: 'topic', book: null, unit: topic, title, titleVi: topicVi || '…tên chủ đề bằng tiếng Việt…' });
+  return [
+    'Bạn soạn MỘT bài học tiếng Anh cho bé 6 tuổi (lớp 1, Việt Nam) cho app Olly English.',
+    `Chủ đề: "${topic}"${topicVi ? ` (${topicVi})` : ''}.`,
+    '',
+    'CHỌN TỪ:',
+    `- Chọn đúng ${count} từ MỚI về chủ đề này: danh từ / động từ cụ thể, quen thuộc hằng ngày với bé 6 tuổi, dễ vẽ, có emoji rõ nghĩa.`,
+    '- Khoảng một nửa số từ nên ĐỌC ĐƯỢC bằng các âm bé đã học (bảng ở yêu cầu 4) để bé tập ghép âm; số còn lại có thể là tricky word.',
+    '- Không chọn từ hiếm, trừu tượng hay khó chỉ để cho đủ số từ.',
+    ...(avoid.sameTopic.length ? [`- QUAN TRỌNG — bé đã học các từ này ở bài "${topic}" trước, KHÔNG chọn lại (kể cả dạng số ít / số nhiều): ${avoid.sameTopic.join(', ')}.`] : []),
+    ...(avoid.others.length ? [`- Cũng đã học ở bài khác — không chọn làm từ mới: ${avoid.others.join(', ')}.`] : []),
+    ...(avoid.sameTopic.length || avoid.others.length ? ['  Các từ đã học vẫn được xuất hiện tự nhiên trong câu và hội thoại để bé ôn lại.'] : []),
+    '',
+    'YÊU CẦU:',
+    '1. Trả về DUY NHẤT một object JSON hợp lệ đúng cấu trúc ví dụ bên dưới. Không Markdown, không giải thích.',
+    `2. Giữ nguyên: "version": 1, "kind": "lesson", "id": "${id}", "track": "topic", "book": null, "unit": "${topic}".`,
+    ...sharedRules(group, {
+      wordsRule: `Mỗi từ đã chọn là một mục trong "words" (đúng ${count} mục)`,
+      sentencesRule: '"sentences": 2–4 câu mẫu ngắn (≤ 7 từ) về chủ đề, dùng các từ của bài ("id": s1, s2…; "en"; "vi").',
+      titleRule: `"title" = "${title}", "titleVi" = tên chủ đề bằng tiếng Việt.`,
+      dialogueAbout: 'về chủ đề, dùng từ và câu mẫu của bài',
+    }),
+    '',
+    'VÍ DỤ CẤU TRÚC (thay bằng nội dung thật của bài):',
     JSON.stringify(example, null, 2),
   ].join('\n');
 }
