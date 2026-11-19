@@ -277,6 +277,8 @@ export const NOT_DECODABLE = [
   'home', 'like', 'have', 'live', 'ride', 'side', 'bake', 'drive', 'gold', 'old', 'cold', 'spider', 'words', 'word',
   'chair', 'hair', 'ball', 'fall', 'falls', 'tall', 'walk', 'talk', 'wash', 'water', 'of', 'comes', 'says', 'fly',
   'sky', 'baby', 'fluffy', 'grown', 'crown', 'wears', 'carries', 'many', 'day', 'night', 'mark', 'place',
+  // i / o dài trước nd, ld, st, th (Truyện ngắn, review Story-0 2026-11-19): find = /faɪnd/, không phải f-i-n-d.
+  'find', 'finds', 'kind', 'mind', 'wild', 'child', 'most', 'post', 'both',
 ];
 
 /** Bé đã đọc xong nhóm 1 → g. */

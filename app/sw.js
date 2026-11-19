@@ -41,6 +41,8 @@ const ASSETS = [
   'js/quest/content.js',
   'js/quest/quest.js',
   'js/quest/riddles.js',
+  'js/story/builtin-stories.js',
+  'js/story/words.js',
   'js/quest/crossword.js',
   'js/screens/parent/math.js',
   'js/math/math.js',
