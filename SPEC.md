@@ -23,7 +23,7 @@ App anh em của **kid-english** (Bông, bé 3 tuổi): cùng cách làm (PWA ch
 | Giới hạn buổi | **20 phút** (15 / 20 / 30 / tắt) | `limitMinutes` |
 
 - Thời gian chỉ cộng khi bé đang trong hoạt động (đã có trong `session.js`).
-- Còn ≤ 2 phút: hết hoạt động hiện tại thì Olly nói *"One more and then rest!"* + chữ tiếng Việt "Còn một chút nữa thôi".
+- Còn ≤ 2 phút: hết hoạt động hiện tại thì Olly nói *"One more and then rest!"* + chữ tiếng Việt "Còn một chút nữa thôi" (0.13.1: lúc bé rời một hoạt động về danh sách bài / màn chính; mỗi buổi một lần, bố mẹ cho học thêm thì nhắc lại được).
 - Hết giờ: **không bao giờ cắt ngang** hoạt động. Bé làm xong hoạt động đang dở → lưu tiến độ → Olly khen và đi ngủ (đã đúng như `app.afterActivity` hiện tại). Bố mẹ cho học thêm 15 phút.
 
 ## 2. Lõi chép từ kid-english
@@ -109,7 +109,7 @@ Cách dùng lại: **chép phần lõi sang** (không chia sẻ code giữa hai 
   | Sai | về hộp 0 | trong buổi, sau 2–3 thẻ khác (không bao giờ hai lần liền) |
   | Đúng sau khi nghe gợi ý | giữ hộp | buổi sau |
   | Đúng độc lập | +1 | hộp 1: 1 ngày · 2: 3 ngày · 3: 7 ngày · 4: 14 ngày |
-  | Quá hạn | — | vào đầu bài ôn kế tiếp, tối đa 5 thẻ ôn / lượt |
+  | Quá hạn | — | vào đầu bài ôn kế tiếp, tối đa 5 thẻ ôn / lượt (0.13.1: đầu mỗi bài Read — "🔁 Ôn lại", Olly đọc từ, bé tìm thẻ trong 3 thẻ; quá hạn lâu nhất trước; trừ từ bài đó sẽ học; không tính vào sao của bài) |
 
 #### 3.1.5. Đọc câu
 1. Câu + hình. Olly đọc mẫu, từ sáng theo nhịp (karaoke — cách tính ở SPEC-ta-tranh mục 5.4, dùng chung).
@@ -405,7 +405,7 @@ Có ở bản 0.11.4, **gỡ ở 0.11.6** theo bố mẹ (app Bông đã có t�
 | 0.1.2 *(xong)* | Lõi dữ liệu: khóa tiến độ mới + sao (4.3–4.4, `progress.js`), kết quả khi bé đọc (4.2, `listen.js`), so khớp chặt (`match.js`), chữ và âm (`phonics.js`), gói bài + kiểm tra (`lesson.js`), Góc bố mẹ → 📚 Bài học: **nhập / xuất / thay / xóa bài JSON** (5.5), `CORE.md` + test chống lệch (2.2) |
 | 0.1.3 *(xong)* | 🔔 Chuông thông báo (bản mới, bài mới) + Thư viện bài `app/shared/` (6.3) |
 | 0.1.4 *(xong)* | 18 file âm rời nhóm 1–3 (`app/sounds/phonics/`, nguồn trong `app/sounds/CREDITS.md`), bố mẹ đã duyệt |
-| 0.2.0 *(xong)* | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0); số phiên bản ở màn hình chính. **Chưa làm, để sau:** nhắc "còn 2 phút" (1.1), đưa thẻ tricky quá hạn của bài khác vào lượt ôn (3.1.4), bài Theo sách mới chơi được các hoạt động sounds / blend / tricky |
+| 0.2.0 *(xong)* | Read: âm + ghép âm + tricky words, bài Phonics **nhóm 1–3** có sẵn + file âm của 3 nhóm (bố mẹ duyệt), giải thích tiếng Việt khi sai, nút 🔊 nghe lại + phụ đề tiếng Việt (4.5), sao; thẻ khu "Sắp mở" (3.0); số phiên bản ở màn hình chính. **Chưa làm, để sau:** ~~nhắc "còn 2 phút" (1.1)~~ (xong 0.13.1), ~~đưa thẻ tricky quá hạn của bài khác vào lượt ôn (3.1.4)~~ (xong 0.13.1), ~~bài Theo sách mới chơi được các hoạt động sounds / blend / tricky~~ (xong 0.3.2) |
 | 0.3.0 *(xong)* | Spell: xếp ô + điền ô (bài nhóm 1–3 có sẵn, sao riêng của khu Spell) |
 | 0.3.1 *(xong)* | Tạo bài theo sách bằng AI, 2 bước (5.7): Góc bố mẹ → Bài học → ✨ Tạo bài theo sách (chọn sách + Unit, prompt 1 lấy từ từ ảnh, prompt 2 tạo bài, nháp tự lưu, dán JSON vào Nhập bài); lúc học, từ có âm chưa có file ghi âm tự chuyển sang tricky (`adaptForPlay`) — thêm file âm nhóm 4–7 thì bài cũ tự ghép âm được |
 | 0.3.2 *(xong)* | Đủ 42 âm rời nhóm 1–7 (bố mẹ duyệt nhóm 4–7 ngày 2026-11-10, nguồn trong `app/sounds/CREDITS.md`); bài Phonics có sẵn nhóm 4–7 (mỗi nhóm 10 từ có hình + 4 tricky words theo thứ tự kiểu Jolly); ô nhiễu khi chọn chữ không trùng chữ với đáp án (oo / oo dài, th / th this) |
@@ -418,6 +418,7 @@ Có ở bản 0.11.4, **gỡ ở 0.11.6** theo bố mẹ (app Bông đã có t�
 | 0.12.0 *(xong)* | 📚 Truyện ngắn (3.1.6, [SPEC-story.md](SPEC-story.md)): tab 📚 Truyện ở khu Read, 7 truyện Phonics có sẵn (nhóm 1–7, bố mẹ duyệt STORIES.md); ① Nghe truyện (lật trang, karaoke, VI, ⏸ ◀ ▶, chạm từ), ② Bé đọc (🎤 / ✅, ⏭), ③ 3 câu hỏi (chọn hình, chọn chữ, xếp thứ tự) + sao; Góc bố mẹ → Bài học → 📚 Truyện ngắn: tiến độ, tạo truyện bằng AI (theo nhóm âm hoặc bài sách), ảnh lưới cùng nhân vật cho cả truyện + vẽ lại một trang; gói chia sẻ có truyện; gợi ý truyện cuối bài Unit |
 | 0.12.1 *(xong)* | 📚 Truyện: chạm giữ một từ đọc được để nghe ghép âm (SPEC-story 4.3) |
 | 0.13.0 *(xong)* | 💾 Góc bố mẹ → Sao lưu / Khôi phục (6.2): file .zip mọi kho (JSZip), gộp / thay toàn bộ, kiểm tra file trước khi ghi; nhắc sao lưu sau 7 ngày trên menu Góc bố mẹ; xóa toàn bộ dữ liệu học |
+| 0.13.1 *(xong)* | Nhắc "còn một chút nữa" khi buổi học còn ≤ 2 phút (1.1); ôn thẻ tricky quá hạn ở đầu bài Read (3.1.4) |
 | 0.5.0 | Talk (3.3): khu 💬 mở, 6 bài hội thoại hằng ngày có sẵn, 3 mức hỗ trợ, bạn hỏi giọng thứ hai, các bước khi bé im lặng, ghi âm + Góc bố mẹ → 🎙️ Ghi âm (6.2), prompt AI bài theo sách có hội thoại |
 | 0.6.0 *(xong)* | 🔢 Math-a ([SPEC-math.md](SPEC-math.md); bố mẹ đổi thứ tự 2026-11-11: làm trước Tập viết và Quest): khu thứ 5 (màn chính 3 + 2), T1 Số nào lớn hơn, T2 Nhóm nào nhiều hơn, T3 Cá sấu > < =, T6 Chục và đơn vị (tới 100); làm mẫu → 8 mục → bé đọc câu → sao, 3 mức (mở khi ≥ 2⭐), ra nền quay lại đúng mục; Góc bố mẹ → 🔢 Toán (tiến độ, kiểu hay sai), Cài đặt → mở mọi mức |
 | 0.7.0 *(xong)* | ✍️ Tập viết prototype ([SPEC-write.md](SPEC-write.md) đợt W-a0): tab ✍️ Tập viết trong khu Spell, 8 chữ c a d g l t m z — xem mẫu → tô 2 lượt → tự viết, chấm từng nét (bắt đầu, hướng, đi hết đường, thứ tự), sai 2 lần → tiếng Việt + tô có dẫn, sao; Góc bố mẹ → ✍️ Tập viết (tiến độ, ghi nét thử, xuất JSON), Cài đặt → độ dễ chấm nét + ưu tiên bút; chữ đọc đổi sang font Andika (a, g một tầng) |

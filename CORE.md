@@ -20,7 +20,7 @@ Không có bản "gốc" cố định: bên nào sửa lỗi trước thì là n
 | `app/js/text.js` | 8833a4b | 453490a1a7ee | Giống kid-english |
 | `app/js/match.js` | 8833a4b | 040a8ca6010d | Sửa riêng cho Olly (0.1.2): thêm `exactMatch` (so khớp chặt). Phần cũ không đổi |
 | `app/js/ui.js` | 8833a4b | e52f8fb16e28 | Giống kid-english |
-| `app/js/session.js` | 8833a4b | ff72c80d2166 | Sửa (0.1.2): bỏ hằng số `DEFAULT_LIMIT_MINUTES` không dùng, sửa chú thích. kid-english cũng không dùng hằng số này — có thể bỏ bên đó (chưa) |
+| `app/js/session.js` | 8833a4b | 22b107468b72 | Sửa (0.1.2): bỏ hằng số `DEFAULT_LIMIT_MINUTES` không dùng, sửa chú thích. kid-english cũng không dùng hằng số này — có thể bỏ bên đó (chưa). Sửa riêng cho Olly (0.13.1): thêm `timeLeftMs`, `shouldWarnAlmostUp` (nhắc còn ≤ 2 phút, SPEC 1.1), `extend` xóa cờ `warned`. Phần cũ không đổi; kid-english không cần |
 | `app/js/image.js` | 8833a4b | 7191f7d6f28a | Giống kid-english |
 
 Không nằm trong danh sách (đã viết lại riêng cho Olly, không cần giữ giống): `app.js`, `db.js`, `settings.js`, `mascot.js`, `zones.js`, `screens/*`, `sw.js`.

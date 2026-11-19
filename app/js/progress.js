@@ -114,3 +114,20 @@ export async function recordLessonDone(db, lessonId, stars, now = Date.now(), pa
   await db.put('progress', next);
   return next;
 }
+
+/** Tối đa 5 thẻ tricky quá hạn ôn ở đầu mỗi bài Read (SPEC 3.1.4). */
+export const TRICKY_REVIEW_MAX = 5;
+
+/**
+ * Thẻ tricky đến hạn ôn (hàm thuần, SPEC 3.1.4): `nextAt` ≤ bây giờ, chưa có trong bài sắp học (`exclude` = từ đã chuẩn
+ * hóa); quá hạn lâu nhất trước, cùng hạn thì hộp thấp trước; tối đa `limit` thẻ.
+ * @param {object[]} records bản ghi tiến độ có lessonId "tricky"
+ * @returns {string[]} từ (đã chuẩn hóa)
+ */
+export function dueTrickyCards(records, now = Date.now(), { exclude = new Set(), limit = TRICKY_REVIEW_MAX } = {}) {
+  return records
+    .filter((p) => p.lessonId === TRICKY_LESSON && p.activity === 'card' && p.nextAt != null && p.nextAt <= now && !exclude.has(p.itemId))
+    .sort((a, b) => a.nextAt - b.nextAt || (a.box ?? 0) - (b.box ?? 0))
+    .slice(0, limit)
+    .map((p) => p.itemId);
+}

@@ -181,6 +181,29 @@ export async function trickyWords(ctx, words) {
   }
 }
 
+/**
+ * Ôn thẻ tricky QUÁ HẠN ở đầu bài Read (SPEC 3.1.4, tối đa 5 thẻ): Olly đọc một từ, bé tìm đúng thẻ trong 3 thẻ; kết quả
+ * cập nhật hộp ôn. Không tính vào sao của bài (thẻ không thuộc bài này).
+ * @param {string[]} words từ đã chuẩn hóa (chữ thường) — "i" hiện là "I"
+ */
+export async function reviewTricky(ctx, words) {
+  const { t, stage, app } = ctx;
+  const show = (w) => (w === 'i' ? 'I' : w);
+  const pool = [...new Set([...Object.entries(TRICKY_BY_GROUP).filter(([g]) => Number(g) <= Math.max(ctx.lesson.group ?? 3, 1)).flatMap(([, list]) => list).map((w) => w.toLowerCase()), ...words])];
+  stage.replaceChildren(h('div.word-card.tricky', { text: '⭐' }));
+  await t.say("Let's review some tricky words!");
+  for (const w of words) {
+    const choices = shuffle([w, ...distractors(w, [], pool)]);
+    const buttons = choices.map((c) => h('button.word-choice', { type: 'button', 'aria-label': show(c), dataset: { choice: c }, text: show(c) }));
+    const correct = buttons[choices.indexOf(w)];
+    stage.replaceChildren(h('p.review-label', { text: '🔁 Ôn lại' }), h('div.choices', {}, ...buttons));
+    const result = await t.choose({ options: buttons, correct, question: QUESTIONS.findWord(show(w)), answer: () => t.say(show(w)) });
+    recordTricky(app.db, w, result).catch(() => {});
+    await t.pause(400);
+    ctx.tick();
+  }
+}
+
 /** Loại hoạt động của từng khu (màn học chỉ chạy các loại của khu mình). */
 export const ZONE_TYPES = {
   read: new Set(['sounds', 'blend', 'tricky', 'sentence']),

@@ -22,11 +22,24 @@ export function addTime(state, ms, now = Date.now()) {
 
 /** Bố mẹ cho học thêm 15 phút. */
 export function extend(state, now = Date.now()) {
-  return { ...state, extraMs: state.extraMs + EXTEND_MS, lastSeenAt: now };
+  return { ...state, extraMs: state.extraMs + EXTEND_MS, lastSeenAt: now, warned: false }; // học thêm → gần hết giờ mới lại nhắc
 }
 
 /** Đã hết giờ chưa. limitMinutes = null nghĩa là tắt giới hạn. */
 export function isTimeUp(state, limitMinutes) {
   if (limitMinutes == null) return false;
   return state.usedMs >= limitMinutes * 60 * 1000 + state.extraMs;
+}
+
+/** Thời gian còn lại của buổi (ms, không âm). null = tắt giới hạn. */
+export function timeLeftMs(state, limitMinutes) {
+  if (limitMinutes == null || !state) return null;
+  return Math.max(0, limitMinutes * 60 * 1000 + state.extraMs - state.usedMs);
+}
+
+/** Còn ≤ 2 phút (SPEC 1.1): hết hoạt động hiện tại thì Olly nhắc "One more and then rest!" — mỗi buổi một lần. */
+export const ALMOST_UP_MS = 2 * 60 * 1000;
+export function shouldWarnAlmostUp(state, limitMinutes) {
+  const left = timeLeftMs(state, limitMinutes);
+  return left != null && left > 0 && left <= ALMOST_UP_MS && !state.warned;
 }

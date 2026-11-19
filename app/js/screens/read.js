@@ -9,9 +9,10 @@ import { mascotElement } from '../mascot.js';
 import { ZONE_BY_ID } from '../zones.js';
 import { homeButton } from './child.js';
 import { BUILTIN_LESSONS, BUILTIN_BY_ID, BUILTIN_TALKS } from '../data/builtin-lessons.js';
-import { getLessonProgress, recordLessonDone, starsFor } from '../progress.js';
+import { getLessonProgress, recordLessonDone, starsFor, dueTrickyCards, TRICKY_LESSON } from '../progress.js';
+import { normalizeWord } from '../text.js';
 import { activityLayout, Teacher } from '../read/teacher.js';
-import { meetSounds, blendWords, trickyWords, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
+import { meetSounds, blendWords, trickyWords, reviewTricky, countSteps, isPlayable, ZONE_TYPES } from '../read/stages.js';
 import { spellWords, fillWords } from '../read/spell-stages.js';
 import { readSentences } from '../read/sentence-stages.js';
 import { talkDialogue, talkSteps } from '../read/talk-stages.js';
@@ -145,9 +146,13 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     // Talk (SPEC 3.3.3): bé chọn mức hỗ trợ trước; sao = mức đã làm xong.
     const level = zone === 'talk' ? await chooseLevel(app, t, layout.stage, lesson) : null;
     const dialogues = new Map((lesson.dialogues ?? []).map((d) => [d.id, d]));
-    const total = Math.max(1, zone === 'talk'
+    // Thẻ tricky quá hạn ôn (SPEC 3.1.4): đầu bài Read, tối đa 5 thẻ, trừ từ bài này sẽ học.
+    const own = new Set(lesson.activities.filter((a) => a.type === 'tricky').flatMap((a) => a.items)
+      .map((id) => lesson.words.find((w) => w.id === id)?.en).filter(Boolean).map((en) => normalizeWord(en)));
+    const due = zone === 'read' ? dueTrickyCards(await app.db.getAllByIndex('progress', 'lessonId', TRICKY_LESSON), Date.now(), { exclude: own }) : [];
+    const total = Math.max(1, due.length + (zone === 'talk'
       ? lesson.activities.filter((a) => a.type === 'talk').flatMap((a) => a.items).reduce((n, id) => n + (dialogues.has(id) ? talkSteps(dialogues.get(id), app.settings.childName) : 0), 0)
-      : countSteps(lesson, zone));
+      : countSteps(lesson, zone)));
     let done = 0;
     const results = [];
     const ctx = {
@@ -159,6 +164,7 @@ export function lessonScreen(app, { lessonId, zone = 'read' }) {
     const byId = new Map([...lesson.words, ...lesson.sentences].map((w) => [w.id, w]));
     const items = (a) => a.items.map((id) => byId.get(id)).filter(Boolean);
     const withGraphemes = (a) => items(a).filter((w) => w.graphemes);
+    if (due.length) await reviewTricky(ctx, due);
     for (const a of lesson.activities) {
       if (!ZONE_TYPES[zone].has(a.type)) continue;
       if (a.type === 'sounds') await meetSounds(ctx, a.sounds);

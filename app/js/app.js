@@ -6,13 +6,15 @@ import { Microphone, MIC } from './speech/microphone.js';
 import { Recognizer } from './speech/recognition.js';
 import { unlockAudio, isAudioLocked } from './speech/sfx.js';
 import { saveSetting } from './settings.js';
-import { resumeSession, addTime, extend, isTimeUp } from './session.js';
-import { h } from './ui.js';
+import { resumeSession, addTime, extend, isTimeUp, shouldWarnAlmostUp } from './session.js';
+import { h, toast } from './ui.js';
 import { mascotElement } from './mascot.js';
 
-export const APP_VERSION = '0.13.0';
+export const APP_VERSION = '0.13.1';
 
 const SESSION_SAVE_EVERY_MS = 15000;
+/** Màn chọn hoạt động: rời một hoạt động về đây thì có thể nhắc "còn một chút nữa" (SPEC 1.1). */
+const LIST_SCREENS = new Set(['home', 'read', 'spell', 'talk', 'math', 'quest']);
 
 export class App {
   constructor(root) {
@@ -52,6 +54,7 @@ export class App {
 
   /** Chuyển màn hình. Màn hình là hàm (app, params) → hàm dọn dẹp (tùy chọn). */
   go(name, params = {}) {
+    const leavingActivity = Boolean(this.activity && !this.activity.signal.aborted);
     this.stopActivity();
     try {
       this.cleanup?.();
@@ -67,6 +70,16 @@ export class App {
     if (!render) throw new Error(`Không có màn hình ${name}`);
     this.cleanup = render(this, params) ?? null;
     window.scrollTo(0, 0);
+    if (leavingActivity && LIST_SCREENS.has(name)) this.warnAlmostUp();
+  }
+
+  /** Còn ≤ 2 phút của buổi (SPEC 1.1): xong hoạt động, về chọn hoạt động khác → Olly nhắc một lần mỗi buổi. */
+  warnAlmostUp() {
+    if (!shouldWarnAlmostUp(this.session, this.settings?.limitMinutes)) return;
+    this.session = { ...this.session, warned: true };
+    this.saveSession();
+    toast('Còn một chút nữa thôi', 4000);
+    this.speaker.speak('One more and then rest!').catch(() => {});
   }
 
   /** Bắt đầu một hoạt động của bé. Trả về signal để hủy khi rời màn hình. */

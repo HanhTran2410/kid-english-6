@@ -1064,3 +1064,4 @@ circle.wr-ok { fill: #2f9e44; }
 .story-blend-tile { display: grid; place-items: center; min-width: 52px; height: 60px; font-size: 32px; }
 .sword[data-graphemes] { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; }
 .backup-remind { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font-weight: 700; }
+.review-label { margin: 0; font-size: 20px; font-weight: 800; color: var(--ink-soft); }

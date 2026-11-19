@@ -259,3 +259,22 @@ test('4.3: chạm GIỮ một từ đọc được → hiện ô âm, phát từ
   await expect.poll(() => spoken(page).then((s) => s.at(-1))).toBe('naps');
   await expect(page.locator('.scene-text')).toHaveAttribute('data-sound-count', '3'); // chạm thường không phát âm rời
 });
+
+test('SPEC 1.1: còn ≤ 2 phút → xong hoạt động về danh sách, Olly nhắc "One more and then rest!" + chữ tiếng Việt, một lần mỗi buổi', async ({ page }) => {
+  await open(page);
+  await app(page, async () => {
+    const a = window.kidEnglish6;
+    await a.setSetting('limitMinutes', 20);
+    a.session = { ...a.session, usedMs: 19 * 60 * 1000, extraMs: 0, warned: false };
+  });
+  await go(page, { storyId: 'story-g1-pip', continueDirectly: true });
+  await page.getByRole('button', { name: 'Về' }).click();
+  await expect(page.locator('.story-card').first()).toBeVisible();
+  await expect.poll(() => spoken(page)).toContain('One more and then rest!');
+  await expect(page.locator('.toast').last()).toHaveText('Còn một chút nữa thôi');
+  await go(page, { storyId: 'story-g1-pip', continueDirectly: true });
+  await page.getByRole('button', { name: 'Về' }).click();
+  await expect(page.locator('.story-card').first()).toBeVisible();
+  await page.waitForTimeout(300);
+  expect((await spoken(page)).filter((s) => s === 'One more and then rest!').length).toBe(1);
+});
