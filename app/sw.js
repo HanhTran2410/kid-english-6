@@ -3,7 +3,7 @@
 // Thêm/bớt file trong app/ thì cập nhật ASSETS (test tests/unit/sw.test.js sẽ báo nếu thiếu).
 // Thư viện bài app/shared/ (file .json + index.json) KHÔNG lưu offline: tải từ mạng khi bố mẹ mở Thư viện bài / chuông kiểm tra.
 
-const VERSION = '0.12.1';
+const VERSION = '0.13.0';
 const CACHE = `kid-english-6-${VERSION}`;
 
 const ASSETS = [
@@ -18,11 +18,13 @@ const ASSETS = [
   'fonts/nunito-latin-800-normal.woff2',
   'fonts/nunito-latin-ext-700-normal.woff2',
   'fonts/nunito-latin-ext-800-normal.woff2',
+  'vendor/jszip.min.js',
   'fonts/nunito-vietnamese-700-normal.woff2',
   'fonts/nunito-vietnamese-800-normal.woff2',
   'icons/icon.svg',
   'index.html',
   'js/app.js',
+  'js/backup.js',
   'js/captions.js',
   'js/data/builtin-lessons.js',
   'js/data/builtin-scenes.js',
@@ -88,6 +90,7 @@ const ASSETS = [
   'js/screens/parent/recordings.js',
   'js/screens/parent/scene-edit.js',
   'js/screens/parent/stories.js',
+  'js/screens/parent/backup.js',
   'js/scene-data.js',
   'js/share.js',
   'js/scene.js',

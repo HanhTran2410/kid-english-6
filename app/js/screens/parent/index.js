@@ -15,6 +15,8 @@ import { mathView } from './math.js';
 import { writeView } from './write.js';
 import { questView } from './quest.js';
 import { storiesView, storyImagesView } from './stories.js';
+import { backupView } from './backup.js';
+import { isBackupDue } from '../../settings.js';
 import { WRITE_LEVELS, LEVEL_VI } from '../../write/stroke.js';
 
 const VIEWS = {
@@ -30,6 +32,7 @@ const VIEWS = {
   quest: questView,
   stories: storiesView,
   'story-images': storyImagesView,
+  backup: backupView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -42,6 +45,9 @@ function menuView(app) {
   const item = (emoji, text, onclick) => h('button.menu-item', { type: 'button', onclick }, h('span.menu-emoji', { text: emoji }), h('span', { text }));
   body.append(
     h('button.exit-to-child', { type: 'button', onclick: () => app.go('home') }, h('span', { text: '▶ Về màn hình của bé' })),
+    // Nhắc sao lưu sau 7 ngày (SPEC 6.2, BACKUP_REMIND_DAYS).
+    isBackupDue(app.settings) ? h('button.notice.warn.backup-remind', { type: 'button', onclick: () => goParent(app, 'backup') },
+      h('span', { text: app.settings.lastBackupAt ? '💾 Đã hơn 7 ngày chưa sao lưu — bấm để sao lưu.' : '💾 Chưa sao lưu lần nào — bấm để sao lưu (mọi dữ liệu chỉ nằm trên máy này).' })) : null,
     h('div.menu', {},
       item('📚', 'Bài học', () => goParent(app, 'lessons')),
       item('🖼️', 'Kho ảnh', () => goParent(app, 'library')),
@@ -49,6 +55,7 @@ function menuView(app) {
       item('🔢', 'Toán (tiến độ)', () => goParent(app, 'math')),
       item('✍️', 'Tập viết (tiến độ, ghi nét thử)', () => goParent(app, 'write')),
       item('🧩', 'Quest (tiến độ)', () => goParent(app, 'quest')),
+      item('💾', 'Sao lưu / Khôi phục', () => goParent(app, 'backup')),
       item('⚙️', 'Cài đặt', () => goParent(app, 'settings'))),
     h('p.muted', { text: `Phiên bản ${APP_VERSION}` }),
   );
