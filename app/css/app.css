@@ -1060,3 +1060,6 @@ circle.wr-ok { fill: #2f9e44; }
 .story-compare-pics figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
 .story-compare-pics img { width: 160px; height: 160px; object-fit: contain; border-radius: 12px; background: #f1f3ff; }
 .story-page-row .story-compare { grid-column: 1 / -1; }
+.story-blend { justify-content: center; gap: 8px; margin-top: 6px; }
+.story-blend-tile { display: grid; place-items: center; min-width: 52px; height: 60px; font-size: 32px; }
+.sword[data-graphemes] { touch-action: manipulation; -webkit-touch-callout: none; user-select: none; }

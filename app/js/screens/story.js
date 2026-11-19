@@ -16,6 +16,8 @@ import { shuffle } from '../read/stages.js';
 import { libraryImages, wordKey } from '../picture-library.js';
 import { classifySentence, storyTokens, WORD_KIND } from '../story/words.js';
 import { contentHash } from '../story/validate.js';
+import { playPhoneme } from '../speech/phoneme.js';
+import { soundOfGrapheme } from '../phonics.js';
 import {
   getStory, learnedNow, playableQuestions, orderCorrect, storyStars, recordListened, recordStoryRead, readLevel,
 } from '../story/story.js';
@@ -23,6 +25,7 @@ import {
 const REST_MS = 1200; // nghỉ sau khi đọc xong trang rồi mới tự lật (4.2)
 const WORD_IDLE_MS = 3000; // chạm từ xong 3 giây không chạm gì → đọc tiếp (4.3)
 const NUDGE_MS = 3000; // tắt tự chạy: nút Trang sau nhún sau 3 giây (4.2)
+const HOLD_MS = 500; // chạm giữ một từ đọc được → ghép âm (4.3); không nhân hệ số ?fast — là thao tác của tay
 const ORDER_SLOTS = ['first', 'next', 'last'];
 
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -105,8 +108,9 @@ function sentenceWords(text, lp) {
     const tok = storyTokens(w)[0];
     const kind = tok ? classifySentence(tok.text, lp)[0]?.kind : null;
     const say = tokenize(w)[0] ?? w;
+    const graphemes = kind === WORD_KIND.DECODABLE ? classifySentence(tok.text, lp)[0].graphemes : null;
     return h(`button.sword${kind === WORD_KIND.TRICKY ? '.tricky' : kind === WORD_KIND.NEW ? '.new-word' : ''}`, {
-      type: 'button', dataset: { word: say, kind: kind ?? '' }, text: w,
+      type: 'button', dataset: { word: say, kind: kind ?? '', ...(graphemes ? { graphemes: graphemes.join(' ') } : {}) }, text: w,
     });
   });
 }
@@ -301,25 +305,72 @@ function listenMode({ app, story, params, lp, pageUrl }) {
     showVi(); // chỉ ẩn / hiện chữ, không ngắt giọng đọc
     reserveTextHeight();
   });
-  // Chạm từ: đọc riêng từ đó; 3 giây không chạm gì → đọc lại từ đầu câu đang đọc (đang dừng thì thôi).
-  sentenceBox.addEventListener('click', (e) => {
-    const el = e.target.closest('.sword');
-    if (!el || !el.dataset.word) return;
+  /**
+   * Chạm từ: đọc riêng từ đó; chạm GIỮ từ đọc được bằng âm: hiện ô âm, phát từng âm rời (file âm) rồi đọc cả từ (4.3).
+   * Xong + 3 giây không chạm gì → đọc lại từ đầu câu đang đọc (đang dừng thì thôi).
+   */
+  function wordAction(el, blend) {
     const wasPaused = state === 'PAUSED';
     const wasDone = state === 'PAGE_DONE';
     const t = newRun();
+    const signal = run.signal;
     setState(wasPaused ? 'PAUSED' : 'WORD');
     groups.forEach((g) => g.wordEls.forEach((x) => x.classList.remove('reading')));
     el.classList.add('reading');
-    t.say(el.dataset.word, { rate: app.settings.rate * 0.8 }).catch(() => {}).finally(() => {
+    (async () => {
+      if (blend) {
+        const gs = el.dataset.graphemes.split(' ');
+        const tiles = gs.map((g) => h('span.tile.story-blend-tile', { dataset: { sound: soundOfGrapheme(g) }, text: g }));
+        const row = h('div.tile-row.story-blend', { 'aria-hidden': 'true' }, ...tiles);
+        textBar.append(row);
+        try {
+          for (const g of gs) {
+            await playPhoneme(soundOfGrapheme(g), { stage: textBar, signal });
+            await t.pause(120);
+          }
+          row.classList.add('blended');
+          await t.say(el.dataset.word, { rate: app.settings.rate * 0.85 });
+        } finally {
+          setTimeout(() => row.remove(), scaled(600));
+        }
+      } else {
+        await t.say(el.dataset.word, { rate: app.settings.rate * 0.8 });
+      }
+    })().catch(() => {}).finally(() => {
       el.classList.remove('reading');
-      if (run.signal.aborted || state === 'PAUSED') return;
+      if (signal.aborted || state === 'PAUSED') return;
       later(WORD_IDLE_MS, () => {
         if (wasDone && index < last && app.settings.sceneAutoNext !== false) playPage(index + 1);
         else if (wasDone) setState('PAGE_DONE');
         else playPage(index, { from: sentence, animate: false });
       });
     });
+  }
+  let holdTimer = null;
+  let held = false;
+  sentenceBox.addEventListener('pointerdown', (e) => {
+    const el = e.target.closest('.sword');
+    held = false;
+    clearTimeout(holdTimer);
+    if (!el?.dataset.graphemes) return;
+    holdTimer = setTimeout(() => {
+      held = true;
+      wordAction(el, true);
+    }, HOLD_MS);
+  });
+  const cancelHold = () => clearTimeout(holdTimer);
+  sentenceBox.addEventListener('pointerup', cancelHold);
+  sentenceBox.addEventListener('pointerleave', cancelHold);
+  sentenceBox.addEventListener('pointercancel', cancelHold);
+  sentenceBox.addEventListener('contextmenu', (e) => { if (e.target.closest('.sword')) e.preventDefault(); });
+  sentenceBox.addEventListener('click', (e) => {
+    const el = e.target.closest('.sword');
+    if (!el || !el.dataset.word) return;
+    if (held) { // vừa chạm giữ → đã ghép âm, không đọc thêm lần nữa
+      held = false;
+      return;
+    }
+    wordAction(el, false);
   });
 
   const onResize = () => reserveTextHeight();

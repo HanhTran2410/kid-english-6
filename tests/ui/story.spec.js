@@ -236,3 +236,26 @@ test('ST-14 / 21: iPhone dọc, trang 2 câu, bật VI → hình + chữ + nút 
   const after = await page.locator('.scene-text').boundingBox();
   expect(Math.abs(after.height - before.height)).toBeLessThan(1);
 });
+
+test('4.3: chạm GIỮ một từ đọc được → hiện ô âm, phát từng âm rời rồi đọc cả từ; tricky word / từ mới không ghép; chạm thường vẫn đọc cả từ', async ({ page }) => {
+  await open(page);
+  await go(page, { storyId: 'story-g1-pip', page: 1, continueDirectly: true }); // "Pip naps in a tin."
+  await expect(page.locator('.story-screen')).toHaveAttribute('data-state', 'PAUSED');
+  const tin = page.locator('.story-sent .sword', { hasText: 'tin' });
+  await expect(tin).toHaveAttribute('data-graphemes', 't i n');
+  await expect(page.locator('.story-sent .sword', { hasText: /^a$/ })).not.toHaveAttribute('data-graphemes', /./); // tricky
+  const box = await tin.boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await expect(page.locator('.story-blend .story-blend-tile')).toHaveText(['t', 'i', 'n']);
+  await expect.poll(() => page.locator('.scene-text').getAttribute('data-sound-count')).toBe('3');
+  await expect.poll(() => spoken(page).then((s) => s.at(-1))).toBe('tin');
+  const n = (await spoken(page)).length;
+  await page.waitForTimeout(300);
+  expect((await spoken(page)).length).toBe(n); // không đọc thêm lần nữa khi nhả tay; đang dừng → không đọc tiếp
+  await page.locator('.story-sent .sword', { hasText: 'naps' }).click();
+  await expect.poll(() => spoken(page).then((s) => s.at(-1))).toBe('naps');
+  await expect(page.locator('.scene-text')).toHaveAttribute('data-sound-count', '3'); // chạm thường không phát âm rời
+});
