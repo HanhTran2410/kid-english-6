@@ -88,7 +88,7 @@ test('truyện có sẵn: 7 truyện, nhóm 1–7, id không trùng, đủ trư�
     assert.equal(s.kind, 'story');
     assert.equal(s.track, 'phonics');
     assert.match(s.id, /^story-g\d-[a-z0-9-]+$/);
-    assert.ok(s.title && s.titleVi && s.cover && s.characters, s.id);
+    assert.ok(s.title && s.titleVi && s.cover && s.characters && s.setting, s.id);
     assert.equal(s.pages.length, 5, s.id);
     const ids = [...s.pages.map((p) => p.id), ...storySentences(s).map((x) => x.id), ...s.questions.map((q) => q.id)];
     assert.equal(new Set(ids).size, ids.length, `${s.id}: id trùng`);

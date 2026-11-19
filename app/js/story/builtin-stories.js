@@ -12,6 +12,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g1-pip', group: 1, title: 'Pip the Ant', titleVi: 'Chú kiến Pip', cover: '🐜',
     characters: 'Pip: a tiny smiling black ant with big round eyes. Nan: a girl with two short black pigtails and a yellow dress.',
+    setting: 'a cosy kitchen table with a small round tin box on it',
     pages: [
       page('p1', '🐜', ['Pip is an ant.', 'Pip là một chú kiến.']),
       page('p2', '🐜🥫', ['Pip naps in a tin.', 'Pip ngủ trong một cái hộp thiếc.']),
@@ -31,6 +32,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g2-pam-hen', group: 2, title: 'Pam and the Hen', titleVi: 'Pam và con gà mái', cover: '🐔',
     characters: 'Pam: a girl with curly red hair, a green T-shirt and blue shorts. A plump red hen.',
+    setting: 'a farmyard with a red barn, green grass and a brown sack on the ground',
     pages: [
       page('p1', '👧🐔', ['Pam has a hen.', 'Pam có một con gà mái.']),
       page('p2', '🐔', ['The hen is red.', 'Con gà mái màu đỏ.']),
@@ -50,6 +52,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g3-red-hat', group: 3, title: 'The Red Hat', titleVi: 'Cái mũ đỏ', cover: '👒',
     characters: 'Sam: a small boy with short brown hair, a blue T-shirt and a red hat. A big brown dog with floppy ears.',
+    setting: 'a sunny garden with green grass, a fallen log and a white fence',
     pages: [
       page('p1', '👦👒', ['Sam has a red hat.', 'Sam có một cái mũ đỏ.']),
       page('p2', '👒🪵', ['The hat is on a log.', 'Cái mũ ở trên khúc gỗ.']),
@@ -69,6 +72,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g4-goat-coat', group: 4, title: 'A Coat for the Goat', titleVi: 'Cái áo cho chú dê', cover: '🐐',
     characters: 'Jen: a girl with a long black ponytail, a yellow raincoat and green boots. A small white goat with little horns.',
+    setting: 'a small farm field with a wooden fence, grey rain clouds and puddles',
     pages: [
       page('p1', '👧🐐', ['Jen has a goat.', 'Jen có một chú dê.']),
       page('p2', '🐐🌧️', ['The goat is in the rain.', 'Chú dê đang ở ngoài trời mưa.']),
@@ -88,6 +92,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g5-pink-float', group: 5, title: 'The Pink Float', titleVi: 'Chiếc phao hồng', cover: '🛟',
     characters: 'Viv: a girl with short black hair and a purple swimsuit, with a pink swim ring (round float). Ben: a boy with spiky blond hair and green swim shorts.',
+    setting: 'a bright outdoor swimming pool with blue water and white tiles',
     pages: [
       page('p1', '👧🛟', ['Viv has a pink float.', 'Viv có một chiếc phao bơi màu hồng.']),
       page('p2', '👧🏊', ['She swims in the pool.', 'Bạn ấy bơi trong bể bơi.']),
@@ -107,6 +112,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g6-big-fish', group: 6, title: 'The Big Fish', titleVi: 'Con cá to', cover: '🐟',
     characters: 'Seth: a boy with messy brown hair, an orange T-shirt and a fishing rod. Dad: a tall man with a short beard, a green cap and a blue shirt.',
+    setting: 'a green pond with a small wooden dock and tall reeds',
     pages: [
       page('p1', '👦👨🎣', ['Seth and his dad go fishing.', 'Seth và bố đi câu cá.']),
       page('p2', '👦👨', ['They sit on the dock.', 'Hai bố con ngồi trên cầu gỗ.']),
@@ -126,6 +132,7 @@ export const BUILTIN_STORIES = [
   story({
     id: 'story-g7-lost-coin', group: 7, title: 'The Lost Coin', titleVi: 'Đồng xu bị mất', cover: '🪙',
     characters: 'Rex: a boy with curly black hair, a red hoodie and a shiny gold coin. A quick little brown dog with a white tail.',
+    setting: 'a park with a big sandpit, trees and a bench',
     pages: [
       page('p1', '👦🪙', ['Rex has one coin.', 'Rex có một đồng xu.']),
       page('p2', '👦🏞️', ['Rex runs to the park.', 'Rex chạy ra công viên.']),

@@ -54,6 +54,7 @@ for (const s of BUILTIN_STORIES) {
 - Âm đã học: ${graphemes}
 - Tricky / từ nhận diện đã học: ${tricky.join(', ')}
 - Nhân vật (cho ảnh): ${s.characters}
+- Bối cảnh chung (cho ảnh): ${s.setting}
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|

@@ -16,6 +16,7 @@
 - Âm đã học: s a t i p n
 - Tricky / từ nhận diện đã học: a, an, I, the
 - Nhân vật (cho ảnh): Pip: a tiny smiling black ant with big round eyes. Nan: a girl with two short black pigtails and a yellow dress.
+- Bối cảnh chung (cho ảnh): a cosy kitchen table with a small round tin box on it
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -39,6 +40,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d
 - Tricky / từ nhận diện đã học: a, an, he, I, me, she, the, we
 - Nhân vật (cho ảnh): Pam: a girl with curly red hair, a green T-shirt and blue shorts. A plump red hen.
+- Bối cảnh chung (cho ảnh): a farmyard with a red barn, green grass and a brown sack on the ground
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -62,6 +64,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d · g o u l f b
 - Tricky / từ nhận diện đã học: a, an, be, do, he, I, me, she, the, to, was, we
 - Nhân vật (cho ảnh): Sam: a small boy with short brown hair, a blue T-shirt and a red hat. A big brown dog with floppy ears.
+- Bối cảnh chung (cho ảnh): a sunny garden with green grass, a fallen log and a white fence
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -85,6 +88,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d · g o u l f b · ai j oa ie ee or
 - Tricky / từ nhận diện đã học: a, all, an, are, be, do, he, I, me, she, the, to, was, we, you, your
 - Nhân vật (cho ảnh): Jen: a girl with a long black ponytail, a yellow raincoat and green boots. A small white goat with little horns.
+- Bối cảnh chung (cho ảnh): a small farm field with a wooden fence, grey rain clouds and puddles
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -108,6 +112,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d · g o u l f b · ai j oa ie ee or · z w ng v oo
 - Tricky / từ nhận diện đã học: a, all, an, are, be, come, do, he, here, I, me, said, she, some, the, to, was, we, you, your
 - Nhân vật (cho ảnh): Viv: a girl with short black hair and a purple swimsuit, with a pink swim ring (round float). Ben: a boy with spiky blond hair and green swim shorts.
+- Bối cảnh chung (cho ảnh): a bright outdoor swimming pool with blue water and white tiles
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -131,6 +136,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d · g o u l f b · ai j oa ie ee or · z w ng v oo · y x ch sh th
 - Tricky / từ nhận diện đã học: a, all, an, are, be, come, do, go, he, here, I, me, no, said, she, some, the, there, they, to, was, we, you, your
 - Nhân vật (cho ảnh): Seth: a boy with messy brown hair, an orange T-shirt and a fishing rod. Dad: a tall man with a short beard, a green cap and a blue shirt.
+- Bối cảnh chung (cho ảnh): a green pond with a small wooden dock and tall reeds
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|
@@ -154,6 +160,7 @@
 - Âm đã học: s a t i p n · c k ck e h r m d · g o u l f b · ai j oa ie ee or · z w ng v oo · y x ch sh th · qu ou oi ue er ar
 - Tricky / từ nhận diện đã học: a, all, an, are, be, by, come, do, go, he, here, I, me, my, no, one, said, she, so, some, the, there, they, to, was, we, you, your
 - Nhân vật (cho ảnh): Rex: a boy with curly black hair, a red hoodie and a shiny gold coin. A quick little brown dog with a white tail.
+- Bối cảnh chung (cho ảnh): a park with a big sandpit, trees and a bench
 
 | Trang | Hình | Tiếng Anh | Số từ | Tách âm | Tiếng Việt |
 |---|---|---|---|---|---|

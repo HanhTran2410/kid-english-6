@@ -226,7 +226,7 @@ Mỗi câu hỏi có **dấu** `hash` = băm của: trường của câu hỏi +
 
 | Thay đổi | Xử lý |
 |---|---|
-| Tiêu đề, `titleVi`, `vi` của câu, `cover`, `characters`, `imagePrompt` | giữ mọi tiến độ |
+| Tiêu đề, `titleVi`, `vi` của câu, `cover`, `characters`, `setting`, `imagePrompt` | giữ mọi tiến độ |
 | Ảnh trang (thay / xóa) | giữ tiến độ; `order` thiếu ảnh thì chỉ bị bỏ lúc chơi (6.1) |
 | Chữ `en` của một câu | xóa `<storyId>/read/<sid>` của câu đó; câu hỏi tham chiếu trang chứa câu đó **đổi dấu** → xóa `<storyId>/quiz/<qid>` của câu hỏi đó |
 | Sửa câu hỏi (bất kỳ trường nào trừ `vi`, `explainVi`) | đổi dấu → xóa `<storyId>/quiz/<qid>` |
@@ -244,11 +244,12 @@ Mỗi truyện: số lần nghe hết (`listened`), số lần làm câu hỏi (
 
 ### 8.1. Lưu ở đâu
 - Kho mới **`stories`** (bước `MIGRATIONS` mới, `keyPath: 'id'`) — tách khỏi `lessons` như `scenes` (SPEC 5.4: truyện là bản ghi riêng `kind: 'story'`).
-- **Ảnh trang:** kho `images` sẵn có, `lessonId = <storyId>`, `word = <pageId>`. `id` bản ghi ảnh là UUID nên **không trùng** giữa các truyện; truyện phân biệt bằng `lessonId` (`id` truyện duy nhất, có chỉ mục `lessonId`).
+- **Ảnh trang:** kho `images` sẵn có, `lessonId = <storyId>`, `word = <pageId>` — quản lý theo **(storyId, pageId)**, không theo thứ tự trang hay số ô. Bản ghi thêm `source: 'grid' | 'single'` và `gridCell` (số ô 0–5 trong ảnh lưới gốc, chỉ khi `source = 'grid'`) để màn ảnh biết ảnh trang lấy từ đâu. `id` bản ghi ảnh là UUID nên **không trùng** giữa các truyện; truyện phân biệt bằng `lessonId` (`id` truyện duy nhất, có chỉ mục `lessonId`).
+- **Ảnh lưới gốc:** lưu thêm một bản ghi `lessonId = <storyId>`, `word = '_grid'` (cạnh dài ≤ 1536 px, kèm `cols`, `rows`, `cells` = bảng ô → `pageId` / `null`) để **cắt lại / đổi ô / gửi kèm khi vẽ lại một ô** mà không phải nhờ AI vẽ lại cả truyện. Lưu ảnh lưới mới thì thay bản cũ. Bố mẹ xóa được ảnh lưới gốc (các ảnh trang vẫn giữ); xóa truyện thì xóa luôn.
   - Thay ảnh trang: `setWordImage` đã **xóa bản cũ cùng (lessonId, word)** trong cùng giao dịch → không có ảnh rác.
   - Xóa trang: `removeWordImage(storyId, pageId)` cùng giao dịch với lưu truyện.
   - Xóa truyện: xóa mọi ảnh `lessonId = storyId` + mọi khóa tiến độ `lesson:<storyId>`, `<storyId>/…` (dùng chỉ mục `lessonId` như `deleteLesson`) — **một giao dịch**.
-  - Lưu truyện: sau khi lưu, xóa ảnh có `lessonId = storyId` mà `word` không còn là `pageId` nào (dọn ảnh mồ côi).
+  - Lưu truyện: sau khi lưu, xóa ảnh có `lessonId = storyId` mà `word` không còn là `pageId` nào và không phải `_grid` (dọn ảnh mồ côi).
 - Ảnh trang **không** vào Kho ảnh dùng chung; **lựa chọn hình** của `pick` dùng Kho ảnh theo từ (`lib`) + emoji như mọi chỗ khác.
 
 ### 8.2. Kiểu dữ liệu
@@ -264,6 +265,7 @@ Mỗi truyện: số lần nghe hết (`listened`), số lần làm câu hỏi (
   "titleVi": "Cái mũ đỏ",
   "cover": "👒",
   "characters": "Sam: a small boy, short brown hair, blue T-shirt, red hat. A big brown dog with floppy ears.",
+  "setting": "a sunny garden with green grass, a fallen log and a white fence",
   "pages": [
     { "id": "p1", "sentences": [ { "id": "s1", "en": "Sam has a red hat.", "vi": "Sam có một cái mũ đỏ." } ],
       "emoji": "👦👒", "imagePrompt": "Sam smiles and holds up his red hat in a sunny garden." }
@@ -284,7 +286,7 @@ Mỗi truyện: số lần nghe hết (`listened`), số lần làm câu hỏi (
 }
 ```
 - `emoji` của trang (không bắt buộc): hình thay thế khi trang chưa có ảnh (8.4); thiếu thì dùng `cover`.
-- `characters` (bắt buộc), `imagePrompt` (không bắt buộc — thiếu thì prompt ảnh dùng câu tiếng Anh của trang, 8.4): chỉ cho prompt ảnh, không hiện cho bé.
+- `characters` (bắt buộc), `setting` (không bắt buộc — bối cảnh chung, ví dụ *"a sunny garden with a fallen log and a white fence"*), `imagePrompt` (không bắt buộc — thiếu thì prompt ảnh dùng câu tiếng Anh của trang, 8.4): chỉ cho prompt ảnh, không hiện cho bé.
 
 ### 8.3. Kiểm tra khi nhập / lưu
 **Lỗi → từ chối cả truyện, chỉ rõ chỗ (tiếng Việt), dữ liệu cũ giữ nguyên:**
@@ -295,16 +297,35 @@ Mỗi truyện: số lần nghe hết (`listened`), số lần làm câu hỏi (
 **Cảnh báo, không chặn** (hiện ở màn xem lại): câu sai bậc 3.1 (dài quá, đại từ sớm); thiếu `vi`; tỉ lệ đọc được < 70%; lựa chọn `pick` chưa có emoji / ảnh; lựa chọn `word` bé chưa đọc được; hai câu hỏi cùng `page`; thiếu ảnh trang.
 
 ### 8.4. Ảnh truyện và trang thiếu ảnh
-- **Một ảnh lưới cho cả truyện** (đã chốt): 4 trang → 2 × 2; 5–6 trang → 3 × 2 (3 cột, 2 hàng).
-- **Prompt ảnh lưới** (tiếng Anh, app dựng từ `characters` + `imagePrompt` từng trang):
-  - mô tả nhân vật (`characters`) ở **đầu** prompt và nhắc lại: *same face, same hair colour, same clothes in every panel*;
+- **Một ảnh lưới cho cả truyện** (đã chốt): 4 trang → 2 × 2, ảnh **vuông 1:1**; 5–6 trang → 3 × 2 (3 cột, 2 hàng), ảnh **ngang 3:2**. Hai tỉ lệ này app vẽ ảnh nào cũng hỗ trợ (ChatGPT chỉ có 1:1 / 3:2 / 2:3), và cả hai cho **ô vuông**.
+- **Ô vuông trong khung trang 4:3:** khung hình của màn truyện vẫn 4:3 (giống Tả tranh, 4.1) nhưng ảnh trang hiện **trọn** (`object-fit: contain`) giữa khung, hai bên là nền nhạt lấy theo màu viền ảnh — không cắt mất đầu / chân nhân vật. Ảnh lẻ bố mẹ chọn (tỉ lệ bất kỳ) cũng hiện trọn như vậy. Truyện không có vùng chạm theo tọa độ nên không cần ảnh lấp kín khung.
+- **Bốn lớp giữ hình đồng nhất giữa các trang** (AI vẽ nên không bảo đảm 100%; bố mẹ thấy lệch ở màn xem trước):
+  1. **một ảnh lưới** cho cả truyện — AI vẽ mọi cảnh trong một lần nên dùng chung nhân vật, nét, màu (vẽ từng trang riêng thì mỗi lần AI vẽ lại nhân vật từ đầu);
+  2. **mô tả nhân vật cố định** (`characters`) ở đầu prompt, đặc điểm dễ thấy (màu tóc, màu áo, phụ kiện), nhắc lại cho mọi ô;
+  3. **khóa bối cảnh + nét vẽ:** `setting` (bối cảnh chung của truyện) + **một dòng nét vẽ dùng chung cho mọi truyện** `STORY_ART_STYLE` (*flat cartoon for young children, thick dark outlines, soft bright colours, simple background, same art style and same setting in every panel*) — hai cảnh cùng một chỗ không bị vẽ thành hai phông khác nhau;
+  4. **vẽ lại một ô** khi chỉ một trang lệch (mục dưới) — gửi kèm ảnh lưới cũ làm ảnh mẫu.
+- **Prompt ảnh lưới** (tiếng Anh, app dựng từ `STORY_ART_STYLE` + `characters` + `setting` + `imagePrompt` từng trang):
+  - dòng nét vẽ `STORY_ART_STYLE`, rồi mô tả nhân vật (`characters`) ở **đầu** prompt và nhắc lại: *same face, same hair colour, same clothes in every panel*; rồi bối cảnh: *All panels take place in: {setting}* (truyện không có `setting` thì bỏ dòng này);
   - *no extra main characters* — chỉ nhân vật trong `characters` + đồ vật / con vật truyện nhắc tới;
   - *no text, no letters, no speech bubbles, no page numbers*;
   - mỗi ô **một cảnh**, đánh thứ tự **trái → phải, trên → dưới**, liệt kê *Panel 1: …, Panel 2: …*; mô tả cảnh của ô = `imagePrompt` của trang, **trang không có `imagePrompt` thì dùng chính câu tiếng Anh của trang** (*Panel 3: A big dog gets the hat!*) — 7 truyện có sẵn đi theo cách này, không cần viết thêm mô tả cảnh;
-  - nhân vật **trọn người**, không bị cắt đầu / chân; viền trắng mỏng rõ giữa các ô;
-  - 5 trang trên lưới 3 × 2: *Panel 6 must be completely blank white* — không vẽ thêm cảnh.
-- **Cắt + xem trước** (dùng `loadGridImage` / `sliceGrid` của `image.js`): sau khi cắt, màn xem trước hiện **từng ô cạnh câu của trang** được gán (mặc định ô 1 → trang 1…). Bố mẹ **chạm hai ô để đổi chỗ**, hoặc chọn "Không dùng ô này". Ô thứ 6 của truyện 5 trang mặc định **không dùng** (kể cả khi AI lỡ vẽ). Chỉ khi bấm **Lưu ảnh** mới ghi vào kho.
-- Ảnh lẻ từng trang (chọn / chụp) cũng được, cùng màn quản lý.
+  - **bố cục cứng:** *One {1:1 square / 3:2 landscape} image divided into exactly {cols} columns × {rows} rows of EQUAL square panels, separated by straight thin white lines. Each panel is a separate, complete picture — not part of one wide panorama. Nothing crosses from one panel into another. No outer border, no decorative frames.*;
+  - nhân vật **trọn người**, đặt giữa ô, không bị cắt đầu / chân, chừa khoảng trống quanh mép ô (app cắt bỏ ~4% mép mỗi ô);
+  - 5 trang trên lưới 3 × 2: *Only Panels 1–5 contain story scenes. Panel 6 is reserved: it must be completely empty pure white (#FFFFFF), with absolutely no characters, objects, decorations, shadows, textures or scene elements.* — app **vẫn** mặc định không dùng ô 6, dù AI có làm theo hay không.
+- **Cắt ảnh** (`loadGridImage` / `sliceGrid` của `image.js`, đang dùng cho Kho ảnh — **không dùng AI**, đọc điểm ảnh):
+  - app **biết trước** kiểu lưới (2 × 2 / 3 × 2 theo số trang), dò **đường kẻ trắng** theo điểm ảnh để cắt đúng chỗ AI thực sự kẻ (AI hay vẽ khoảng cách giữa các ô không đều); dò không ra hoặc không khớp kiểu lưới → **chia đều** theo số cột / hàng. Mỗi ô bỏ ~4% mép để không dính đường kẻ — vì vậy không có "pixel lẻ" bị sót hay đường trắng thừa ở ảnh trang.
+  - **Kiểm tra trước khi cắt:** ảnh giải mã được (không → *"Không đọc được ảnh này, hãy chọn ảnh khác."*); mỗi ô sau khi cắt ≥ **300 × 300 px** (ảnh lưới quá nhỏ → *"Ảnh nhỏ quá, trang sẽ bị mờ — hãy tải ảnh gốc từ app AI."*, không cắt, không lưu gì). Tỉ lệ ảnh lệch nhiều so với 1:1 / 3:2 (> 15%) → cảnh báo *"Ảnh không đúng khổ, có thể bị cắt lệch — xem kỹ từng ô."*, vẫn cho cắt. Ảnh xoay: `createImageBitmap` (giải mã dùng chung với Kho ảnh) theo mặc định của trình duyệt tự xoay theo EXIF (`imageOrientation: 'from-image'`); ảnh tải từ app AI thường không có EXIF xoay — còn lệch thì bố mẹ thấy ngay ở màn xem trước.
+  - Ảnh lưới gốc **không bị sửa** khi cắt hay đổi ô.
+- **Màn xem trước** (chưa ghi gì vào kho cho tới khi bấm **Lưu ảnh**):
+  - Hiện **ảnh lưới thu nhỏ** (đánh số ô 1–6) và danh sách **trang 1 → N**, mỗi trang: câu của trang + ô đang gán cho trang đó. Mặc định ô k → trang k; ô 6 của truyện 5 trang: **không dùng**, không tự gán cho trang nào.
+  - **Đổi ô:** chạm ô của một trang → ô đó được chọn (viền cam); chạm ô của trang khác → **hoán đổi** hai trang; chạm lại ô đang chọn → bỏ chọn. Chỉ đổi bảng gán ô → trang (`cells`), không sửa ảnh. Ảnh cạnh câu đổi ngay.
+  - **Không dùng ô này:** trang đó chuyển sang emoji (8.4 thiếu ảnh). Ô bị bỏ hiện mờ trong hàng **"Ô chưa dùng"** (kể cả ô 6) — chạm ô chưa dùng rồi chạm một trang → gán ô đó cho trang (ô đang gán của trang đó về "chưa dùng"). Dữ liệu ô không bị xóa.
+  - **Lưu ảnh:** ghi ảnh lưới gốc (`_grid` + `cells`) và ảnh từng trang được gán (`source: 'grid'`, `gridCell`) trong **một giao dịch**; trang không được gán ô thì giữ ảnh trang cũ (nếu có), không xóa.
+- **🔁 Vẽ lại một ô** (khi chỉ một trang lệch — ở màn xem trước và màn ảnh của truyện, mỗi trang có nút **🔁 Prompt vẽ lại trang này**):
+  1. App chép prompt (tiếng Anh): *"The attached image is a picture grid for a children's story. Draw ONLY the scene of Panel {n} again, as ONE single {tỉ lệ} picture: {mô tả cảnh}. Keep exactly the same characters as in the other panels ({characters}) — same faces, hair colour, clothes and accessories, and the same number of characters in this scene. Same setting ({setting}) and same art style and colours. Do not add any character or object that is not in the scene description. One single picture only: no grid, no panel lines, no text, no page numbers."* — **{tỉ lệ}** lấy từ **ảnh trang hiện tại** (chiều rộng / cao, làm tròn về *square 1:1*, *4:3 landscape* hoặc *3:2 landscape*; trang chưa có ảnh → *square 1:1* như ô lưới), không mặc định 4:3. Kèm dòng tiếng Việt: *"Gửi prompt này KÈM ảnh lưới (nút ⬇️ Tải ảnh lưới) cho ChatGPT / Gemini."* — có nút **⬇️ Tải ảnh lưới** lấy từ `_grid`; truyện không còn ảnh lưới gốc → gửi kèm ảnh một trang khác đẹp nhất (prompt đổi chữ *"picture grid"* thành *"page from the same story"*).
+  2. Bố mẹ dán ảnh mới vào trang đó → app hiện **ảnh cũ và ảnh mới cạnh nhau** (cùng câu của trang) với hai nút **✓ Dùng ảnh mới** / **Giữ ảnh cũ**. Không tự thay khi vừa dán.
+  3. **✓ Dùng ảnh mới** → chỉ thay ảnh của đúng `pageId` (`source: 'single'`); các trang khác và ảnh lưới gốc giữ nguyên.
+- Ảnh lẻ từng trang (chọn / chụp) cũng được, cùng màn quản lý, cũng qua bước so sánh cũ / mới khi trang đã có ảnh.
 - **Thiếu ảnh** — không bao giờ chặn việc đọc:
   - trang chưa có ảnh → `emoji` của trang cỡ lớn trên nền nhạt, thiếu thì `cover`;
   - có ảnh một số trang → trang thiếu dùng emoji như trên;
@@ -313,7 +334,7 @@ Mỗi truyện: số lần nghe hết (`listened`), số lần làm câu hỏi (
 ### 8.5. Tạo truyện bằng AI (Góc bố mẹ → Bài học → 📚 Truyện)
 Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 1. Bố mẹ chọn **nguồn**: một bài Theo sách đã có (lấy từ + mẫu câu của Unit) **hoặc** một nhóm âm Phonics (mặc định = nhóm bé đã học xong, như 5.7a). Tùy chọn: ý tưởng một dòng (*"Bé đi sở thú với bố"*), số trang 4 / 5 / 6.
-2. **📋 Chép prompt viết truyện** → AI trả JSON đúng 8.2. App đưa vào prompt: danh sách grapheme + tricky đã học (từ `learnedPhonics`, cùng nguồn với 3.2), từ của Unit, bậc 3.1 của nhóm, bảng trường câu hỏi 6.1, nguyên tắc 3 câu hỏi hỏi 3 chi tiết khác nhau, `"id": "auto"`.
+2. **📋 Chép prompt viết truyện** → AI trả JSON đúng 8.2. App đưa vào prompt: danh sách grapheme + tricky đã học (từ `learnedPhonics`, cùng nguồn với 3.2), từ của Unit, bậc 3.1 của nhóm, bảng trường câu hỏi 6.1, nguyên tắc 3 câu hỏi hỏi 3 chi tiết khác nhau, yêu cầu `characters` (đặc điểm dễ thấy, cố định: màu tóc, màu áo, phụ kiện) + `setting` + `imagePrompt` từng trang, `"id": "auto"`.
 3. Dán vào **📥 Nhập** → kiểm tra 8.3 → màn **xem lại**: từng trang (câu + VI), từ `new` tô màu, tỉ lệ đọc được, cảnh báo; sửa chữ tại chỗ; ✕ bỏ câu hỏi (còn ≥ 2). **Lưu** mới ghi vào kho (thoát giữa chừng → không ghi gì).
 4. **🖼️ Ảnh cho truyện** (8.4).
 
@@ -391,6 +412,12 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 | ST-30 | Nghe hết rồi 📖 Con tự đọc | Không đọc mẫu tự động; vào 📖 giữa chừng → có đọc mẫu |
 | ST-31 | Đọc 2 câu rồi ⏭ bỏ qua phần còn lại | Chỉ 2 câu có `practiced`, câu bỏ qua có `skipped` |
 | ST-32 | Cuối bài Unit có truyện | Thẻ gợi ý hiện, không tự mở; Để sau → về danh sách |
+| ST-33 | Prompt ảnh lưới truyện có / không có `setting`, trang có / không có `imagePrompt` | Có dòng nét vẽ chung + nhân vật ở đầu; có / bỏ dòng bối cảnh; ô thiếu `imagePrompt` dùng câu tiếng Anh |
+| ST-34 | 🔁 Vẽ lại trang 4 rồi dán ảnh mới | Prompt có tỉ lệ của ảnh trang 4 hiện tại + nhắc gửi kèm ảnh lưới; hiện ảnh cũ / mới cạnh nhau; "Giữ ảnh cũ" không đổi gì; "Dùng ảnh mới" chỉ đổi trang 4, ảnh lưới gốc giữ nguyên |
+| ST-35 | Prompt ảnh lưới 4 / 5 / 6 trang | 1:1 + 2 × 2 / 3:2 + 3 × 2; có câu bố cục cứng; truyện 5 trang có câu Panel 6 trắng hoàn toàn |
+| ST-36 | Ảnh lưới quá nhỏ (ô < 300 px) / không giải mã được | Báo lỗi dễ hiểu, không cắt, kho không đổi |
+| ST-37 | Màn xem trước: đổi trang 2 ↔ 4, bỏ ô 3, gán lại ô 6 cho trang 3, Lưu | `cells` đúng; ảnh trang theo `pageId`, `gridCell` đúng; ảnh lưới gốc không đổi; thoát không Lưu → kho không đổi |
+| ST-38 | Ảnh trang vuông trong khung 4:3 | Hiện trọn ảnh, không cắt đầu / chân, nền hai bên |
 
 ## 12. Thứ tự làm
 | Mốc | Phạm vi |
@@ -398,7 +425,7 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 | Story-0 *(xong, bố mẹ duyệt STORIES.md 2026-11-19)* | `classifyWord` + bậc độ khó + test (3.1, 3.2), `js/story/builtin-stories.js`, `scripts/read-stories-sheet.mjs`, **STORIES.md** 7 truyện → bố mẹ duyệt. Chưa có màn chơi. |
 | Story-a | Kho `stories`, tab 📚 Truyện, ① Nghe truyện (state machine 4.4), ③ Câu hỏi (pick / word / order), sao, tiến độ 7, 7 truyện đã duyệt (SVG + emoji) |
 | Story-b | ② Bé đọc + mức đọc; Góc bố mẹ → 📚 Truyện (7.3) |
-| Story-c | Tạo truyện bằng AI (8.5), ảnh lưới + xem trước (8.4), sửa / thay truyện (7.2), gói chia sẻ, gợi ý cuối bài Unit |
+| Story-c | Tạo truyện bằng AI (8.5), ảnh lưới (bố cục cứng, cắt + kiểm tra ảnh, xem trước đổi / bỏ / gán lại ô, lưu ảnh lưới gốc) + bốn lớp giữ hình đồng nhất + vẽ lại một trang có so sánh cũ / mới (8.1, 8.4), sửa / thay truyện (7.2), gói chia sẻ, gợi ý cuối bài Unit |
 
 ## 13. Đã chốt (2026-11-19, theo review draft1)
 | Nội dung | Quyết định |
