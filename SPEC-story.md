@@ -363,6 +363,7 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 
 ## 10. Chia sẻ, sao lưu, offline
 - Gói chia sẻ (6.4) thêm `stories` + ảnh trang; nhập: truyện trùng `id` → như "Thay truyện cũ" (7.2, 8.5), dọn ảnh trang cũ không còn dùng.
+- **Truyện có sẵn (0.13.2):** ảnh trang bố mẹ đã thay cũng chia sẻ được — gói chỉ mang **ảnh trang** (`images` với `lessonId` = id truyện có sẵn), **không** mang nội dung truyện (máy kia đã có). Nút ⬇️ Tải về ở truyện có sẵn: chưa thay ảnh nào → báo *"Truyện có sẵn chưa có ảnh nào bố mẹ thay — máy kia đã có truyện này rồi."*; "⬇️ Tải tất cả" tự kèm ảnh của mọi truyện có sẵn đã thay ảnh. Máy kia nhập → ảnh thay ảnh trang đó (trang không có trong truyện → bỏ qua).
 - Sao lưu (khi làm, SPEC 6.2) gồm kho `stories`.
 - Truyện có sẵn + SVG được service worker cache; truyện bố mẹ tạo + ảnh nằm trong IndexedDB → đọc được offline sau khi mở. Giọng đọc: như SPEC-ta-tranh 10.
 

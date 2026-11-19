@@ -170,3 +170,23 @@ test('ST-32 / 7.2: cuối bài Unit có truyện → thẻ gợi ý (không tự
   await expect(card.locator('.lesson-stars')).toHaveClass(/stale/);
   await expect(page.locator('.story-card[data-story="story-g1-pip"] .story-card-note', { hasText: 'Truyện đã sửa' })).toHaveCount(0);
 });
+
+test('10: truyện có sẵn chia sẻ được ảnh bố mẹ đã thay — chưa thay ảnh → báo; có ảnh → gói chỉ mang ảnh trang (không nội dung)', async ({ page }) => {
+  await openStories(page);
+  const row = page.locator('.lesson-row[data-story="story-g1-pip"]');
+  await row.getByRole('button', { name: /Tải về truyện/ }).click();
+  await expect(page.locator('.toast').last()).toContainText('chưa có ảnh nào bố mẹ thay');
+
+  await row.getByRole('button', { name: /Ảnh của truyện/ }).click();
+  await page.getByLabel('Ảnh trang 1', { exact: true }).setInputFiles(await gridPng(page, 600, 600, 1, 1));
+  await expect(page.locator('.story-page-row img')).toHaveCount(1);
+  await page.getByRole('button', { name: '← Quay lại' }).click();
+
+  const [download] = await Promise.all([
+    page.waitForEvent('download'),
+    row.getByRole('button', { name: /Tải về truyện/ }).click(),
+  ]);
+  const pkg = JSON.parse(await (await download.createReadStream()).toArray().then((c) => Buffer.concat(c).toString('utf8')));
+  expect(pkg.stories).toEqual([]);
+  expect(pkg.images.map((i) => [i.lessonId, i.word])).toEqual([['story-g1-pip', 'p1']]);
+});

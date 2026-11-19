@@ -201,7 +201,7 @@ test('10: gói chia sẻ có truyện + ảnh trang (không kèm ảnh lưới g
   const img = (text) => ({ blob: new Blob([text], { type: 'image/jpeg' }), mimeType: 'image/jpeg', width: 8, height: 8 });
   await saveGridImages(src, story.id, { grid: img('grid'), cols: 3, rows: 2, cells: ['p1', 'p2', null, null, null, null], tiles: ['a', 'b', 'c', 'd', 'e', 'f'].map(img) });
   const made = await makeSharePackage(src, { storyIds: [story.id, 'story-g1-pip'] });
-  assert.deepEqual(made.counts, { lessons: 0, scenes: 0, stories: 1, images: 2 }); // truyện có sẵn không đi kèm
+  assert.deepEqual(made.counts, { lessons: 0, scenes: 0, stories: 1, storyImages: 0, images: 2 }); // truyện có sẵn chưa thay ảnh → không gì đi kèm
   const pkg = JSON.parse(JSON.stringify(made.package));
   assert.ok(isSharePackage(pkg));
   assert.equal(pkg.stories[0].createdAt, undefined);
@@ -231,6 +231,44 @@ test('10: gói chia sẻ có truyện + ảnh trang (không kèm ảnh lưới g
   const r3 = await installPackage(dst, clash, installLesson);
   assert.equal(r3.stories, 0);
   assert.match(r3.problems[0], /trùng id truyện có sẵn/);
+  src.close();
+  dst.close();
+});
+
+test('10: ảnh bố mẹ thay cho truyện có sẵn đi kèm gói (chỉ ảnh trang, không nội dung, không ảnh lưới); máy kia nhập → thay ảnh trang đó', async () => {
+  const { makeSharePackage, installPackage, builtinStoriesWithImages, installedText } = await import('../../app/js/share.js');
+  const { installLesson } = await import('../../app/js/library.js');
+  const { BUILTIN_STORIES } = await import('../../app/js/story/builtin-stories.js');
+  const pip = BUILTIN_STORIES.find((s) => s.id === 'story-g1-pip');
+  const [p1, p2] = pip.pages.map((p) => p.id);
+  const src = await openDatabase(`share-builtin-src-${Math.random()}`);
+  const img = (text) => ({ blob: new Blob([text], { type: 'image/jpeg' }), mimeType: 'image/jpeg', width: 8, height: 8 });
+  assert.deepEqual(await builtinStoriesWithImages(src), []);
+  await saveGridImages(src, pip.id, { grid: img('grid'), cols: 3, rows: 2, cells: [p1, p2, null, null, null, null], tiles: ['a', 'b', 'c', 'd', 'e', 'f'].map(img) });
+  assert.deepEqual(await builtinStoriesWithImages(src), [pip.id]);
+
+  const made = await makeSharePackage(src, { storyIds: [pip.id] });
+  assert.deepEqual(made.counts, { lessons: 0, scenes: 0, stories: 0, storyImages: 1, images: 2 });
+  const pkg = JSON.parse(JSON.stringify(made.package));
+  assert.deepEqual(pkg.stories, []);
+  assert.deepEqual(pkg.images.map((i) => [i.lessonId, i.word]).sort(), [[pip.id, p1], [pip.id, p2]]);
+  assert.match(pkg.title, /(ảnh)/);
+
+  const dst = await openDatabase(`share-builtin-dst-${Math.random()}`);
+  await setPageImage(dst, pip.id, p1, img('old'));
+  const r = await installPackage(dst, pkg, installLesson);
+  assert.equal(r.images, 2);
+  assert.deepEqual(r.problems, []);
+  assert.equal(installedText(r), 'Đã nhập 2 ảnh');
+  const pages = new Map((await dst.getAllByIndex('images', 'lessonId', pip.id)).map((x) => [x.word, x]));
+  assert.equal(new TextDecoder().decode(pages.get(p1).data), 'a'); // ảnh mới thay ảnh cũ
+  assert.equal(new TextDecoder().decode(pages.get(p2).data), 'b');
+  assert.equal(pages.has(STORY_GRID), false);
+
+  // Ảnh lạ (trang không có trong truyện có sẵn) → bỏ qua.
+  const odd = structuredClone(pkg);
+  odd.images = [{ ...pkg.images[0], word: 'p99' }];
+  assert.equal((await installPackage(dst, odd, installLesson)).images, 0);
   src.close();
   dst.close();
 });

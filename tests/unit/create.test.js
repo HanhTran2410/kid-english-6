@@ -184,7 +184,7 @@ test('SPEC 6.4 — gói chia sẻ: bài + ảnh Kho ảnh của từ / câu tron
 
   const made = await makeSharePackage(src, { lessonIds: [lesson.id], sceneIds: ['scene-x'] }, Date.UTC(2026, 10, 17));
   assert.equal(made.filename, 'olly-2-bai-tranh-2026-11-17.json');
-  assert.deepEqual(made.counts, { lessons: 1, scenes: 1, stories: 0, images: 4 });
+  assert.deepEqual(made.counts, { lessons: 1, scenes: 1, stories: 0, storyImages: 0, images: 4 });
   const pkg = JSON.parse(JSON.stringify(made.package)); // như đọc lại từ file
   assert.ok(isSharePackage(pkg));
   assert.equal(pkg.lessons[0].createdAt, undefined);

@@ -10,7 +10,7 @@ import { resumeSession, addTime, extend, isTimeUp, shouldWarnAlmostUp } from './
 import { h, toast } from './ui.js';
 import { mascotElement } from './mascot.js';
 
-export const APP_VERSION = '0.13.1';
+export const APP_VERSION = '0.13.2';
 
 const SESSION_SAVE_EVERY_MS = 15000;
 /** Màn chọn hoạt động: rời một hoạt động về đây thì có thể nhắc "còn một chút nữa" (SPEC 1.1). */

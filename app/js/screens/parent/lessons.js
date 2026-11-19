@@ -9,7 +9,7 @@ import { fetchLibrary } from '../../library.js';
 import { importShared, errorText } from '../notice-bell.js';
 import { createPanel } from './create.js';
 import { fillBookId, withoutWord } from '../../lesson-prompts.js';
-import { isSharePackage, makeSharePackage, downloadPackage, installPackage, installedText } from '../../share.js';
+import { isSharePackage, makeSharePackage, downloadPackage, installPackage, installedText, builtinStoriesWithImages } from '../../share.js';
 import { installLesson } from '../../library.js';
 import { BUILTIN_LESSONS } from '../../data/builtin-lessons.js';
 
@@ -261,15 +261,19 @@ function sharePanel(app) {
     onclick: async () => {
       const lessonIds = (await app.db.getAll('lessons')).filter((l) => !l.builtIn).map((l) => l.id);
       const sceneIds = (await app.db.getAll('scenes')).filter((x) => !x.builtIn).map((x) => x.id);
-      const storyIds = (await app.db.getAll('stories')).filter((x) => !x.builtIn).map((x) => x.id);
-      if (!lessonIds.length && !sceneIds.length && !storyIds.length) return toast('Chưa có bài, tranh hay truyện nào do bố mẹ tạo.');
+      const storyIds = [
+        ...(await app.db.getAll('stories')).filter((x) => !x.builtIn).map((x) => x.id),
+        ...await builtinStoriesWithImages(app.db), // truyện có sẵn bố mẹ đã thay ảnh → chỉ ảnh đi kèm
+      ];
+      if (!lessonIds.length && !sceneIds.length && !storyIds.length) return toast('Chưa có bài, tranh, truyện hay ảnh truyện nào do bố mẹ tạo.');
       const made = await makeSharePackage(app.db, { lessonIds, sceneIds, storyIds });
       downloadPackage(made);
-      toast(`Đã tải về ${made.filename}: ${made.counts.lessons} bài, ${made.counts.scenes} tranh, ${made.counts.stories} truyện, ${made.counts.images} ảnh.`, 4500);
+      const c = made.counts;
+      toast(`Đã tải về ${made.filename}: ${c.lessons} bài, ${c.scenes} tranh, ${c.stories} truyện${c.storyImages ? `, ảnh của ${c.storyImages} truyện có sẵn` : ''}, ${c.images} ảnh.`, 4500);
     },
   });
   return section('📤 Chia sẻ sang máy khác',
-    h('p.field-hint', { text: 'Bấm "⬇️ Tải về" ở từng bài / tranh (hoặc nút dưới để tải tất cả) — được MỘT file .json chứa bài, tranh và ảnh. Rồi chọn một cách:' }),
+    h('p.field-hint', { text: 'Bấm "⬇️ Tải về" ở từng bài / tranh / truyện (hoặc nút dưới để tải tất cả) — được MỘT file .json chứa bài, tranh, truyện và ảnh (cả ảnh bố mẹ đã thay cho truyện có sẵn). Rồi chọn một cách:' }),
     h('ol.share-steps', {},
       h('li', { text: 'Đưa lên GitHub: mở repo kid-english-6 → thư mục app/shared → Add file → Upload files → chọn file → Commit. Vài phút sau, máy kia vào Góc bố mẹ → Bài học → 📚 Thư viện bài bấm Nhập (chuông 🔔 cũng báo).' }),
       h('li', { text: 'Hoặc gửi thẳng file (Zalo, AirDrop, email…): máy kia vào Góc bố mẹ → Bài học → 📥 Nhập bài → 📄 Chọn file… → 📥 Nhập gói.' })),

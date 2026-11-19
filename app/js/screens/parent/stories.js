@@ -18,7 +18,7 @@ import { readability, learnedUpTo } from '../../story/words.js';
 import { validateStory, storyIdFor, storyResets } from '../../story/validate.js';
 import { storyWritingPrompt, storyGridPrompt, storyGridShape, storyRedrawPrompt, ratioLabel, STORY_ART_STYLE } from '../../story/prompts.js';
 import { saveStory, replaceStory, deleteStory, setPageImage, removePageImage, saveGridImages, removeGridImage, STORY_GRID } from '../../story/store.js';
-import { makeSharePackage, downloadPackage } from '../../share.js';
+import { makeSharePackage, downloadPackage, builtinStoriesWithImages } from '../../share.js';
 import { choose } from './lessons.js';
 
 const MIN_CELL_PX = 300; // mỗi ô sau khi cắt ≥ 300 px (8.4)
@@ -78,12 +78,17 @@ async function renderStories(app, box) {
         })),
       h('div.lesson-actions', {},
         h('button.btn', { type: 'button', text: '🖼️ Ảnh', 'aria-label': `Ảnh của truyện ${s.title}`, onclick: () => goParent(app, 'story-images', { storyId: s.id }) }),
-        s.builtIn ? null : h('button.btn', {
+        h('button.btn', {
           type: 'button', text: '⬇️ Tải về', 'aria-label': `Tải về truyện ${s.title}`,
           onclick: async () => {
+            // Truyện có sẵn: máy kia đã có nội dung → gói chỉ mang ảnh trang bố mẹ đã thay.
+            if (s.builtIn && !(await builtinStoriesWithImages(app.db)).includes(s.id)) {
+              toast('Truyện có sẵn chưa có ảnh nào bố mẹ thay — máy kia đã có truyện này rồi.', 4000);
+              return;
+            }
             const made = await makeSharePackage(app.db, { storyIds: [s.id] });
             downloadPackage(made);
-            toast(`Đã tải về ${made.filename} (${made.counts.images} ảnh).`, 3500);
+            toast(`Đã tải về ${made.filename} (${s.builtIn ? 'ảnh trang, ' : ''}${made.counts.images} ảnh).`, 3500);
           },
         }),
         s.builtIn ? null : h('button.btn.danger', {

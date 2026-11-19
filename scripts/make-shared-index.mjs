@@ -29,8 +29,8 @@ export async function describeShared(dir = SHARED) {
         ...(pkg.scenes ?? []).map((sc) => validateScene(sc)).filter((x) => !x.ok).map((x) => x.errors[0]),
         ...(pkg.stories ?? []).map((st) => validateStory(st)).filter((x) => !x.ok).map((x) => x.errors[0]),
       ];
-      if (bad.length || !(pkg.lessons?.length || pkg.scenes?.length || pkg.stories?.length)) {
-        problems.push(`${file}: gói chia sẻ lỗi — ${bad.join(' | ') || 'không có bài / tranh / truyện'}`);
+      if (bad.length || !(pkg.lessons?.length || pkg.scenes?.length || pkg.stories?.length || pkg.images?.length)) {
+        problems.push(`${file}: gói chia sẻ lỗi — ${bad.join(' | ') || 'không có bài / tranh / truyện / ảnh'}`);
         continue;
       }
       files.push({
