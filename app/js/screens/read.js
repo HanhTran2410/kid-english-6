@@ -23,6 +23,9 @@ import { libraryImages, wordKey, sentenceKey } from '../picture-library.js';
 import { writeCards } from './write.js';
 import { writeWords } from '../read/write-stages.js';
 import { pickWriteWords } from '../write/words.js';
+import { allStories, learnedNow } from '../story/story.js';
+import { readability } from '../story/words.js';
+import { contentHash } from '../story/validate.js';
 
 const say = (app, text) => app.speaker.speak(text).catch(() => {});
 const starText = (n) => '⭐'.repeat(n) + '☆'.repeat(3 - n);
@@ -55,7 +58,7 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   app.root.className = `child-screen read-list zone-list-${zone}`;
   const list = h('div.lesson-cards');
   // Khu Talk: tab đầu là các bài hội thoại hằng ngày có sẵn (mạch "phonics" trong dữ liệu).
-  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh']] : []), ...(zone === 'spell' ? [['write', '✍️ Tập viết']] : [])];
+  const tabList = [['phonics', zone === 'talk' ? '💬 Hằng ngày' : '🔤 Phonics'], ['book', '📘 Theo sách'], ...(zone === 'read' ? [['scene', '🖼️ Tả tranh'], ['story', '📚 Truyện']] : []), ...(zone === 'spell' ? [['write', '✍️ Tập viết']] : [])];
   const tabs = tabList.map(([id, label]) => h(`button.tab${id === tab ? '.active' : ''}`, {
     type: 'button', text: label, 'aria-pressed': String(id === tab),
     onclick: () => {
@@ -75,6 +78,10 @@ function zoneListScreen(app, { zone, tab = 'phonics' }) {
   }
   if (tab === 'write') {
     writeCards(app, list).catch((err) => console.error(err));
+    return;
+  }
+  if (tab === 'story') {
+    storyCards(app, list).catch((err) => console.error(err));
     return;
   }
   (async () => {
@@ -188,6 +195,19 @@ function showDone(app, t, layout, lesson, stars, zone) {
     h('div.done-actions', {},
       h('button.big-btn', { type: 'button', 'aria-label': 'Học lại', text: '🔁', onclick: () => app.go('lesson', { lessonId: lesson.id, zone }) }),
       h('button.big-btn.primary', { type: 'button', 'aria-label': 'Bài khác', text: ZONE_BY_ID.get(zone)?.emoji ?? '📖', onclick: leave }))));
+  // Cuối bài Unit có truyện gắn kèm (SPEC-story 2): gợi ý nghe truyện — không tự mở; một lần mỗi lượt học bài này.
+  if (zone === 'read' && lesson.track !== 'phonics') {
+    allStories(app.db).then((stories) => {
+      const story = stories.find((s) => s.lessonId === lesson.id);
+      if (!story || !layout.stage.isConnected) return;
+      const card = h('div.story-suggest', {},
+        h('p', { text: `📚 Có truyện của Unit này — nghe nhé? (${story.title})` }),
+        h('div.done-actions', {},
+          h('button.big-btn.primary', { type: 'button', 'aria-label': 'Nghe truyện', text: '👂', onclick: () => app.go('story', { storyId: story.id }) }),
+          h('button.big-btn', { type: 'button', 'aria-label': 'Để sau', text: 'Để sau', onclick: () => card.remove() })));
+      layout.stage.querySelector('.done-panel')?.append(card);
+    }).catch(() => {});
+  }
   t.celebrate();
   t.say(stars === 3 ? 'Wow! Three stars! Great job!' : 'Great job! You did it!').catch(() => {});
 }
@@ -214,6 +234,45 @@ async function chooseLevel(app, t, stage, lesson) {
   play('pop');
   app.speaker.cancel();
   return Number(picked.dataset.level);
+}
+
+// ---------- 📚 Truyện ngắn: danh sách truyện (SPEC-story mục 2) ----------
+
+/** Sao ghi trước khi truyện bị sửa (dấu nội dung khác — SPEC-story 7.2). */
+const edited = (story, p) => Boolean(p.completedAt && p.contentHash && p.contentHash !== contentHash(story));
+
+async function storyCards(app, list) {
+  const [stories, lp] = await Promise.all([allStories(app.db), learnedNow(app.db)]);
+  const progress = await Promise.all(stories.map((s) => getLessonProgress(app.db, s.id)));
+  const ratios = stories.map((s) => readability(s, lp).ratio);
+  // ⭐ Tiếp theo: truyện đầu tiên chưa có sao mà bé đọc được ≥ 90% từ.
+  const next = stories.findIndex((s, i) => !progress[i].completedAt && ratios[i] >= 0.9);
+  const thumbs = await Promise.all(stories.map(async (s) => {
+    const rec = (await lessonImages(app.db, s.id)).get(s.pages[0]?.id);
+    const blob = rec ? mediaBlob(rec) : null;
+    return h('div.scene-thumb.story-thumb', {}, blob
+      ? h('img', { src: URL.createObjectURL(blob), alt: '' })
+      : h('div.story-art', {}, h('span.story-emoji', { text: s.cover || s.pages[0]?.emoji || '📖' })));
+  }));
+  stories.forEach((s, i) => {
+    const label = s.track === 'phonics' ? `Nhóm ${s.group}` : 'Theo sách';
+    list.append(h(`button.lesson-card.scene-card.story-card${i === next ? '.next' : ''}`, {
+      type: 'button', 'aria-label': s.title, dataset: { story: s.id },
+      onclick: () => {
+        play('tap');
+        app.go('story', { storyId: s.id });
+      },
+    },
+    thumbs[i],
+    h('span.lesson-title', { text: s.title }),
+    h('span.lesson-vi', { text: `${s.titleVi ? `${s.titleVi} · ` : ''}${label} · ${s.pages.length} trang` }),
+    progress[i].completedAt || progress[i].listened
+      ? h(`span.lesson-stars${edited(s, progress[i]) ? '.stale' : ''}`, { text: [progress[i].listened ? `👂 ${progress[i].listened}` : '', progress[i].completedAt ? starText(progress[i].bestStars) : ''].filter(Boolean).join('  ') })
+      : null,
+    edited(s, progress[i]) ? h('span.story-card-note', { text: 'Truyện đã sửa' }) : null,
+    ratios[i] < 0.7 ? h('span.story-card-note', { text: 'Nhiều từ mới — nghe trước nhé' }) : null,
+    i === next ? h('span.next-badge', { text: '⭐ Tiếp theo' }) : null));
+  });
 }
 
 // ---------- Tả tranh: danh sách tranh (SPEC-ta-tranh mục 2.1) ----------

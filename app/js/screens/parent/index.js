@@ -14,6 +14,7 @@ import { recordingsView } from './recordings.js';
 import { mathView } from './math.js';
 import { writeView } from './write.js';
 import { questView } from './quest.js';
+import { storiesView, storyImagesView } from './stories.js';
 import { WRITE_LEVELS, LEVEL_VI } from '../../write/stroke.js';
 
 const VIEWS = {
@@ -27,6 +28,8 @@ const VIEWS = {
   math: mathView,
   write: writeView,
   quest: questView,
+  stories: storiesView,
+  'story-images': storyImagesView,
 };
 
 export function parentScreen(app, params = {}) {
@@ -120,7 +123,7 @@ function settingsView(app) {
       h('label.check', {}, viHelp, h('span', { text: ` Bé sai ${VI_HELP_AFTER} lần liên tiếp thì Olly giải thích bằng tiếng Việt` })),
       showVi,
       h('label.check', {}, readVi, h('span', { text: ' Olly đọc thêm câu tiếng Việt thành tiếng' })),
-      check('sceneAutoNext', 'Tả tranh: tự chạy sang câu sau (tắt = bé tự bấm ⏭)'),
+      check('sceneAutoNext', 'Tả tranh & Truyện: tự chạy sang câu / trang sau (tắt = bé tự bấm ⏭ / ▶)'),
       viNote),
     section('🔊 Giọng đọc', field('Giọng tiếng Anh', voiceSel), field('Tốc độ đọc', rateSel), test,
       field('Giọng thứ hai (bạn nói chuyện với bé ở khu Nói chuyện)', voiceSel2, 'Máy chỉ có một giọng tiếng Anh thì bạn ấy nói cao giọng hơn.'), test2),

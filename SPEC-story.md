@@ -139,7 +139,7 @@ Chi tiết cho SPEC.md mục 3.1.6. Bé **6 tuổi**, lớp 1 (SPEC.md mục 1).
 ## 5. ② Bé đọc
 - Mỗi trang: hình + câu (phân loại từ như 3.2), nút 🔊 nghe mẫu từng câu.
 - **Đọc mẫu tự động:** đã nghe hết truyện trong lượt mở này (`listenedThisVisit`) → **không** đọc mẫu, bé tự đọc ngay. Chưa nghe hết (vào ② giữa chừng, hoặc mở lại truyện) → Olly đọc mẫu câu trước, rồi mới tới lượt bé.
-- Bé bấm 🎤 đọc từng câu → dùng `readSentences` của Đọc câu: từ nghe được xanh, chưa nghe được xám, Olly đọc lại từ xám rồi cả câu. Không mic → **✅ Con đọc xong**.
+- Bé bấm **🎤** rồi đọc từng câu (máy chỉ nghe sau khi bé bấm — trước đó bé bấm ⏭ được) → cách chấm như Đọc câu: từ nghe được xanh, chưa nghe được xám, Olly đọc lại từ xám rồi cả câu. Không mic → **✅ Con đọc xong**.
 - **Ghi nhận theo từng câu** (`<storyId>/read/<sid>`, 7.1):
   - Bé đọc xong câu (có kết quả nghe, hoặc bấm ✅) → `practiced + 1`, cập nhật `bestLevel` (mức đọc SPEC 3.1.5: `word` nhận từ → `chunk` đọc cụm → `sentence` cả câu ≥ 80% từ nghe được → `fluent` cả câu một lần, không ngắt quá 2 giây; không mic thì không có mức).
   - **⏭ Bỏ qua** câu / trang → `skipped + 1`, **không** tăng `practiced`.
@@ -159,7 +159,7 @@ Olly đọc câu hỏi (karaoke) + dòng tiếng Việt. Bé không cần đọc
 | `order` | trình tự trước – sau – cuối | xếp 3 hình **trang** vào ô *first / next / last* | trang 1, 3, 5 xáo trộn | khay + ô Toán T4 |
 
 - Mỗi truyện **3 câu hỏi, đủ 3 kiểu**, thứ tự `pick` → `word` → `order`. Ba câu hỏi phải hỏi **ba chi tiết khác nhau** (không hai câu cùng `page` cho `pick` / `word`, đáp án khác nhau).
-- Truyện thiếu ảnh ở bất kỳ trang nào trong `order.pages` → bỏ câu `order`, còn 2 câu (ST-11).
+- Thẻ của `order` là **hình trang**: ảnh trang, không có thì emoji của trang (`emoji`). Một trong 3 trang không có hình riêng (không ảnh, không emoji trang — chỉ còn emoji bìa) hoặc hai trang trùng hình → bỏ câu `order`, còn 2 câu (ST-11): bé không phân biệt được hai thẻ giống nhau. 7 truyện có sẵn có emoji khác nhau ở mỗi trang nên luôn đủ 3 câu.
 - Vị trí đáp án / thứ tự thẻ xáo khi chơi; `order` không bao giờ hiện sẵn đúng thứ tự.
 
 **Trường của từng kiểu** (✓ bắt buộc, — không có):
@@ -390,7 +390,7 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 | ST-08 | `pick` sai 1 lần rồi đúng | Lựa chọn mờ, hiện trang `page`; 2 sao |
 | ST-09 | `word` sai 2 lần | Tiếng Việt + đáp án sáng → 1 sao |
 | ST-10 | `order` đặt sai 1 thẻ | Thẻ đúng ở lại (viền xanh), thẻ sai về khay; đúng lần 2 → `helped` |
-| ST-11 | Truyện không có ảnh trang | Hiện emoji trang, chỉ 2 câu hỏi (không `order`) |
+| ST-11 | Trang không có ảnh | Hiện emoji trang; 3 trang của `order` không có hình riêng / trùng hình → chỉ 2 câu hỏi |
 | ST-12 | Nhập JSON lỗi | Từ chối, chỉ rõ chỗ, truyện cũ không đổi |
 | ST-13 | Ảnh lưới 3 × 2, truyện 6 trang | Cắt đúng 6 trang theo thứ tự |
 | ST-14 | iPhone dọc | Hình + trang 2 câu + nút vừa màn, không cuộn màn |
@@ -423,9 +423,9 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 | Mốc | Phạm vi |
 |---|---|
 | Story-0 *(xong, bố mẹ duyệt STORIES.md 2026-11-19)* | `classifyWord` + bậc độ khó + test (3.1, 3.2), `js/story/builtin-stories.js`, `scripts/read-stories-sheet.mjs`, **STORIES.md** 7 truyện → bố mẹ duyệt. Chưa có màn chơi. |
-| Story-a | Kho `stories`, tab 📚 Truyện, ① Nghe truyện (state machine 4.4), ③ Câu hỏi (pick / word / order), sao, tiến độ 7, 7 truyện đã duyệt (SVG + emoji) |
-| Story-b | ② Bé đọc + mức đọc; Góc bố mẹ → 📚 Truyện (7.3) |
-| Story-c | Tạo truyện bằng AI (8.5), ảnh lưới (bố cục cứng, cắt + kiểm tra ảnh, xem trước đổi / bỏ / gán lại ô, lưu ảnh lưới gốc) + bốn lớp giữ hình đồng nhất + vẽ lại một trang có so sánh cũ / mới (8.1, 8.4), sửa / thay truyện (7.2), gói chia sẻ, gợi ý cuối bài Unit |
+| Story-a *(xong 0.12.0)* | Kho `stories`, tab 📚 Truyện, ① Nghe truyện (state machine 4.4), ③ Câu hỏi (pick / word / order), sao, tiến độ 7, 7 truyện đã duyệt (SVG + emoji) |
+| Story-b *(xong 0.12.0)* | ② Bé đọc + mức đọc; Góc bố mẹ → 📚 Truyện (7.3) |
+| Story-c *(xong 0.12.0)* | Tạo truyện bằng AI (8.5), ảnh lưới (bố cục cứng, cắt + kiểm tra ảnh, xem trước đổi / bỏ / gán lại ô, lưu ảnh lưới gốc) + bốn lớp giữ hình đồng nhất + vẽ lại một trang có so sánh cũ / mới (8.1, 8.4), sửa / thay truyện (7.2), gói chia sẻ, gợi ý cuối bài Unit |
 
 ## 13. Đã chốt (2026-11-19, theo review draft1)
 | Nội dung | Quyết định |
@@ -435,3 +435,9 @@ Cùng tinh thần 5.7a: **gõ ít nhất, dùng AI nhiều nhất**.
 | Truyện có sẵn | 7 truyện, mỗi nhóm âm một truyện |
 | Ảnh | Một ảnh lưới cho cả truyện |
 | Gợi ý cuối bài Unit | Có, không tự mở truyện |
+
+## 14. Ghi chú khi làm (0.12.0, 2026-11-19)
+- **Code:** `js/story/words.js` (phân loại từ, bậc), `story.js` (danh sách, câu hỏi chơi được, chấm xếp thứ tự, sao, ghi nghe / đọc), `validate.js` (kiểm tra 8.3, id auto, dấu nội dung, `storyResets` 7.2), `prompts.js` (prompt viết truyện, ảnh lưới, vẽ lại một trang), `store.js` (lưu / thay / xóa, ảnh trang, ảnh lưới gốc — mỗi thao tác một giao dịch); màn bé `screens/story.js`; Góc bố mẹ `screens/parent/stories.js` (Bài học → 📚 Mở Truyện ngắn). Kho IndexedDB `stories` (bước nâng cấp thứ 5).
+- **Chưa làm:** chạm GIỮ một từ đọc được để mở ô ghép âm (4.3) — chạm từ vẫn nghe Olly đọc cả từ. Mức đọc `fluent` (5) cần đo khoảng ngắt giữa các từ — nhận dạng giọng nói của trình duyệt không cho thời gian từng từ, nên chỉ ghi `word` / `chunk` / `sentence`.
+- **Làm khác spec:** ② Bé đọc có nút 🎤 (bé bấm rồi máy mới nghe) thay cho tự nghe ngay — để ⏭ bỏ qua dùng được và giống Đọc câu 3.1.5. Gói chia sẻ chỉ kèm ảnh từng trang, **không** kèm ảnh lưới gốc (file nhẹ hơn; máy kia muốn vẽ lại một trang thì gửi kèm ảnh một trang khác — prompt tự đổi lời). Cài đặt "tự chạy" đổi nhãn: *Tả tranh & Truyện: tự chạy sang câu / trang sau*.
+- **Test:** unit `read-story.test.js`, `read-story-c.test.js`; UI `story.spec.js` (nghe, đọc, câu hỏi, ra nền, iPhone dọc), `story-parent.spec.js` (tạo truyện, trùng id, ảnh lưới + xem trước, ảnh lẻ so sánh cũ / mới, gợi ý cuối bài Unit, "Truyện đã sửa").

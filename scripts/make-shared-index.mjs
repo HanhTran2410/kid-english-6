@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parseLessonText, validateLesson } from '../app/js/lesson.js';
 import { validateScene } from '../app/js/scene-data.js';
+import { validateStory } from '../app/js/story/validate.js';
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 export const SHARED = path.join(root, 'app', 'shared');
@@ -26,14 +27,15 @@ export async function describeShared(dir = SHARED) {
       const bad = [
         ...(pkg.lessons ?? []).map((l) => validateLesson(l)).filter((x) => !x.ok).map((x) => x.errors[0]),
         ...(pkg.scenes ?? []).map((sc) => validateScene(sc)).filter((x) => !x.ok).map((x) => x.errors[0]),
+        ...(pkg.stories ?? []).map((st) => validateStory(st)).filter((x) => !x.ok).map((x) => x.errors[0]),
       ];
-      if (bad.length || !(pkg.lessons?.length || pkg.scenes?.length)) {
-        problems.push(`${file}: gói chia sẻ lỗi — ${bad.join(' | ') || 'không có bài / tranh'}`);
+      if (bad.length || !(pkg.lessons?.length || pkg.scenes?.length || pkg.stories?.length)) {
+        problems.push(`${file}: gói chia sẻ lỗi — ${bad.join(' | ') || 'không có bài / tranh / truyện'}`);
         continue;
       }
       files.push({
         file, size: Buffer.byteLength(text, 'utf8'), id: pkg.lessons[0]?.id ?? `pkg:${file}`, title: pkg.title, titleVi: '',
-        track: 'package', emoji: '📦', lessons: pkg.lessons.length, scenes: pkg.scenes.length, images: pkg.images?.length ?? 0,
+        track: 'package', emoji: '📦', lessons: pkg.lessons.length, scenes: pkg.scenes.length, stories: pkg.stories?.length ?? 0, images: pkg.images?.length ?? 0,
       });
       continue;
     }

@@ -995,3 +995,68 @@ circle.wr-ok { fill: #2f9e44; }
 .word-review-row input { min-width: 0; }
 .manual-book { margin-top: 14px; }
 .manual-book > summary { cursor: pointer; font-weight: 700; padding: 6px 0; }
+
+/* ---------- 📚 Truyện ngắn (screens/story.js, SPEC-story mục 4–6) ---------- */
+.story-frame { overflow: hidden; }
+.story-art { width: 100%; height: 100%; display: grid; place-items: center; background: #f1f3ff; }
+/* Ô ảnh lưới là ảnh VUÔNG: hiện trọn trong khung 4:3, không cắt đầu / chân (8.4). */
+.story-art img { width: 100%; height: 100%; object-fit: contain; display: block; -webkit-user-drag: none; }
+.story-emoji { font-family: var(--emoji); font-size: clamp(80px, 22vmin, 200px); line-height: 1; letter-spacing: 0.05em; text-align: center; }
+.story-art.turning { animation: page-turn 0.3s ease-out; }
+@keyframes page-turn { from { transform: translateX(14%); opacity: 0.2; } }
+.story-sentences { gap: 4px 6px; }
+.story-sent { display: inline-flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; opacity: 0.6; transition: opacity 0.2s; }
+.story-sent.current { opacity: 1; }
+.sword.tricky { text-decoration: underline; text-decoration-thickness: 3px; text-underline-offset: 6px; }
+.sword.new-word { color: #8f86c9; }
+.story-dots { display: flex; gap: 8px; justify-content: center; }
+.story-dot { width: 12px; height: 12px; border-radius: 50%; background: rgba(38, 33, 92, 0.18); }
+.story-dot.on { background: var(--sky); }
+.scene-btn.nudge, .bounce { animation: nudge 0.9s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateY(-6px) scale(1.06); } }
+.story-art.small { width: min(100%, 420px); aspect-ratio: 4 / 3; height: auto; border-radius: 22px; overflow: hidden; box-shadow: var(--shadow); }
+.story-art.tiny { width: 120px; aspect-ratio: 4 / 3; height: auto; border-radius: 12px; overflow: hidden; flex: none; }
+.story-art.tiny .story-emoji { font-size: 48px; }
+.story-art.small .story-emoji { font-size: clamp(70px, 16vmin, 130px); }
+.story-read .stage, .story-quiz .stage { gap: 12px; }
+.story-read-sentence .sword { font-size: clamp(28px, 5.4vmin, 46px); }
+.story-read-tools { display: flex; gap: 16px; justify-content: center; }
+.story-question { display: grid; justify-items: center; gap: 4px; }
+.story-hint:empty { display: none; }
+.story-hint-page { display: flex; align-items: center; gap: 12px; padding: 8px 12px; border-radius: 18px; background: var(--card); box-shadow: var(--shadow); max-width: 760px; }
+.story-answer { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 6px; }
+.story-answer .sword { font-size: clamp(24px, 4.4vmin, 36px); }
+.order-slots { display: flex; gap: clamp(10px, 2.4vw, 20px); justify-content: center; }
+.order-slot { display: grid; justify-items: center; align-content: start; gap: 6px; width: clamp(110px, 22vw, 200px); min-height: clamp(120px, 22vw, 200px); padding: 8px; border-radius: 20px; border: 4px dashed rgba(38, 33, 92, 0.25); background: rgba(255, 255, 255, 0.5); }
+.order-slot.right { border-style: solid; border-color: var(--mint); }
+.order-label { font-size: 18px; font-weight: 800; color: var(--ink-soft); }
+.order-tray { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; min-height: clamp(90px, 16vw, 150px); }
+.order-card { padding: 4px; border-radius: 16px; background: var(--card); box-shadow: var(--shadow); }
+.order-card .story-art.card { width: clamp(96px, 18vw, 180px); aspect-ratio: 4 / 3; height: auto; border-radius: 12px; overflow: hidden; }
+.order-card .story-emoji { font-size: clamp(36px, 7vw, 64px); }
+.order-card.hint { outline: 4px solid var(--sun); }
+.story-card-note { font-size: 13px; color: var(--ink-soft); }
+@media (max-height: 500px) and (orientation: landscape) { .story-art.small { width: min(100%, 300px); } }
+@media (prefers-reduced-motion: reduce) { .story-art.turning, .scene-btn.nudge, .bounce { animation: none; } }
+.lesson-stars.stale { opacity: 0.45; }
+.story-suggest { display: grid; justify-items: center; gap: 8px; margin-top: 8px; padding: 12px 18px; border-radius: 22px; background: var(--card); box-shadow: var(--shadow); font-size: 20px; }
+.story-suggest p { margin: 0; text-align: center; }
+/* Góc bố mẹ → 📚 Truyện ngắn (screens/parent/stories.js) */
+.story-review { display: grid; gap: 10px; }
+.story-review-page { display: grid; gap: 6px; padding: 8px; border-radius: 12px; background: #f8f9ff; }
+.story-review-sent { display: grid; gap: 4px; }
+.story-review-sent input { width: 100%; }
+.story-cells { display: grid; gap: 8px; }
+.story-cell-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+.story-cell { position: relative; width: 96px; height: 96px; padding: 0; border-radius: 12px; overflow: hidden; border: 3px solid transparent; background: #f1f3ff; display: grid; place-items: center; }
+.story-cell img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.story-cell .story-emoji { font-size: 36px; }
+.story-cell.selected { border-color: var(--sun); }
+.story-cell-num { position: absolute; left: 4px; top: 4px; min-width: 22px; padding: 0 4px; border-radius: 8px; background: rgba(0, 0, 0, 0.55); color: #fff; font-size: 13px; }
+.story-unused { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; border-radius: 12px; border: 2px dashed #d6d9ea; }
+.story-cell.unused { opacity: 0.6; }
+.story-grid-thumb { max-width: min(100%, 420px); border-radius: 12px; }
+.story-compare-pics { display: flex; gap: 12px; flex-wrap: wrap; }
+.story-compare-pics figure { margin: 0; display: grid; justify-items: center; gap: 4px; }
+.story-compare-pics img { width: 160px; height: 160px; object-fit: contain; border-radius: 12px; background: #f1f3ff; }
+.story-page-row .story-compare { grid-column: 1 / -1; }

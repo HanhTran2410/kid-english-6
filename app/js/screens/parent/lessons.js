@@ -27,7 +27,7 @@ export function lessonsView(app) {
     imp.scrollIntoView({ behavior: 'smooth', block: 'start' });
     imp.querySelector('textarea')?.focus({ preventScroll: true });
   };
-  body.append(createPanel(app, { focusImport }), imp, sharePanel(app), libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), builtinPanel(app));
+  body.append(createPanel(app, { focusImport }), imp, sharePanel(app), libraryPanel(app, refresh), section('Các bài đã có', listBox), scenesPanel(app), storiesPanel(app), builtinPanel(app));
   refresh();
 }
 
@@ -95,7 +95,7 @@ function importPanel(app, refresh) {
     if (isSharePackage(parsed.data)) {
       const pkg = parsed.data;
       result.append(
-        notice('info', h('strong', { text: '📦 Gói chia sẻ: ' }), `${pkg.lessons.length} bài, ${pkg.scenes.length} tranh, ${pkg.images?.length ?? 0} ảnh — ${pkg.title}`),
+        notice('info', h('strong', { text: '📦 Gói chia sẻ: ' }), `${pkg.lessons.length} bài, ${pkg.scenes.length} tranh, ${pkg.stories?.length ?? 0} truyện, ${pkg.images?.length ?? 0} ảnh — ${pkg.title}`),
         h('button.btn.primary', {
           type: 'button', text: '📥 Nhập gói',
           onclick: async () => {
@@ -209,7 +209,7 @@ async function freeId(db, base) {
 }
 
 /** Hộp thoại nhiều lựa chọn. @returns {Promise<string>} */
-function choose(message, options) {
+export function choose(message, options) {
   return new Promise((resolve) => {
     const overlay = h('div.dialog-overlay', {},
       h('div.dialog', { role: 'dialog', 'aria-modal': 'true' },
@@ -257,14 +257,15 @@ function downloadButton(app, label, ids) {
 /** 📤 Chia sẻ sang máy khác: tải TẤT CẢ bài + tranh bố mẹ tạo thành một file, và cách đưa sang máy kia. */
 function sharePanel(app) {
   const all = h('button.btn.primary', {
-    type: 'button', text: '⬇️ Tải tất cả bài & tranh bố mẹ tạo',
+    type: 'button', text: '⬇️ Tải tất cả bài, tranh & truyện bố mẹ tạo',
     onclick: async () => {
       const lessonIds = (await app.db.getAll('lessons')).filter((l) => !l.builtIn).map((l) => l.id);
       const sceneIds = (await app.db.getAll('scenes')).filter((x) => !x.builtIn).map((x) => x.id);
-      if (!lessonIds.length && !sceneIds.length) return toast('Chưa có bài hay tranh nào do bố mẹ tạo.');
-      const made = await makeSharePackage(app.db, { lessonIds, sceneIds });
+      const storyIds = (await app.db.getAll('stories')).filter((x) => !x.builtIn).map((x) => x.id);
+      if (!lessonIds.length && !sceneIds.length && !storyIds.length) return toast('Chưa có bài, tranh hay truyện nào do bố mẹ tạo.');
+      const made = await makeSharePackage(app.db, { lessonIds, sceneIds, storyIds });
       downloadPackage(made);
-      toast(`Đã tải về ${made.filename}: ${made.counts.lessons} bài, ${made.counts.scenes} tranh, ${made.counts.images} ảnh.`, 4500);
+      toast(`Đã tải về ${made.filename}: ${made.counts.lessons} bài, ${made.counts.scenes} tranh, ${made.counts.stories} truyện, ${made.counts.images} ảnh.`, 4500);
     },
   });
   return section('📤 Chia sẻ sang máy khác',
@@ -314,7 +315,7 @@ function libraryPanel(app, refresh) {
         h('div.lesson-info', {}, h('strong', { text: `${f.emoji || '📘'} ${f.title}` }), f.titleVi ? h('span', { text: ` — ${f.titleVi}` }) : null,
           h('div.field-hint', {
             text: (f.track === 'package'
-              ? [TRACK_LABEL.package, `${f.lessons} bài`, `${f.scenes} tranh`, `${f.images} ảnh`]
+              ? [TRACK_LABEL.package, `${f.lessons} bài`, `${f.scenes} tranh`, f.stories ? `${f.stories} truyện` : null, `${f.images} ảnh`]
               : [TRACK_LABEL[f.track] ?? f.track, `id: ${f.id}`, have.has(f.id) ? 'đã có trên máy' : null]).filter(Boolean).join(' · '),
           }), status),
         h('div.lesson-actions', {}, btn));
@@ -336,6 +337,13 @@ function builtinPanel(app) {
     h('div.lesson-list.builtin-lessons', {}, ...BUILTIN_LESSONS.map((lesson) => h('div.lesson-row', {},
       h('div.lesson-info', {}, h('strong', { text: lesson.title }), lesson.titleVi ? h('span', { text: ` — ${lesson.titleVi}` }) : null),
       h('div.lesson-actions', {}, picturesButton(app, lesson))))));
+}
+
+/** 📚 Truyện ngắn (SPEC-story.md 7.3, 8): tạo truyện bằng AI, ảnh, tiến độ — ở trang riêng. */
+function storiesPanel(app) {
+  return section('📚 Truyện ngắn',
+    h('p.field-hint', { text: '7 truyện có sẵn theo nhóm âm + truyện bố mẹ tạo bằng AI (theo nhóm âm hoặc theo bài sách). Xem bé nghe / đọc / trả lời câu hỏi thế nào, vẽ tranh cho truyện.' }),
+    h('button.btn.primary', { type: 'button', text: '📚 Mở Truyện ngắn', onclick: () => goParent(app, 'stories') }));
 }
 
 /** Tranh của Tả tranh do bố mẹ tạo (SPEC-ta-tranh mục 8). */

@@ -184,7 +184,7 @@ test('SPEC 6.4 — gói chia sẻ: bài + ảnh Kho ảnh của từ / câu tron
 
   const made = await makeSharePackage(src, { lessonIds: [lesson.id], sceneIds: ['scene-x'] }, Date.UTC(2026, 10, 17));
   assert.equal(made.filename, 'olly-2-bai-tranh-2026-11-17.json');
-  assert.deepEqual(made.counts, { lessons: 1, scenes: 1, images: 4 });
+  assert.deepEqual(made.counts, { lessons: 1, scenes: 1, stories: 0, images: 4 });
   const pkg = JSON.parse(JSON.stringify(made.package)); // như đọc lại từ file
   assert.ok(isSharePackage(pkg));
   assert.equal(pkg.lessons[0].createdAt, undefined);
@@ -194,7 +194,7 @@ test('SPEC 6.4 — gói chia sẻ: bài + ảnh Kho ảnh của từ / câu tron
   const dst = await openDatabase(`share-dst-${Math.random()}`);
   await setLibraryImage(dst, 'dog', { blob: blob('my-dog'), mimeType: 'image/png', width: 5, height: 5 });
   const r = await installPackage(dst, pkg, installLesson);
-  assert.deepEqual({ ...r, problems: r.problems.length }, { lessons: 1, scenes: 1, images: 3, kept: 1, problems: 0 });
+  assert.deepEqual({ ...r, problems: r.problems.length }, { lessons: 1, scenes: 1, stories: 0, images: 3, kept: 1, problems: 0 });
   assert.equal(installedText(r), 'Đã nhập 1 bài, 1 tranh, 3 ảnh (giữ 1 ảnh đã có trên máy)');
   assert.equal((await dst.get('lessons', lesson.id)).title, 'Unit 1: Pets');
   const sc = await dst.get('scenes', 'scene-x');

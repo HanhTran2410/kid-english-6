@@ -143,3 +143,43 @@ test('truyện có sẵn: 3 câu hỏi pick → word → order đủ trường t
     assert.notEqual(pick.answer, word.answer, s.id);
   }
 });
+
+// ---------- Story-a: câu hỏi chơi được, chấm xếp thứ tự, sao, mức đọc (SPEC-story 6, 7) ----------
+import { playableQuestions, orderCorrect, storyStars, readLevel, pageVisual } from '../../app/js/story/story.js';
+import { RESULT } from '../../app/js/progress.js';
+
+test('6.1 / ST-11: order chỉ chơi khi 3 trang có hình riêng, khác nhau (ảnh hoặc emoji trang); truyện có sẵn đủ 3 câu', () => {
+  for (const s of BUILTIN_STORIES) assert.deepEqual(playableQuestions(s).map((q) => q.type), ['pick', 'word', 'order'], s.id);
+  const s = structuredClone(BUILTIN_STORIES[2]);
+  s.pages.forEach((p) => delete p.emoji); // không ảnh, không emoji trang → chỉ còn emoji bìa
+  assert.deepEqual(playableQuestions(s).map((q) => q.type), ['pick', 'word']);
+  assert.deepEqual(playableQuestions(s, () => true).map((q) => q.type), ['pick', 'word', 'order']); // có ảnh mọi trang
+  const same = structuredClone(BUILTIN_STORIES[2]);
+  same.pages.forEach((p) => { p.emoji = '🐶'; }); // hai thẻ trùng hình → bé không phân biệt được
+  assert.equal(playableQuestions(same).length, 2);
+  assert.equal(pageVisual({ id: 'p1', emoji: '🐶' }, (id) => id === 'p1'), 'img:p1');
+  assert.equal(pageVisual({ id: 'p1' }, () => false), null);
+});
+
+test('6.2 / ST-10: chấm xếp thứ tự theo ô; thứ tự trong mảng pages là đáp án', () => {
+  assert.deepEqual(orderCorrect(['p1', 'p3', 'p5'], ['p1', 'p3', 'p5']), [true, true, true]);
+  assert.deepEqual(orderCorrect(['p3', 'p1', 'p5'], ['p1', 'p3', 'p5']), [false, false, true]);
+});
+
+test('6.3 / ST-07 → ST-09: sao theo kết quả từng câu hỏi', () => {
+  const { INDEPENDENT: I, HELPED: H, MISSED: M } = RESULT;
+  assert.equal(storyStars([I, I, I]), 3);
+  assert.equal(storyStars([I, H, I]), 2);
+  assert.equal(storyStars([I, I, M]), 1);
+  assert.equal(storyStars([H, M]), 1);
+  assert.equal(storyStars([]), null);
+});
+
+test('mức đọc một câu (5): ≥ 80% từ → cả câu; có cụm + một phần → cụm; một phần → từ; không nghe được → không có mức', () => {
+  const words = ['the', 'dog', 'drops', 'the', 'hat'];
+  assert.equal(readLevel(words, new Set(['the', 'dog', 'drops', 'hat'])), 'sentence');
+  assert.equal(readLevel(words, new Set(['dog'])), 'word');
+  assert.equal(readLevel(words, new Set(['dog']), true), 'chunk');
+  assert.equal(readLevel(words, new Set()), null);
+  assert.equal(readLevel(words, null), null);
+});

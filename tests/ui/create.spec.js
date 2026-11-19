@@ -134,7 +134,7 @@ test('Chia sẻ sang máy khác (6.4): máy A tải về bài (gói .json kèm �
 
   const [all] = await Promise.all([
     page.waitForEvent('download'),
-    page.getByRole('button', { name: '⬇️ Tải tất cả bài & tranh bố mẹ tạo' }).click(),
+    page.getByRole('button', { name: '⬇️ Tải tất cả bài, tranh & truyện bố mẹ tạo' }).click(),
   ]);
   expect(all.suggestedFilename()).toMatch(/^olly-unit-3-at-the-zoo-/); // chỉ có 1 bài bố mẹ tạo
   await expect(page.locator('.toast').last()).toContainText('1 bài, 0 tranh');
